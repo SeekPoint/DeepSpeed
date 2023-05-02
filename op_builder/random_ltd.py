@@ -11,6 +11,7 @@ class RandomLTDBuilder(CUDAOpBuilder):
     NAME = "random_ltd"
 
     def __init__(self, name=None):
+        print('RandomLTDBuilder init')
         name = self.NAME if name is None else name
         super().__init__(name=name)
 

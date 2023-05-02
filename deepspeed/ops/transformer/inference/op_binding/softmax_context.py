@@ -12,6 +12,7 @@ from .base import BaseOp
 class SoftmaxContextOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('SoftmaxContextOp init')
         super(SoftmaxContextOp, self).__init__(config)
         if self.config.fp16:
             self.softmax_context_func = self.inference_cuda_module.softmax_context_fp16

@@ -34,6 +34,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
     inference_mp_group = None
 
     def __init__(self, args, model, **kwargs):
+        print('DeepSpeedHybridEngine init')
 
         super().__init__(args, model, **kwargs)
 

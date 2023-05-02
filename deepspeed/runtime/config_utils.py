@@ -51,6 +51,7 @@ class DeepSpeedConfigModel(BaseModel):
     """
 
     def __init__(self, strict=False, **data):
+        print('DeepSpeedConfigModel init')
         if (not strict):  # This is temporary until we refactor all DS configs, allows HF to load models
             data = {k: v for k, v in data.items() if (v != "auto" or k == "replace_method")}
         super().__init__(**data)

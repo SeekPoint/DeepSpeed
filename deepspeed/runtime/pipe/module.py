@@ -50,6 +50,7 @@ class LayerSpec:
     """
 
     def __init__(self, typename, *module_args, **module_kwargs):
+        print('LayerSpec init')
         self.typename = typename
         self.module_args = module_args
         self.module_kwargs = module_kwargs

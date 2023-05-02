@@ -21,6 +21,7 @@ except ImportError:
 class CudaEventTimer(object):
 
     def __init__(self, start_event: get_accelerator().Event, end_event: get_accelerator().Event):
+        print('CudaEventTimer init': start_event, end_event)
         self.start_event = start_event
         self.end_event = end_event
 

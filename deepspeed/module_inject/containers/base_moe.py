@@ -13,6 +13,7 @@ from deepspeed.accelerator import get_accelerator
 class BaseTransformerMoEContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        print('BaseTransformerMoEContainer init')
         # Call the init function of the parent class to initialize the tensors and configs from parent class
         super().__init__(**kwargs)
 

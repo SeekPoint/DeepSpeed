@@ -249,6 +249,7 @@ class Softmax:
              block: required: an integer determining the block size.
              bench: optional: set if you want to do benchmarking
         """
+        print('Softmax init')
 
         self.num_blocks = layout.sum().item()
         self.spdims = layout.shape

@@ -55,12 +55,15 @@ def calc_bw_log(comm_op, size, duration):
     tput /= 1e6
     busbw /= 1e6
 
+    print("tput, busbw :", tput, busbw)
+
     return tput, busbw
 
 
 class CommsLogger:
 
     def __init__(self):
+        print('CommsLogger init')
         from deepspeed.comm.constants import COMMS_LOGGER_VERBOSE_DEFAULT, COMMS_LOGGER_DEBUG_DEFAULT, COMMS_LOGGER_PROF_OPS_DEFAULT, COMMS_LOGGER_PROF_ALL_DEFAULT, COMMS_LOGGER_ENABLED_DEFAULT
         self.comms_dict = {}
         self.verbose = COMMS_LOGGER_VERBOSE_DEFAULT

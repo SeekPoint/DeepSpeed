@@ -30,6 +30,7 @@ class ProcessTopology:
             axes (list): the names of the tensor axes
             dims (list): the dimension (length) of each axis of the topology tensor
         """
+        print('ProcessTopology init')
 
         self.axes = axes  # names of each topology axis
         self.dims = dims  # length of each topology axis
@@ -238,6 +239,7 @@ class PipeDataParallelTopology(ProcessTopology):
     """
 
     def __init__(self, num_pp, num_dp):
+        print('PipeDataParallelTopology init')
         super().__init__(axes=['pipe', 'data'], dims=[num_pp, num_dp])
 
 
@@ -245,6 +247,7 @@ class PipeModelDataParallelTopology(ProcessTopology):
     """ A topology for hybrid pipeline, model, and data parallelism. """
 
     def __init__(self, num_pp, num_mp, num_dp):
+        print('PipeModelDataParallelTopology init')
         super().__init__(axes=['pipe', 'data', 'model'], dims=[num_pp, num_dp, num_mp])
 
 
@@ -272,6 +275,7 @@ class PipelineParallelGrid:
     """
 
     def __init__(self, topology=None, process_group=None):
+        print('PipelineParallelGrid init')
         # TODO use process_group if provided
         self.global_rank = dist.get_rank()
         self.world_size = dist.get_world_size()

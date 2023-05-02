@@ -147,6 +147,7 @@ class EngineTimers(object):
     r"""Wallclock timers for DeepSpeedEngine"""
 
     def __init__(self, enable_micro_timers, enable_global_timers):
+        print('EngineTimers init')
         self.forward_timers = []
         self.backward_timers = []
         self.backward_inner_timers = []

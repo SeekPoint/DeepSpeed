@@ -13,6 +13,7 @@ import deepspeed.comm as dist
 class TensorBoardMonitor(Monitor):
 
     def __init__(self, tensorboard_config):
+        print('TensorBoardMonitor init')
         super().__init__(tensorboard_config)
         check_tb_availability()
 

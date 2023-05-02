@@ -18,6 +18,7 @@ from .constants import PDSH_MAX_FAN_OUT, MVAPICH_TMP_HOSTFILE
 class MultiNodeRunner(ABC):
 
     def __init__(self, args, world_info_base64):
+        print('MultiNodeRunner init')
         self.args = args
         self.validate_args()
         self.user_arguments = self.parse_user_args()
@@ -51,6 +52,7 @@ class MultiNodeRunner(ABC):
 class PDSHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64):
+        print('PDSHRunner init')
         super().__init__(args, world_info_base64)
 
     def backend_exists(self):
@@ -107,6 +109,7 @@ class PDSHRunner(MultiNodeRunner):
 class OpenMPIRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
+        print('OpenMPIRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
         self.add_export('UCX_TLS', 'tcp')
@@ -160,6 +163,7 @@ class OpenMPIRunner(MultiNodeRunner):
 class MPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
+        print('MPICHRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
@@ -217,6 +221,7 @@ class MPICHRunner(MultiNodeRunner):
 class SlurmRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
+        print('SlurmRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
@@ -265,6 +270,7 @@ class SlurmRunner(MultiNodeRunner):
 class MVAPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
+        print('MVAPICHRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 

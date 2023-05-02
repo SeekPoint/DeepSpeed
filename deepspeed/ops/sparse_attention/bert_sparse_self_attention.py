@@ -28,7 +28,7 @@ class BertSparseSelfAttention(nn.Module):
             config: required: Bert model config
             sparsity_config: optional: this parameter determines sparsity pattern configuration; it is based on FixedSparsityConfig class.
         """
-
+        print(' init')
         super(BertSparseSelfAttention, self).__init__()
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError("The hidden size (%d) is not a multiple of the number of attention "

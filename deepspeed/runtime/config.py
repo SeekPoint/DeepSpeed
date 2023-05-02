@@ -658,6 +658,7 @@ Can be used for quickly changing parameters via command line parameters.'''
 class DeepSpeedConfigWriter:
 
     def __init__(self, data=None):
+        print('DeepSpeedConfigWriter init')
         self.data = data if data is not None else {}
 
     def add_config(self, key, value):
@@ -674,6 +675,7 @@ class DeepSpeedConfigWriter:
 class DeepSpeedConfig(object):
 
     def __init__(self, config: Union[str, dict], mpu=None):
+        print('DeepSpeedConfig init')
         super(DeepSpeedConfig, self).__init__()
         if isinstance(config, dict):
             self._param_dict = config

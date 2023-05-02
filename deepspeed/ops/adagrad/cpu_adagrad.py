@@ -12,7 +12,7 @@ class DeepSpeedCPUAdagrad(torch.optim.Optimizer):
     optimizer_id = 0
 
     def __init__(self, model_params, lr=1e-2, eps=1e-10, weight_decay=0, amsgrad=False, fp32_optimizer_states=True):
-
+        print("DeepSpeedCPUAdagrad init")
         default_args = dict(lr=lr, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad)
         super(DeepSpeedCPUAdagrad, self).__init__(model_params, default_args)
 
@@ -52,6 +52,7 @@ class DeepSpeedCPUAdagrad(torch.optim.Optimizer):
         Returns:
             loss: if ``closure`` is provided. Otherwise ``None``.
         """
+        print("DeepSpeedCPUAdagrad step")
 
         loss = None
         if closure is not None:

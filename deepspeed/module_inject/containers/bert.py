@@ -13,6 +13,7 @@ from ..policy import TransformerPolicy
 class DS_BERTContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        print('DS_BERTContainer init')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
@@ -29,6 +30,7 @@ class DS_BERTContainer(BaseTransformerContainer):
 class HFBertLayerPolicy(TransformerPolicy):
 
     def __init__(self, client_module, inference=False):
+        print('HFBertLayerPolicy init')
         super().__init__(inference, pre_attn_norm=False)
         self.client_module = client_module
         self.cuda_graph_supported = True

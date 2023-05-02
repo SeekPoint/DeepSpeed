@@ -18,6 +18,7 @@ ASYNC_SWAPPER_WAIT_TIMER = 'async_swap_gradient_wait'
 class AsyncTensorSwapper(object):
 
     def __init__(self, aio_handle, numel_alignment, timers):
+        print('AsyncTensorSwapper init')
         self.free_buffer_index = []
         self.swapping_buffer_index = []
         self.ready_buffer_index = []

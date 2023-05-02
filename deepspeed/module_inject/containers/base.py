@@ -20,6 +20,7 @@ class BaseConvolutionContainer(ABC):
 class BaseTransformerContainer(ABC):
 
     def __init__(self, policy, config, model_config, layer_id, child):
+        print('BaseTransformerContainer init')
         self.policy = policy
         self.config = config
         self.model_config = model_config

@@ -10,6 +10,7 @@ from deepspeed.utils.types import ActivationFuncType
 class TransformerConfig():
 
     def __init__(self, hidden_size, intermediate_size, heads, num_hidden_layers):
+        print('TransformerConfig init')
         self.layer_id = -1
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
@@ -76,6 +77,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
                  return_single_tuple=False,
                  set_empty_params=False,
                  transposed_mode=False):
+        print('DeepSpeedInferenceConfig init')
         super(DeepSpeedInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers)

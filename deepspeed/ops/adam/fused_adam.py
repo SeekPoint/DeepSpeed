@@ -60,6 +60,7 @@ class FusedAdam(torch.optim.Optimizer):
                  weight_decay=0.,
                  amsgrad=False,
                  set_grad_none=True):
+        print('FusedAdam init')
 
         if amsgrad:
             raise RuntimeError('FusedAdam does not support the AMSGrad variant.')

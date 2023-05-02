@@ -45,6 +45,7 @@ class Autotuner:
     """
 
     def __init__(self, args, active_resources):
+        print('Autotuner init')
         self.args = args
         self.selected_exp_dir = None
 

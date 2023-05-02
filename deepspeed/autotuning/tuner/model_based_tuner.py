@@ -20,6 +20,7 @@ class ModelBasedTuner(BaseTuner):
     """Exploring the search space with a cost model"""
 
     def __init__(self, exps: list, resource_manager, metric, tuning_sapce):
+        print('ModelBasedTuner init')
         super().__init__(exps, resource_manager, metric)
         self.tuning_space = tuning_sapce
         self.best_iter = 0

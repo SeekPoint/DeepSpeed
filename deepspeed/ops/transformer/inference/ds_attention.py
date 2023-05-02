@@ -18,6 +18,7 @@ class DeepSpeedSelfAttention(nn.Module):
     _qkv_buffers = []
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1):
+        print('DeepSpeedSelfAttention init')
         super(DeepSpeedSelfAttention, self).__init__()
         self.config = config
         data_type = torch.int8 if config.q_int8 else torch.half if config.fp16 else torch.float

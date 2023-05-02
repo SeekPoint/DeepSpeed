@@ -11,6 +11,7 @@ from .base import BaseOp
 class MLPGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('MLPGemmOp init')
         super(MLPGemmOp, self).__init__(config)
         if self.config.fp16:
             self.mlp_gemm_func = self.inference_cuda_module.mlp_gemm_fp16

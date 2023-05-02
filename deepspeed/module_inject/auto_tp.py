@@ -29,6 +29,7 @@ class AutoTP():
                         mlist = mlist + [module]
             else:
                 mlist = mlist + AutoTP.get_module_list(child)
+        print("mlist :", mlist)
         return mlist
 
     def supported(model):
@@ -53,6 +54,7 @@ class AutoTP():
                 layer_list = layer_list + ["ln"]
             else:
                 layer_list = layer_list + AutoTP.get_layers(key, submodule)
+        print("layer_list :", layer_list)
         return layer_list
 
     def update_policy_list(policy_list, new_module, new_gems):
@@ -64,6 +66,7 @@ class AutoTP():
                     policy_list[i] = tuple([type(new_module), new_gems])
                     return policy_list
         policy_list.append(tuple([type(new_module), new_gems]))
+        print("update_policy_list policy_list :", policy_list)
         return policy_list
 
     def kernel_supported(module_list):
@@ -111,4 +114,5 @@ class AutoTP():
                 gem_list = []
         assert len(policy_list), "AutoTP not supported for model. Please use kernel injection since container policy for model exists." \
         if AutoTP.kernel_supported(module_list) else "Not able to determine model policy automatically. Please provide policy."
+        print("policy_list :", policy_list)
         return policy_list

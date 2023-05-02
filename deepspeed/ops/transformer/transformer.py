@@ -20,6 +20,7 @@ class TransformerConfig():
 
     def __init__(self, batch_size, hidden_size, intermediate_size, heads, attn_dropout_ratio, hidden_dropout_ratio,
                  num_hidden_layers, initializer_range):
+        print('TransformerConfig init')
         self.layer_id = -1
         self.batch_size = batch_size
         self.hidden_size = hidden_size

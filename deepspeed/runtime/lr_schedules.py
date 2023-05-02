@@ -301,6 +301,7 @@ class LRRangeTest(object):
                  lr_range_test_step_rate: float = 1.0,
                  lr_range_test_staircase: bool = False,
                  last_batch_iteration: int = -1):
+        print('LRRangeTest init')
 
         self.optimizer = get_torch_optimizer(optimizer)
 
@@ -442,6 +443,7 @@ class OneCycle(object):
                  cycle_max_mom=0.9,
                  decay_mom_rate=0.,
                  last_batch_iteration=-1):
+        print('OneCycle init')
 
         self.optimizer = get_torch_optimizer(optimizer)
 
@@ -652,7 +654,7 @@ class WarmupLR(object):
                  warmup_num_steps: int = 1000,
                  warmup_type: str = WARMUP_LOG_RATE,
                  last_batch_iteration: int = -1):
-
+        print('WarmupLR init')
         self.optimizer = get_torch_optimizer(optimizer)
 
         self.min_lrs = self._format_param(self.optimizer, warmup_min_lr, "min_lr")
@@ -743,7 +745,7 @@ class WarmupDecayLR(WarmupLR):
                  warmup_num_steps: int = 1000,
                  warmup_type: str = WARMUP_LOG_RATE,
                  last_batch_iteration: int = -1):
-
+        print('WarmupDecayLR init')
         self.total_num_steps = total_num_steps
         super(WarmupDecayLR, self).__init__(optimizer, warmup_min_lr, warmup_max_lr, warmup_num_steps, warmup_type,
                                             last_batch_iteration)

@@ -11,6 +11,7 @@ from torch.utils.dlpack import from_dlpack
 class CupyBackend(object):
 
     def __init__(self):
+        print('CupyBackend init')
         pass
 
     def torch2cupy(self, tensor):

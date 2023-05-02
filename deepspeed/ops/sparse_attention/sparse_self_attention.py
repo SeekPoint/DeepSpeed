@@ -31,6 +31,7 @@ class SparseSelfAttention(nn.Module):
             attn_mask_mode: optional: a string determining if attention mask needs to be added, `add`, or be multiplied, `mul`.
             max_seq_length: optional: the maximum sequence length this sparse attention module will be applied to; it controls the size of the master_layout.
         """
+        print('SparseSelfAttention init')
         super().__init__()
 
         # sparsity information

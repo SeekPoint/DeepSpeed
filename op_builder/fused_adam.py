@@ -13,6 +13,7 @@ class FusedAdamBuilder(CUDAOpBuilder):
     NAME = "fused_adam"
 
     def __init__(self):
+        print("FusedAdamBuilder init")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):

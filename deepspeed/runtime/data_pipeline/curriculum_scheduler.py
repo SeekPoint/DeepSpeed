@@ -11,6 +11,7 @@ from .constants import *
 class CurriculumScheduler(object):
 
     def __init__(self, config):
+        print('CurriculumScheduler init')
         super().__init__()
         self.state = {}
         assert CURRICULUM_LEARNING_MIN_DIFFICULTY in config, \

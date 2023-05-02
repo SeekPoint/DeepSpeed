@@ -19,6 +19,7 @@ from deepspeed.utils.types import ActivationFuncType
 class DS_OPTContainer(MetaTensorContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        print('DS_OPTContainer init')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.

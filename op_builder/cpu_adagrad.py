@@ -12,6 +12,7 @@ class CPUAdagradBuilder(TorchCPUOpBuilder):
     NAME = "cpu_adagrad"
 
     def __init__(self):
+        print('CPUAdagradBuilder init')
         super().__init__(name=self.NAME)
 
     def absolute_name(self):

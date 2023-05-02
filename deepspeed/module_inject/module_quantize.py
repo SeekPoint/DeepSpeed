@@ -69,4 +69,5 @@ def _quantize_module(model, policies):
         else:
             _quantize_module(child, policies)
 
+    print("_quantize_module model:", model)
     return model

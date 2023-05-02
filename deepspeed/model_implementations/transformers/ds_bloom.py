@@ -17,4 +17,5 @@ class DeepSpeedBloomInference(DeepSpeedTransformerInference):
                  quantize_groups=1,
                  merge_count=1,
                  mlp_extra_grouping=False):
+        print('DeepSpeedBloomInference init')
         super().__init__(config, mp_group, quantize_scales, quantize_groups, merge_count, mlp_extra_grouping)

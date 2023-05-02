@@ -33,6 +33,7 @@ TIMEOUT = 5
 class ResourceManager:
 
     def __init__(self, args, hosts, num_gpus_per_node, results_dir, exps_dir, arg_mappings):
+        print('ResourceManager init')
         self.results_dir = results_dir
         self.exps_dir = exps_dir
 
@@ -260,6 +261,7 @@ class ResourceManager:
 class Node:
 
     def __init__(self, host, max_slots):
+        print('Node init')
         self.host = host
         self.max_slots = max_slots
         self.idle_slots = list(range(max_slots))
@@ -275,6 +277,7 @@ class Node:
 class Reservation:
 
     def __init__(self, node, slots):
+        print('Reservation init')
         self.node = node
         self.slots = slots
 

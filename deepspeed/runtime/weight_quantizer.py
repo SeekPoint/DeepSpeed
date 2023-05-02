@@ -11,6 +11,7 @@ from deepspeed.accelerator import get_accelerator
 class WeightQuantization(object):
 
     def __init__(self, mlp_extra_grouping=True, mp_size=1):
+        print('WeightQuantization init')
         self.dense_scales = []
         self.qkv_scales = []
         self.mlp4hh_scales = []

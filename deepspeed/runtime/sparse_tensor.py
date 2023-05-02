@@ -14,6 +14,7 @@ class SparseTensor(object):
     """ Compressed Sparse Tensor """
 
     def __init__(self, dense_tensor=None):
+        print('SparseTensor init')
         self.orig_dense_tensor = dense_tensor
         self.is_sparse = dense_tensor.is_sparse
         if dense_tensor is not None:

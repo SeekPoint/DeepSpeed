@@ -108,6 +108,7 @@ class DeepSpeedDiffusersAttention(nn.Module):
         self,
         config,
     ):
+        print('DeepSpeedDiffusersAttention init')
         super(DeepSpeedDiffusersAttention, self).__init__()
 
         self.config = config

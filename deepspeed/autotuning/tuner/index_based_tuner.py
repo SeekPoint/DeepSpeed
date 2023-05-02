@@ -12,6 +12,7 @@ class RandomTuner(BaseTuner):
     """Explore the search space in random order"""
 
     def __init__(self, exps: list, resource_manager, metric):
+        print('RandomTuner init')
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):

@@ -15,6 +15,7 @@ from deepspeed.runtime.compression.cupy import CupyBackend
 class MpiBackend(object):
 
     def __init__(self, cuda_aware):
+        print('MpiBackend init')
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()

@@ -11,6 +11,7 @@ class StochasticTransformerBuilder(TransformerBuilder):
     NAME = "stochastic_transformer"
 
     def __init__(self):
+        print("StochasticTransformerBuilder init")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):

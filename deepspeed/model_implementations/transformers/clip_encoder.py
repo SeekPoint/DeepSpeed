@@ -11,6 +11,7 @@ from ..features.cuda_graph import CUDAGraph
 class DSClipEncoder(CUDAGraph, torch.nn.Module):
 
     def __init__(self, enc, enable_cuda_graph=False):
+        print('DSClipEncoder init')
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         enc.text_model._build_causal_attention_mask = self._build_causal_attention_mask
         self.enc = enc

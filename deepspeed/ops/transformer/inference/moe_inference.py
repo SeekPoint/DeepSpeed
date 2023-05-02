@@ -74,6 +74,7 @@ class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
                  use_rts=False,
                  mlp_type='standard',
                  scale_attn_by_inverse_layer_idx=False):
+        print('DeepSpeedMoEInferenceConfig init')
         super(DeepSpeedMoEInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers, layer_norm_eps, local_rank, mp_size, fp16, q_int8, pre_layer_norm,

@@ -48,6 +48,7 @@ class SDLoaderFactory:
 class SDLoaderBase(ABC):
 
     def __init__(self, ckpt_list, version, checkpoint_engine):
+        print('SDLoaderBase init')
         self.module_key = None
         self.ckpt_list = ckpt_list
         self.version = version
@@ -190,6 +191,7 @@ class SDLoaderBase(ABC):
 class MegatronSDLoader(SDLoaderBase):
 
     def __init__(self, ckpt_list, version, checkpoint_engine):
+        print('MegatronSDLoader init')
         super().__init__(ckpt_list, version, checkpoint_engine)
         """
         ## Q/K/V data need special processing

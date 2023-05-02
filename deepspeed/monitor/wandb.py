@@ -12,6 +12,7 @@ import deepspeed.comm as dist
 class WandbMonitor(Monitor):
 
     def __init__(self, wandb_config):
+        print('WandbMonitor init')
         super().__init__(wandb_config)
         check_wandb_availability()
         import wandb

@@ -47,6 +47,7 @@ class PipeSchedule(ABC):
     """
 
     def __init__(self, micro_batches, stages, stage_id):
+        print('PipeSchedule(ABC) init')
         super().__init__()
         self.micro_batches = micro_batches
         self.stages = stages

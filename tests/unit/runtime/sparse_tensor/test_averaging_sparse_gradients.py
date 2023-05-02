@@ -12,6 +12,7 @@ from unit.util import skip_on_arch
 class Model(torch.nn.Module):
 
     def __init__(self):
+        print('Model init')
         super().__init__()
         self.emb = torch.nn.EmbeddingBag(10, 3, mode="sum", sparse=True)
         self.linear = torch.nn.Linear(3, 1)
@@ -23,6 +24,7 @@ class Model(torch.nn.Module):
 class Adam(torch.optim.Optimizer):
 
     def __init__(self, dense_params, sparse_params):
+        print('Adam init')
         super().__init__(dense_params + sparse_params, defaults={})
         self.adam = torch.optim.Adam(dense_params)
         self.adam_sparse = torch.optim.SparseAdam(sparse_params)

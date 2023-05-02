@@ -17,6 +17,7 @@ GROUP_STATE_KEY = 'state'
 class ZeROCheckpoint(object):
 
     def __init__(self, dir):
+        print('ZeROCheckpoint init')
         basic_folder_validation(dir)
         self.dir = dir
         self.file_list = get_zero_files(dir)

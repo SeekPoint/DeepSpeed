@@ -19,6 +19,7 @@ from deepspeed.runtime.swap_tensor.optimizer_utils import OptimizerSwapper
 class OptimizerSwapOp(object):
 
     def __init__(self, aio_handle, read_op, param_info, allocated_buffers, state_buffers, num_ops):
+        print('OptimizerSwapOp init')
         self.aio_handle = aio_handle
         self.read_op = read_op
         self.param_info = param_info

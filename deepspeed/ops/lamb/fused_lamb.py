@@ -50,6 +50,7 @@ class FusedLamb(torch.optim.Optimizer):
                  max_coeff=10.0,
                  min_coeff=0.01,
                  amsgrad=False):
+        print('FusedLamb init')
         self.fused_lamb_cuda = FusedLambBuilder().load()
 
         if amsgrad:

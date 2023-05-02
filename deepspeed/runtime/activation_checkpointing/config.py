@@ -57,6 +57,7 @@ ACT_CHKPT_DEFAULT = {
 class DeepSpeedActivationCheckpointingConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
+        print('DeepSpeedActivationCheckpointingConfig init')
         super(DeepSpeedActivationCheckpointingConfig, self).__init__()
 
         self.partition_activations = None

@@ -97,6 +97,7 @@ class InferenceEngine(Module):
             model: torch.nn.Module
             config: DeepSpeedInferenceConfig
         """
+        print('InferenceEngine init')
         global DS_INFERENCE_ENABLED
         DS_INFERENCE_ENABLED = True
 

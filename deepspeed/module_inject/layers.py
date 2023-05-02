@@ -15,6 +15,7 @@ from deepspeed.accelerator import get_accelerator
 class LinearAllreduce(nn.Module):
 
     def __init__(self, weight, bias=None, mp_group=None):
+        print('LinearAllreduce init')
         super(LinearAllreduce, self).__init__()
         self.weight = weight
         self.bias = bias

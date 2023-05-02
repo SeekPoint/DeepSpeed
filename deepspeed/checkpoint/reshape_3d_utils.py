@@ -17,6 +17,7 @@ DP_DIM = 'DP'
 class model_3d_desc(object):
 
     def __init__(self, pp_degree=1, tp_degree=1, dp_degree=1):
+        print('model_3d_desc init')
         self.pp_degree = pp_degree
         self.tp_degree = tp_degree
         self.dp_degree = dp_degree

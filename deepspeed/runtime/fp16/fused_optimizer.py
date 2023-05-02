@@ -39,6 +39,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                  fused_adam_legacy=False,
                  has_moe_layers=False,
                  timers=None):
+        print('FP16_Optimizer init')
 
         self.fused_adam_legacy = fused_adam_legacy
         self.timers = timers

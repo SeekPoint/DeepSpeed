@@ -10,6 +10,7 @@ from deepspeed.nebula.constants import *
 class DeepSpeedNebulaConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
+        print('DeepSpeedNebulaConfig init')
         super(DeepSpeedNebulaConfig, self).__init__()
 
         self.enabled = None

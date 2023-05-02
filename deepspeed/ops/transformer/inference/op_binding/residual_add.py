@@ -11,6 +11,7 @@ from .base import BaseOp
 class ResidualAddOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('ResidualAddOp init')
         super(ResidualAddOp, self).__init__(config)
         if self.config.fp16 or self.config.q_int8:
             self.residual_add_func = self.inference_cuda_module.residual_add_bias_fp16

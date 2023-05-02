@@ -33,6 +33,7 @@ LAYER_CONCAT_DIM = {'self_attention.dense.weight': 1, 'mlp.dense_4h_to_h.weight'
 class DeepSpeedCheckpoint(object):
 
     def __init__(self, dir, tp_degree=None, pp_degree=None, dp_degree=None):
+        print('DeepSpeedCheckpoint init')
         self.dir = dir
         self._validate_folder(dir)
 

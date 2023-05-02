@@ -13,6 +13,7 @@ from ...model_implementations.diffusers.unet import DSUNet
 class UNetPolicy(DSPolicy):
 
     def __init__(self):
+        print('UNetPolicy init')
         super().__init__()
         try:
             import diffusers

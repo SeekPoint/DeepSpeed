@@ -12,6 +12,7 @@ from deepspeed import comm as dist
 class QKVGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('QKVGemmOp init')
         super(QKVGemmOp, self).__init__(config)
         if self.config.fp16:
             self.qkv_gemm_func = self.inference_cuda_module.qkv_gemm_fp16

@@ -19,6 +19,7 @@ except ImportError:
 class CUDA_Accelerator(DeepSpeedAccelerator):
 
     def __init__(self):
+        print(' init')
         self._name = 'cuda'
         self._communication_backend_name = 'nccl'
 

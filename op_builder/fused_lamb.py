@@ -13,9 +13,11 @@ class FusedLambBuilder(CUDAOpBuilder):
     NAME = "fused_lamb"
 
     def __init__(self):
+        print("FusedLambBuilder init")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
+        print(f'deepspeed.ops.lamb.{self.NAME}_op')
         return f'deepspeed.ops.lamb.{self.NAME}_op'
 
     def sources(self):

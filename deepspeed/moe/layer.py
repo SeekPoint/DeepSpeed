@@ -48,7 +48,7 @@ class MoE(torch.nn.Module):
                  use_rts=True,
                  use_tutel: bool = False,
                  enable_expert_tensor_parallelism: bool = False):
-
+        print('MoE init')
         super(MoE, self).__init__()
 
         self.use_residual = use_residual

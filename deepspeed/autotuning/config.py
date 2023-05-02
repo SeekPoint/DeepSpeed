@@ -10,6 +10,7 @@ from deepspeed.autotuning.constants import *
 class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
+        print('DeepSpeedAutotuningConfig init')
         super(DeepSpeedAutotuningConfig, self).__init__()
 
         self.enabled = None

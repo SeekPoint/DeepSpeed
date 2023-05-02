@@ -28,6 +28,7 @@ from .utils import policy_to_ds_container
 class ReplaceWithTensorSlicing:
 
     def __init__(self, mp_group=None, mp_size=1, out_dim=1, in_dim=0):
+        print('ReplaceWithTensorSlicing init')
         if mp_group is not None:
             self.gpu_index = dist.get_rank(group=mp_group)
         else:
@@ -140,6 +141,7 @@ def get_transformer_name(replaced_module):
 class GroupQuantizer:
 
     def __init__(self, q_int8=True, group_size=1, num_bits=8, num_groups=0):
+        print('GroupQuantizer init')
         self.group_size = group_size
         self.num_bits = num_bits
         self.q_int8 = q_int8

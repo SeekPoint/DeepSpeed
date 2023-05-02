@@ -46,6 +46,7 @@ class ElasticityConfig:
     """
 
     def __init__(self, param_dict):
+        print('ElasticityConfig init')
         self.enabled = param_dict.get(ENABLED, ENABLED_DEFAULT)
         if self.enabled:
             if MAX_ACCEPTABLE_BATCH_SIZE in param_dict:

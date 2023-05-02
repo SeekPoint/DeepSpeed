@@ -23,7 +23,7 @@ class Quantizer(object):
                  q_eigenvalue=False,
                  use_quantizer_kernel=False,
                  layer_num=0):
-
+        print('Quantizer init')
         self.q_groups = q_groups
         self.q_mixed_fp16 = q_mixed_fp16
         self.q_change_ratio = q_change_ratio

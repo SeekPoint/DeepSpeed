@@ -35,6 +35,7 @@ class DSElasticAgent(LocalElasticAgent):
         exit_barrier_timeout: float = 300,
         log_dir: Optional[str] = None,
     ):
+        print('DSElasticAgent init')
         super().__init__(spec, start_method, exit_barrier_timeout, log_dir)
         self.ds_env = env
 

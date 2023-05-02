@@ -67,7 +67,7 @@ def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, se
 
         else:
             module_inject(layer_obj, child, config, micro_batch_size, max_seq_length, seed, preln, fp16)
-
+    print("model :", model)
     return model
 
 

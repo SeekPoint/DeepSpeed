@@ -31,6 +31,7 @@ class OnDevice(object):
     _orig_torch_full = torch.full
 
     def __init__(self, dtype, device="meta", enabled=True):
+        print('OnDevice init')
         self.dtype = dtype
         self.enabled = enabled
         self.device = device

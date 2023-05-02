@@ -15,6 +15,7 @@ class compression_scheduler():
     '''
 
     def __init__(self, model, compression_config):
+        print('compression_scheduler init')
         self.model = model
         self.compression_config = compression_config
         self.make_init()

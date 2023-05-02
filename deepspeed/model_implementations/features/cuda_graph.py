@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 class CUDAGraph(ABC):
 
     def __init__(self, enable_cuda_graph=False):
+        print('CUDAGraph init')
         super().__init__()
         self.enable_cuda_graph = enable_cuda_graph
 

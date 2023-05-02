@@ -15,6 +15,7 @@ from ..constants import *
 class BaseScheduler(object):
 
     def __init__(self):
+        print('BaseScheduler init')
         self.state = {}
 
     def __fixed_root_get_value(self, global_steps, root_degree=None):

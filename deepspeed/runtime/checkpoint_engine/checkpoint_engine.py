@@ -10,6 +10,7 @@ class CheckpointEngine(object):
 
     # init checkpoint engine for save/load
     def __init__(self, config_params=None):
+        print('CheckpointEngine init')
         pass
 
     def create(self, tag):

@@ -107,6 +107,7 @@ def _fwd_kernel(
 class triton_flash_attn(torch.nn.Module):
 
     def __init__(self, ):
+        print('triton_flash_attn init')
         super(triton_flash_attn, self).__init__()
 
     def forward(self, q, k, v, sm_scale, block_128=True):

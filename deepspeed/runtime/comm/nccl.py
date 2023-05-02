@@ -15,6 +15,7 @@ from deepspeed.accelerator import get_accelerator
 class NcclBackend(object):
 
     def __init__(self, mpu=None):
+        print('NcclBackend init')
         if mpu is None:
             self.world_group = dist.new_group(ranks=range(dist.get_world_size()))
         else:

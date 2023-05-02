@@ -16,6 +16,7 @@ supported_models = {None}
 class DS_BloomContainer(MetaTensorContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        print('DS_BloomContainer init')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
@@ -71,6 +72,7 @@ class BLOOMLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
 
     def __init__(self, client_module, inference=True, use_load_prefix=True, split_qkv=False):
+        print('BLOOMLayerPolicy init')
         super().__init__(inference, linear_layer=True, use_load_prefix=use_load_prefix, split_qkv=split_qkv)
         self.client_module = client_module
         try:

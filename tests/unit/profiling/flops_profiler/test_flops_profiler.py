@@ -25,6 +25,7 @@ TOLERANCE = 0.05
 class LeNet5(torch.nn.Module):
 
     def __init__(self, n_classes):
+        print(' init')
         super(LeNet5, self).__init__()
 
         self.feature_extractor = torch.nn.Sequential(

@@ -38,5 +38,5 @@ def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_gr
             # Indices for params in this partition/GPU
             index_in_param_group += 1
         current_offset += lp_param.numel()
-
+    print('param_and_offset_list :', param_and_offset_list)
     return param_and_offset_list

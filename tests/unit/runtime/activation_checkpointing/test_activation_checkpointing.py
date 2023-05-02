@@ -151,6 +151,7 @@ class LinearNonTensorInput(torch.nn.Linear):
 class LinearNonTensorOutput(torch.nn.Linear):
 
     def __init__(self, non_tensor_output):
+        print(' init')
         super().__init__(HIDDEN_DIM, HIDDEN_DIM)
         self.non_tensor_output = non_tensor_output
 

@@ -10,6 +10,7 @@ import copy
 class Experts(torch.nn.Module):
 
     def __init__(self, expert, num_local_experts=1, expert_group_name=None):
+        print('Experts init')
         super(Experts, self).__init__()
 
         self.deepspeed_experts = torch.nn.ModuleList([copy.deepcopy(expert) for i in range(num_local_experts)])

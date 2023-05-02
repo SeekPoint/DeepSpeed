@@ -104,7 +104,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                  gradient_accumulation_steps=1,
                  elastic_checkpoint=False,
                  aio_config=None):
-
+        print('DeepSpeedZeroOptimizer_Stage3 init')
         see_memory_usage("Stage 3 initialize beginning", force=True)
 
         print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)

@@ -26,6 +26,7 @@ class QuantAct(nn.Module):
     """
 
     def __init__(self, act_range_momentum=0.95, quant_mode='symmetric'):
+        print('QuantAct init')
         super(QuantAct, self).__init__()
 
         self.act_range_momentum = act_range_momentum
@@ -65,6 +66,7 @@ class QuantAct(nn.Module):
 class Embedding_Compress(nn.Embedding):
 
     def __init__(self, *kargs):
+        print('Embedding_Compress init')
         super(Embedding_Compress, self).__init__(*kargs)
         self.weight.start_bits = None
         self.weight.target_bits = None
@@ -124,6 +126,7 @@ class LinearLayer_Compress(nn.Linear):
     """
 
     def __init__(self, *kargs, bias=True):
+        print('LinearLayer_Compress init')
         super(LinearLayer_Compress, self).__init__(*kargs, bias=bias)
         self.sparse_pruning_method = None
         self.row_pruning_method = None
@@ -407,6 +410,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
     """
 
     def __init__(self, *kargs):
+        print('Conv2dLayer_Compress init')
         super(Conv2dLayer_Compress, self).__init__(*kargs)
         self.sparse_pruning_method = None
         self.channel_pruning_method = None
@@ -767,6 +771,7 @@ def gather_from_model_parallel_region(input_):
 class ColumnParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, gather_output=True, skip_bias_add=False):
+        print('ColumnParallelLinear_Compress init')
         # Keep input parameters
         global g_mpu
         g_mpu = mpu
@@ -802,6 +807,7 @@ class ColumnParallelLinear_Compress(LinearLayer_Compress):
 class RowParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, input_is_parallel=False, skip_bias_add=False):
+        print('RowParallelLinear_Compress init')
         # Keep input parameters
         global g_mpu
         g_mpu = mpu

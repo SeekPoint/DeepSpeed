@@ -10,6 +10,7 @@ from ...model_implementations.diffusers.vae import DSVAE
 class VAEPolicy(DSPolicy):
 
     def __init__(self):
+        print('VAEPolicy init')
         super().__init__()
         try:
             import diffusers

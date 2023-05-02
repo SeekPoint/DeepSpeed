@@ -46,6 +46,7 @@ class TorchBackend(Backend):
     """
 
     def __init__(self, backend, timeout, init_method, rank=-1, world_size=-1, name='torch'):
+        print('TorchBackend init')
         super(TorchBackend, self).__init__()
         self.has_all_reduce_coalesced = has_all_reduce_coalesced()
         self.has_coalescing_manager = has_coalescing_manager()

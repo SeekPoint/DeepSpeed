@@ -29,6 +29,7 @@ from .csv_monitor import csvMonitor
 class MonitorMaster(Monitor):
 
     def __init__(self, monitor_config):
+        print('MonitorMaster init')
         super().__init__(monitor_config)
         self.tb_monitor = None
         self.wandb_monitor = None

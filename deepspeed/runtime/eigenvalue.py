@@ -20,6 +20,7 @@ class Eigenvalue(object):
                  layer_name='',
                  layer_num=0):
         super().__init__()
+        print('Eigenvalue init')
 
         self.verbose = verbose
         self.max_iter = max_iter

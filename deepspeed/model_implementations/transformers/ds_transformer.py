@@ -41,6 +41,7 @@ class DeepSpeedTransformerInference(nn.Module):
                  quantize_groups=1,
                  merge_count=1,
                  mlp_extra_grouping=False):
+        print('DeepSpeedTransformerInference init')
         super(DeepSpeedTransformerInference, self).__init__()
 
         self.config = config

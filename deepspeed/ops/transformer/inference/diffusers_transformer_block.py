@@ -34,6 +34,7 @@ def load_spatial_module():
 class DeepSpeedDiffusersTransformerBlock(nn.Module):
 
     def __init__(self, equivalent_module: nn.Module, config: Diffusers2DTransformerConfig):
+        print('DeepSpeedDiffusersTransformerBlock init')
         super(DeepSpeedDiffusersTransformerBlock, self).__init__()
         self.quantizer = module_inject.GroupQuantizer(q_int8=config.int8_quantization)
         # Ensure ops are built by the time we start running

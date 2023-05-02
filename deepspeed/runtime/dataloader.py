@@ -23,6 +23,7 @@ class RepeatingLoader:
         Args:
             loader (iterator): The data loader to repeat.
         """
+        print('RepeatingLoader init')
         self.loader = loader
         self.data_iter = iter(self.loader)
 

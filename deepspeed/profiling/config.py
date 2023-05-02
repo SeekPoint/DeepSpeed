@@ -10,6 +10,7 @@ from deepspeed.profiling.constants import *
 class DeepSpeedFlopsProfilerConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
+        print('DeepSpeedFlopsProfilerConfig init')
         super(DeepSpeedFlopsProfilerConfig, self).__init__()
 
         self.enabled = None

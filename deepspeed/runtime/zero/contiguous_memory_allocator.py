@@ -16,6 +16,7 @@ def print_rank_0(message):
 class ContiguousMemoryAllocator(object):
 
     def __init__(self, size, dtype, device):
+        print('ContiguousMemoryAllocator init')
         self.buffer = torch.zeros(size, dtype=dtype, device=device)
 
         #address to contiguous size available

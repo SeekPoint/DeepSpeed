@@ -18,6 +18,7 @@ class ProgressiveLayerDrop(object):
     """
 
     def __init__(self, theta=0.5, gamma=0.001):
+        print('ProgressiveLayerDrop init')
         super().__init__()
 
         self.theta = theta

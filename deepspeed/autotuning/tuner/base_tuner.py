@@ -13,6 +13,7 @@ from deepspeed.utils import logger
 class BaseTuner:
 
     def __init__(self, exps, resource_manager, metric):
+        print('BaseTuner init')
         self.all_exps = exps
         self.rm = resource_manager
         self.best_iter = 0

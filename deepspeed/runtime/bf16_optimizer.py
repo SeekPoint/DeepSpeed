@@ -38,6 +38,7 @@ class BF16_Optimizer(ZeROOptimizer):
                  allgather_bucket_size=5000000000,
                  dp_process_group=None,
                  timers=None):
+        print('BF16_Optimizer init')
         super().__init__()
         see_memory_usage('begin bf16_optimizer', force=True)
         self.timers = timers

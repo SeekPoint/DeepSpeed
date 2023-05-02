@@ -14,6 +14,7 @@ from .op_binding import MLPGemmOp, VectorMatMulOp, GELUGemmOp, ResidualAddOp
 class DeepSpeedMLP(nn.Module):
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, mlp_extra_grouping=False):
+        print('DeepSpeedMLP init')
         super(DeepSpeedMLP, self).__init__()
 
         self.config = config

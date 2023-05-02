@@ -12,9 +12,11 @@ class CPUAdamBuilder(TorchCPUOpBuilder):
     NAME = "cpu_adam"
 
     def __init__(self):
+        print("CPUAdamBuilder init")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
+        print(f'deepspeed.ops.adam.{self.NAME}_op')
         return f'deepspeed.ops.adam.{self.NAME}_op'
 
     def sources(self):
@@ -31,6 +33,7 @@ class CPUAdamBuilder(TorchCPUOpBuilder):
         if not self.is_rocm_pytorch():
             args += ['curand']
 
+        print("CPUAdamBuilder args:", args)
         return args
 
     def include_paths(self):

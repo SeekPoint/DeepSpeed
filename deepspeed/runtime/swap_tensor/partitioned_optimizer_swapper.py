@@ -28,6 +28,7 @@ SWAP_IN_GRADIENT_TIMER = 'swap_in_gradient'
 class PartitionedOptimizerSwapper(OptimizerSwapper):
 
     def __init__(self, swap_config, aio_config, base_folder, optimizer, largest_numel, device, dtype, timers):
+        print('PartitionedOptimizerSwapper init')
         super(PartitionedOptimizerSwapper, self).__init__(swap_config, aio_config, base_folder, optimizer,
                                                           largest_numel, device, dtype, timers)
 

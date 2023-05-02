@@ -66,6 +66,7 @@ class DeepSpeedCPUAdam(torch.optim.Optimizer):
             full_precision_optimizer_states: creates momementum and variance in full precision regardless of
                         the precision of the parameters (default: True)
         """
+        print('DeepSpeedCPUAdam init')
 
         default_args = dict(lr=lr,
                             betas=betas,

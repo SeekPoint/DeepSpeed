@@ -11,6 +11,7 @@ from .base import BaseOp
 class VectorMatMulOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('VectorMatMulOp init')
         super(VectorMatMulOp, self).__init__(config)
         if self.config.fp16:
             self.vector_matmul_func = self.inference_cuda_module.vector_matmul_fp16

@@ -11,6 +11,7 @@ from .base import BaseOp
 class GELUGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('GELUGemmOp init')
         super(GELUGemmOp, self).__init__(config)
         if self.config.fp16:
             self.fused_gemm_gelu = self.inference_cuda_module.fused_gemm_gelu_fp16

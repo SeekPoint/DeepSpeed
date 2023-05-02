@@ -16,6 +16,7 @@ class SparseAttnBuilder(OpBuilder):
     NAME = "sparse_attn"
 
     def __init__(self):
+        print("SparseAttnBuilder init")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):

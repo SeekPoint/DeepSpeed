@@ -17,6 +17,7 @@ class RandomLayerTokenDrop(Module):
     """
 
     def __init__(self, layer: Module):
+        print('RandomLayerTokenDrop init')
         super(RandomLayerTokenDrop, self).__init__()
         self.random_ltd_layer = layer
         self.reserved_length = None  #config['max_value']

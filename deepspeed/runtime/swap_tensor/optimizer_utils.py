@@ -20,6 +20,7 @@ from deepspeed.runtime.swap_tensor.utils import SwapBufferManager, SwapBufferPoo
 class FlattenedTensorSwapInfo(object):
 
     def __init__(self, path, length, offset):
+        print('FlattenedTensorSwapInfo init')
         self.path = path
         self.offset = offset
         self.length = length
@@ -28,6 +29,7 @@ class FlattenedTensorSwapInfo(object):
 class OptimizerStateSwapInfo(object):
 
     def __init__(self, parameter, numel, base_folder):
+        print('OptimizerStateSwapInfo init')
         self.tensors = []
         self.param_id = id(parameter)
         self.swap_folder = base_folder

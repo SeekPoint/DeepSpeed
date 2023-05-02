@@ -59,6 +59,7 @@ class TransformerPolicy(DSPolicy):
             use_load_prefix=False,
             # whether or not the qkv is stored in the split-format
             split_qkv=True):
+        print('TransformerPolicy init')
         super().__init__()
         self.cuda_graph_supported = False
         self.inference = inference

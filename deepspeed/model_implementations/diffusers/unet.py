@@ -10,6 +10,7 @@ from ..features.cuda_graph import CUDAGraph
 class DSUNet(CUDAGraph, torch.nn.Module):
 
     def __init__(self, unet, enable_cuda_graph=True):
+        print('DSUNet init')
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         self.unet = unet
         # SD pipeline accesses this attribute

@@ -11,6 +11,7 @@ from .base import BaseOp
 class LinearOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
+        print('LinearOp init')
         super(LinearOp, self).__init__(config)
         if self.config.fp16:
             self.linear_func = self.inference_cuda_module.linear_layer_fp16

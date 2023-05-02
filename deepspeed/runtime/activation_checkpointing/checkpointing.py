@@ -128,6 +128,7 @@ class CudaRNGStatesTracker:
     """
 
     def __init__(self):
+        print('CudaRNGStatesTracker init')
         # Map from a string name to the cuda rng state.
         self.states_ = {}
         # Seeds are just for book keeping and ensure no seed is set twice.

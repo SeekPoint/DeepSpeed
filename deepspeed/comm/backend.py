@@ -25,6 +25,7 @@ In the future, directly use NCCL/MPI/Gloo/etc without requiring torch.distribute
 class Backend(object):
 
     def __init__(self, name='backend', rank=0, size=1):
+        print('Backend init')
         self.name = name
         # The world size and rank of the world process group
         self.world_group = None

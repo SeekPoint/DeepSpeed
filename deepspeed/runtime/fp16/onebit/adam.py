@@ -57,6 +57,8 @@ class OnebitAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
+        print('OnebitAdam init')
+
         if amsgrad:
             raise RuntimeError('1-bit Adam does not support the AMSGrad variant.')
 

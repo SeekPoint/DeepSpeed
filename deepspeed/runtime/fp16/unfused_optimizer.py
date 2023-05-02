@@ -37,6 +37,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                  mpu=None,
                  clip_grad=0.0,
                  fused_lamb_legacy=False):
+        print('FP16_UnfusedOptimizer init')
 
         self.fused_lamb_legacy = fused_lamb_legacy
         self._global_grad_norm = 0.

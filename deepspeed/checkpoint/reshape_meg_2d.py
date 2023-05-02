@@ -9,6 +9,7 @@ from .reshape_utils import partition_data
 class meg_2d_parallel_map(object):
 
     def __init__(self, pp_degree, tp_degree):
+        print('meg_2d_parallel_map init')
         self.pp_degree = pp_degree
         self.tp_degree = tp_degree
         self.map = {}
