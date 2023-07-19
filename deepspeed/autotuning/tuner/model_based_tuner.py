@@ -18,11 +18,10 @@ INIT_NUM = 2
 
 class ModelBasedTuner(BaseTuner):
     """Exploring the search space with a cost model"""
-
     def __init__(self, exps: list, resource_manager, metric, tuning_sapce):
         print('ModelBasedTuner init')
         super().__init__(exps, resource_manager, metric)
-        self.tuning_space = tuning_sapce
+        self.tuning_space = tuning_space
         self.best_iter = 0
 
         self.all_configs = [e['ds_config'] for e in exps]
@@ -155,4 +154,4 @@ class ModelBasedTuner(BaseTuner):
 
         self.trials = estimated_top_configs
         self.trial_pt = 0
-        self.train_ct += 1
+        self.train_ct += 1*

@@ -8,6 +8,7 @@ import os
 from deepspeed import comm as dist
 from packaging import version as pkg_version
 from collections import OrderedDict
+from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
 from deepspeed.runtime import ZeROOptimizer
 from deepspeed.runtime.fp16.loss_scaler import CreateLossScaler
@@ -23,7 +24,6 @@ from deepspeed.git_version_info import version
 
 from deepspeed.runtime.constants import PIPE_REPLICATED
 from deepspeed.accelerator import get_accelerator
-from deepspeed.ops.op_builder import UtilsBuilder
 
 from deepspeed.checkpoint.constants import (DS_VERSION, GROUP_PADDINGS, PARTITION_COUNT,
                                             SINGLE_PARTITION_OF_FP32_GROUPS, BASE_OPTIMIZER_STATE, CLIP_GRAD,
@@ -150,10 +150,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             raise SystemError("Cannot use fp16 without accelerator.")
         self.optimizer = init_optimizer
 
-        # Load pre-built or JIT compile (un)flatten ops
-        util_ops = UtilsBuilder().load()
-        self.flatten = util_ops.flatten
-        self.unflatten = util_ops.unflatten
+        # Use torch (un)flatten ops
+        self.flatten = _flatten_dense_tensors
+        self.unflatten = _unflatten_dense_tensors
 
         # ZeRO stage 1 (False) or 2 (True)
         self.partition_gradients = partition_grads
@@ -481,6 +480,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                                             dynamic_loss_args=dynamic_loss_args)
         self.dynamic_loss_scale = self.loss_scaler.dynamic
 
+        if self.dtype != torch.float16:
+            # Only fp16 should use dynamic loss scaling
+            assert self.loss_scaler.cur_scale == 1.0
+            assert not self.dynamic_loss_scale
+
         see_memory_usage("Before initializing optimizer states", force=True)
         self.initialize_optimizer_states()
         see_memory_usage("After initializing optimizer states", force=True)
@@ -611,7 +615,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             self.single_partition_of_fp32_groups[i].grad = get_accelerator().pin_memory(
                 single_grad_partition) if self.cpu_offload else single_grad_partition
 
-        self.optimizer.step()
+        # Initialize the optimizer states with the flattened fp32 partition.
+        # State initialization for the Adagrad optimizer occurs at construction as opposed to other optimizers
+        # which do lazy initialization of the state at the first call to step.
+        if isinstance(self.optimizer, torch.optim.Adagrad):
+            self.optimizer = torch.optim.Adagrad(self.single_partition_of_fp32_groups, **self.optimizer.defaults)
+        else:
+            self.optimizer.step()
 
         if not self.cpu_offload:
             for group in self.single_partition_of_fp32_groups:
@@ -763,7 +773,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             param_size = param.numel()
             param_id = self.get_param_id(param)
 
-            if (current_index >= start_index and current_index < end_index):
+            if start_index <= current_index < end_index:
                 set_key_value_list(self.param_to_partition_ids[i], param_id, partition_id)
                 increment_value(self.total_grads_in_partition[i], partition_id)
 
@@ -772,7 +782,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 self.grad_partition_insertion_offset[i][partition_id][param_id] = current_index - start_index
                 self.grad_start_offset[i][partition_id][param_id] = 0
 
-            elif start_index > current_index and start_index < (current_index + param_size):
+            elif current_index < start_index < (current_index + param_size):
                 assert (first_offset == 0
                         ), "This can happen either zero or only once as this must be the first tensor in the partition"
                 first_offset = start_index - current_index
@@ -910,7 +920,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             rank_and_offsets = []
             real_dp_process_group = []
             curr_size = 0
-            prev_id = -1
+            prev_id, prev_process_group = -1, None
 
             process_group = self.dp_process_group
             # count = 0
@@ -953,14 +963,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                         numel = partition_ids_w_offsets[idx + 1][1] - offset
 
                     # Merge bucket ranges if they belong to the same rank
-                    if partition_id == prev_id:
+                    if partition_id == prev_id and process_group == prev_process_group:
                         prev_pid, prev_size, prev_numel = rank_and_offsets[-1]
                         rank_and_offsets[-1] = (prev_pid, prev_size, prev_numel + numel)
                     else:
                         rank_and_offsets.append((partition_id, curr_size, numel))
                         real_dp_process_group.append(process_group)
                     curr_size += numel
-                    prev_id = partition_id
+                    prev_id, prev_process_group = partition_id, process_group
 
             if not self.ipg_bucket_has_moe_params:
                 tensor.div_(dist.get_world_size(group=self.dp_process_group))
@@ -1425,10 +1435,10 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
             tensor_size = tensor.numel()
 
-            if (current_index >= start_index and current_index < end_index):
+            if start_index <= current_index < end_index:
                 params_in_partition.append(tensor)
 
-            elif start_index > current_index and start_index < (current_index + tensor_size):
+            elif current_index < start_index < (current_index + tensor_size):
                 params_in_partition.append(tensor)
 
                 assert (first_offset == 0
@@ -1624,7 +1634,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     def _optimizer_step(self, group_no):
         original_param_groups = self.optimizer.param_groups
         self.optimizer.param_groups = [original_param_groups[group_no]]
-        # Disabling this as the C++ side copy & synchornize is not working correctly
+        # Disabling this as the C++ side copy & synchronize is not working correctly
         #from deepspeed.ops.adam import DeepSpeedCPUAdam
         #if type(self.optimizer) == DeepSpeedCPUAdam and self.dtype == torch.half:
         #    self.optimizer.step(fp16_param_groups=[self.get_bit16_param_group(group_no)])
@@ -1664,12 +1674,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             self.stop_timers(timer_names)
             return
 
-        # Step 1:- Calculate gradient norm using fp-16 grads
-        if self.dtype == torch.float16:
-            see_memory_usage('Before norm calculation')
-            scaled_global_grad_norm = self.scaled_global_norm()
-            self._global_grad_norm = scaled_global_grad_norm / prev_scale
-            see_memory_usage('After norm before optimizer')
+        # Step 1:- Calculate gradient norm using bit-16 grads
+        see_memory_usage('Before norm calculation')
+        scaled_global_grad_norm = self.scaled_global_norm()
+        self._global_grad_norm = scaled_global_grad_norm / prev_scale
+        see_memory_usage('After norm before optimizer')
 
         # Step 2:- run optimizer and upscaling simultaneously
         for i, group in enumerate(self.bit16_groups):
@@ -1677,8 +1686,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
             if self.cpu_offload:
                 single_grad_partition = self.single_partition_of_fp32_groups[i].grad
-                if self.dtype == torch.float16:
-                    self.unscale_and_clip_grads([single_grad_partition], scaled_global_grad_norm)
+                self.unscale_and_clip_grads([single_grad_partition], scaled_global_grad_norm)
 
                 self.stop_timers([OPTIMIZER_GRADIENTS])
                 self.start_timers([OPTIMIZER_STEP])
@@ -1718,8 +1726,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
                 self.averaged_gradients[i] = None
 
-                if self.dtype == torch.float16:
-                    self.unscale_and_clip_grads([single_grad_partition], scaled_global_grad_norm)
+                self.unscale_and_clip_grads([single_grad_partition], scaled_global_grad_norm)
 
                 self.stop_timers([OPTIMIZER_GRADIENTS])
 
