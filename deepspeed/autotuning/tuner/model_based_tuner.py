@@ -154,4 +154,4 @@ class ModelBasedTuner(BaseTuner):
 
         self.trials = estimated_top_configs
         self.trial_pt = 0
-        self.train_ct += 1*
+        self.train_ct += 1
