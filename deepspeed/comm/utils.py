@@ -6,10 +6,10 @@
 import os
 import inspect
 from deepspeed.utils import get_caller_func
-
+from pydebug import debuginfo
 
 def get_local_rank_from_launcher():
-
+    debuginfo(prj='ds')
     # DeepSpeed launcher will set it so get from there
     rank = os.environ.get('LOCAL_RANK')
 
@@ -24,6 +24,7 @@ def get_local_rank_from_launcher():
 
 
 def get_world_rank_from_launcher():
+    debuginfo(prj='ds')
 
     # DeepSpeed launcher will set it so get from there
     rank = os.environ.get('RANK')
@@ -39,6 +40,7 @@ def get_world_rank_from_launcher():
 
 
 def get_world_size_from_launcher():
+    debuginfo(prj='ds')
     # DeepSpeed launcher will set it so get from there
     size = os.environ.get('WORLD_SIZE')
     rank = os.environ.get('RANK')
@@ -57,12 +59,14 @@ def get_world_size_from_launcher():
 
 
 def get_default_args(func):
+    debuginfo(prj='ds')
     signature = inspect.signature(func)
     return {k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty}
 
 
 # We need this hacky function since torch doesn't consistently name or place the input tensor args
 def get_tensor_position(func):
+    debuginfo(prj='ds')
     sig_params = inspect.signature(func).parameters
     arg = None
     # most colls
@@ -84,6 +88,7 @@ def get_tensor_position(func):
 
 
 def get_tensor_kwarg(func, kwargs):
+    debuginfo(prj='ds')
     func_args = get_default_args(func)
     func_args.update(kwargs)
     arg = None
@@ -104,6 +109,7 @@ def get_msg_size_from_args(func, *args, **kwargs):
     #   - tensor arg is in args
     #   - tensor arg is in kwargs
     #   - tensor arg is not present (e.g. barrier)
+    debuginfo(prj='ds')
     tensor_arg_position = -1
     tensor_arg = None
     # check if tensor arg is in args
@@ -127,6 +133,7 @@ def get_msg_size_from_args(func, *args, **kwargs):
 
 
 def get_debug_log_name(func_args, debug):
+    debuginfo(prj='ds')
     if debug:
         return func_args['log_name'] + ' | [Caller Func: ' + get_caller_func() + ']'
     else:

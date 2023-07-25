@@ -4,3 +4,5 @@
 # DeepSpeed Team
 
 from ..op_builder import AsyncIOBuilder
+from pydebug import debuginfo
+debuginfo(prj='ds')

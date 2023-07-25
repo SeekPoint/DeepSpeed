@@ -8,7 +8,7 @@ from cpuinfo import get_cpu_info
 from deepspeed.utils import logger
 from deepspeed.utils.logging import should_log_le
 from deepspeed.ops.op_builder import CPUAdamBuilder
-
+from pydebug import debuginfo
 
 class DeepSpeedCPUAdam(torch.optim.Optimizer):
     optimizer_id = 0
@@ -23,6 +23,7 @@ class DeepSpeedCPUAdam(torch.optim.Optimizer):
                  amsgrad=False,
                  adamw_mode=True,
                  fp32_optimizer_states=True):
+        debuginfo(prj='ds')
         """Fast vectorized implementation of two variations of Adam optimizer on CPU:
 
         * Adam: A Method for Stochastic Optimization: (https://arxiv.org/abs/1412.6980);
@@ -66,7 +67,7 @@ class DeepSpeedCPUAdam(torch.optim.Optimizer):
             full_precision_optimizer_states: creates momentum and variance in full precision regardless of
                         the precision of the parameters (default: True)
         """
-        print('DeepSpeedCPUAdam init')
+        debuginfo(prj='ds', info='DeepSpeedCPUAdam init')
 
         default_args = dict(lr=lr,
                             betas=betas,
@@ -98,17 +99,20 @@ class DeepSpeedCPUAdam(torch.optim.Optimizer):
                                      should_log_le("info"))
 
     def __del__(self):
+        debuginfo(prj='ds')
         # need to destroy the C++ object explicitly to avoid a memory leak when deepspeed.initialize
         # is used multiple times in the same process (notebook or pytest worker)
         self.ds_opt_adam.destroy_adam(self.opt_id)
 
     def __setstate__(self, state):
+        debuginfo(prj='ds')
         super(DeepSpeedCPUAdam, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
 
     @torch.no_grad()
     def step(self, closure=None, fp16_param_groups=None):
+        debuginfo(prj='ds')
         """Update the model parameters.
 
         .. note::
@@ -137,9 +141,12 @@ class DeepSpeedCPUAdam(torch.optim.Optimizer):
 
         # converting the fp16 params to a group of parameter
         if type(fp16_param_groups) is list:
+            debuginfo(prj='ds')
             if type(fp16_param_groups[0]) is not list:
+                debuginfo(prj='ds')
                 fp16_param_groups = [fp16_param_groups]
         elif fp16_param_groups is not None:
+            debuginfo(prj='ds')
             fp16_param_groups = [[fp16_param_groups]]
 
         for group_id, group in enumerate(self.param_groups):

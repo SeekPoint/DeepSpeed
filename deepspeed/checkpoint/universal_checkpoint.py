@@ -7,9 +7,10 @@ import os
 import torch
 import types
 from .constants import (FP32_WEIGHT_KEY, PARAM, VOCAB_DIVISIBILITY_PADDING_TENSOR, CAT_DIM)
-
+from pydebug import debuginfo
 
 def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
+    debuginfo(prj='ds')
     hp_mapping = self._hp_mapping
     optim_state_keys = hp_mapping.get_optim_state_keys()
     hp_keys = [FP32_WEIGHT_KEY] + optim_state_keys
@@ -91,5 +92,6 @@ def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
 
 
 def enable_universal_checkpoint(param_list):
+    debuginfo(prj='ds')
     for param in param_list:
         param.load_hp_checkpoint_state = types.MethodType(load_hp_checkpoint_state, param)

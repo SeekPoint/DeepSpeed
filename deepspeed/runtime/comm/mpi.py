@@ -10,12 +10,12 @@ import numpy as np
 from mpi4py import MPI
 
 from deepspeed.runtime.compression.cupy import CupyBackend
-
+from pydebug import debuginfo
 
 class MpiBackend(object):
 
     def __init__(self, cuda_aware):
-        print('MpiBackend init')
+        debuginfo(prj='ds', info='MpiBackend init')
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
@@ -25,17 +25,20 @@ class MpiBackend(object):
     def my_igather(self, rank, size, comm, sendbuf, recbuf, root):
         req = []
         if rank == root:
+            debuginfo(prj='ds')
             for idx in range(size):
                 if idx != rank:
                     req.append(comm.Irecv(recbuf[idx], source=idx))
                 else:
                     recbuf[rank] = sendbuf
         else:
+            debuginfo(prj='ds')
             req.append(comm.Isend(sendbuf, dest=root))
         return req
 
     def gather_cuda(self, rank, world_size, comm, cupy_sign_list_packed, cupy_recvbuf_sign, cupy_worker_scale,
                     cupy_recvbuf_scale):
+        debuginfo(prj='ds')
         # We do in-place operations on cupy buffers so we do not return any buffers
         requests = []
         for idx in range(world_size):
@@ -50,6 +53,7 @@ class MpiBackend(object):
 
     def gather_host(self, rank, world_size, comm, cupy_sign_list_packed, cupy_recvbuf_sign, cupy_worker_scale,
                     cupy_recvbuf_scale):
+        debuginfo(prj='ds')
 
         # In-place operations are not possible for newly created cupy arrays
         # so we need to return the new buffers
@@ -99,11 +103,13 @@ class MpiBackend(object):
 
     def allgather_cuda(self, comm, cupy_server_sign_packed, cupy_recvbuf_sign_server, cupy_server_scale,
                        cupy_recvbuf_scale_server):
+        debuginfo(prj='ds')
         comm.Allgather(cupy_server_sign_packed, cupy_recvbuf_sign_server)
         comm.Allgather(cupy_server_scale, cupy_recvbuf_scale_server)
 
     def allgather_host(self, comm, cupy_server_sign_packed, cupy_recvbuf_sign_server, cupy_server_scale,
                        cupy_recvbuf_scale_server):
+        debuginfo(prj='ds')
 
         # 1. Convert cupy to numpy
         numpy_recvbuf_sign_server = np.zeros([comm.Get_size(), cupy_server_sign_packed.size],
@@ -135,12 +141,14 @@ class MpiBackend(object):
         all_start_time = time.time()
         original_shape = buffer_m.size()
         if len(original_shape) > 1:
+            debuginfo(prj='ds')
             buffer_m = torch.flatten(buffer_m)
         original_size = buffer_m.numel()
         worker_error_size = worker_error.numel()
         cupy.cuda.Device(local_rank).use()
 
         if original_size != worker_error_size:
+            debuginfo(prj='ds')
             empty_tensor = torch.zeros(worker_error_size - original_size, device=buffer_m.device)
             buffer_m = torch.cat([buffer_m, empty_tensor])
 
@@ -159,9 +167,11 @@ class MpiBackend(object):
         # Communication Phase 1
         gather_start = time.time()
         if self.cuda_aware:
+            debuginfo(prj='ds')
             self.gather_cuda(self.rank, self.size, self.comm, cupy_sign_list_packed, cupy_recvbuf_sign,
                              cupy_worker_scale, cupy_recvbuf_scale)
         else:
+            debuginfo(prj='ds')
             _, cupy_recvbuf_sign, _, cupy_recvbuf_scale = self.gather_host(self.rank, self.size, self.comm,
                                                                            cupy_sign_list_packed, cupy_recvbuf_sign,
                                                                            cupy_worker_scale, cupy_recvbuf_scale)
@@ -192,9 +202,11 @@ class MpiBackend(object):
 
         # Communication Phase 2
         if self.cuda_aware:
+            debuginfo(prj='ds')
             self.allgather_cuda(self.comm, cupy_server_sign_packed[0], cupy_recvbuf_sign_server, cupy_server_scale,
                                 cupy_recvbuf_scale_server)
         else:
+            debuginfo(prj='ds')
             _, cupy_recvbuf_sign_server, _, cupy_recvbuf_scale_server = self.allgather_host(
                 self.comm, cupy_server_sign_packed[0], cupy_recvbuf_sign_server, cupy_server_scale,
                 cupy_recvbuf_scale_server)
@@ -207,8 +219,10 @@ class MpiBackend(object):
                 self.size, -1)).float().add_(-0.5).mul_(2.0).mul_(
                     self.compression_backend.cupy2torch(cupy_recvbuf_scale_server)).flatten().data)
         if original_size != worker_error_size:
+            debuginfo(prj='ds')
             buffer_m = buffer_m[0:original_size]
         if len(original_shape) > 1:
+            debuginfo(prj='ds')
             buffer_m = buffer_m.reshape(original_shape)
 
         # cupy_recvbuf_sign_server, cupy_recvbuf_scale_server = None, None

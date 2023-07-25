@@ -12,9 +12,10 @@ import itertools
 import copy
 
 from ..utils import logger
-
+from pydebug import debuginfo
 
 def search_error(filename):
+    debuginfo(prj='ds', info=f'filename:{filename}')
     if not os.path.exists(filename):
         return "stderr.log does not exist"
     with open(filename) as f:
@@ -27,6 +28,7 @@ def search_error(filename):
 
 
 def was_interruptted(filename):
+    debuginfo(prj='ds', info=f'filename:{filename}')
     if not os.path.exists(filename):
         return "stderr.log does not exist"
     with open(filename) as f:
@@ -39,6 +41,7 @@ def was_interruptted(filename):
 
 
 def find_replace_str(value, replace_dict):
+    debuginfo(prj='ds')
     if not isinstance(value, str):
         return str(value)
 

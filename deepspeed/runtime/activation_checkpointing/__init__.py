@@ -3,3 +3,5 @@
 
 # DeepSpeed Team
 '''Copyright The Microsoft DeepSpeed Team'''
+from pydebug import debuginfo
+debuginfo(prj='ds')

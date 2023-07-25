@@ -6,7 +6,7 @@
 from ..utils import call_to_str
 
 from abc import ABC, abstractmethod
-
+from pydebug import debuginfo
 
 class PipeSchedule(ABC):
     """Directs the execution of a pipeline engine by generating sequences of
@@ -47,7 +47,7 @@ class PipeSchedule(ABC):
     """
 
     def __init__(self, micro_batches, stages, stage_id):
-        print('PipeSchedule(ABC) init')
+        debuginfo(prj='ds', info='PipeSchedule(ABC) init')
         super().__init__()
         self.micro_batches = micro_batches
         self.stages = stages
@@ -68,6 +68,7 @@ class PipeSchedule(ABC):
         pass
 
     def num_pipe_buffers(self):
+        debuginfo(prj='ds')
         """The number of pipeline buffers that will be used by this stage.
 
         .. note::
@@ -79,9 +80,11 @@ class PipeSchedule(ABC):
         return self.micro_batches
 
     def _valid_micro_batch(self, micro_batch_id):
+        debuginfo(prj='ds')
         return 0 <= micro_batch_id < self.micro_batches
 
     def _valid_stage(self, stage_id):
+        debuginfo(prj='ds')
         return 0 <= stage_id < self.stages
 
     @property
@@ -138,6 +141,7 @@ class InferenceSchedule(PipeSchedule):
     """
 
     def steps(self):
+        debuginfo(prj='ds')
         """"""
         prev_micro_batch_id = -1
         total_steps = self.micro_batches + self.stages - 1
@@ -196,6 +200,7 @@ class TrainSchedule(PipeSchedule):
     """
 
     def steps(self):
+        debuginfo(prj='ds')
         """"""
         prev_micro_batch_id = -1
         total_steps = 2 * (self.micro_batches + self.stages - 1)
@@ -246,6 +251,7 @@ class TrainSchedule(PipeSchedule):
             yield cmds
 
     def num_pipe_buffers(self):
+        debuginfo(prj='ds')
         """Return the number of pipeline buffers required for this stage.
 
         This is equivalent to the maximum number of in-flight forward passes,
@@ -258,18 +264,22 @@ class TrainSchedule(PipeSchedule):
 
     def _step_to_micro_batch(self, step_id):
         if _is_even(step_id) and _is_even(self.stage_id):
+            debuginfo(prj='ds')
             micro_batch_id = self._even_step_forward_id(step_id)
             is_forward = True
 
         elif _is_odd(step_id) and _is_odd(self.stage_id):
+            debuginfo(prj='ds')
             micro_batch_id = self._odd_step_forward_id(step_id)
             is_forward = True
 
         elif _is_even(step_id) and _is_odd(self.stage_id):
+            debuginfo(prj='ds')
             micro_batch_id = self._even_step_backward_id(step_id)
             is_forward = False
 
         elif _is_odd(step_id) and _is_even(self.stage_id):
+            debuginfo(prj='ds')
             micro_batch_id = self._odd_step_backward_id(step_id)
             is_forward = False
 
@@ -279,21 +289,25 @@ class TrainSchedule(PipeSchedule):
         return micro_batch_id, is_forward
 
     def _even_step_forward_id(self, step_id):
+        debuginfo(prj='ds')
         base = step_id // 2
         micro_batch_id = int(base - self.stage_id // 2)
         return micro_batch_id
 
     def _odd_step_forward_id(self, step_id):
+        debuginfo(prj='ds')
         base = (step_id - 1) // 2
         micro_batch_id = int(base - self.stage_id // 2)
         return micro_batch_id
 
     def _even_step_backward_id(self, step_id):
+        debuginfo(prj='ds')
         base = step_id // 2
         micro_batch_id = int(base - self.stages + (self.stage_id + 1) // 2)
         return micro_batch_id
 
     def _odd_step_backward_id(self, step_id):
+        debuginfo(prj='ds')
         base = ((step_id - 1) // 2) - self.stages + 1
         micro_batch_id = int(base + self.stage_id // 2)
         return micro_batch_id
@@ -305,6 +319,7 @@ class DataParallelSchedule(PipeSchedule):
     """
 
     def steps(self):
+        debuginfo(prj='ds')
         """"""
         for step_id in range(self.micro_batches):
             cmds = [
@@ -336,6 +351,7 @@ class PipeInstruction:
     """
 
     def __init__(self, **kwargs):
+        debuginfo(prj='ds')
         self.name = self.__class__.__name__
         self.kwargs = kwargs
         for key, val in kwargs.items():
@@ -381,6 +397,7 @@ class BufferOpInstruction(PipeInstruction):
     """
 
     def __init__(self, buffer_id, **kwargs):
+        debuginfo(prj='ds')
         super().__init__(buffer_id=buffer_id, **kwargs)
 
 

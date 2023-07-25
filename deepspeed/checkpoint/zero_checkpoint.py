@@ -12,12 +12,12 @@ from .reshape_utils import (basic_folder_validation, get_zero_files, merge_state
 from .reshape_3d_utils import (model_3d_desc, get_model_3d_descriptor)
 
 GROUP_STATE_KEY = 'state'
-
+from pydebug import debuginfo
 
 class ZeROCheckpoint(object):
 
     def __init__(self, dir):
-        print('ZeROCheckpoint init')
+        debuginfo(prj='ds', info='ZeROCheckpoint init')
         basic_folder_validation(dir)
         self.dir = dir
         self.file_list = get_zero_files(dir)
@@ -31,27 +31,34 @@ class ZeROCheckpoint(object):
         self._3d_file_map = self.src_3d.reshape(self.target_3d)
 
     def get_src_world_size(self):
+        debuginfo(prj='ds')
         return self.src_3d.world_size()
 
     def get_src_tp_degree(self):
+        debuginfo(prj='ds')
         return self.src_3d.tp_degree
 
     def get_src_pp_degree(self):
+        debuginfo(prj='ds')
         return self.src_3d.pp_degree
 
     def get_src_dp_degree(self):
+        debuginfo(prj='ds')
         return self.src_3d.dp_degree
 
     def get_file_indices_for_rank(self, pp_index, tp_index, dp_index):
+        debuginfo(prj='ds')
         assert dp_index < len(self._3d_file_map), f'DP index {dp_index} >= DP degree {len(self._3d_file_map)}'
         dp_2d_map = self._3d_file_map[dp_index]
         return dp_2d_map.get_data(pp_index, tp_index)
 
     def get_files_for_rank(self, pp_index, tp_index, dp_index):
+        debuginfo(prj='ds')
         file_idx_list = self.get_file_indices_for_rank(pp_index, tp_index, dp_index)
         return [self.file_list[idx] for idx in file_idx_list]
 
     def get_state_for_rank(self, pp_index, tp_index, dp_index, keys_to_ignore=[], strip_tensor_paddings=True):
+        debuginfo(prj='ds')
         state_file_list = self.get_files_for_rank(pp_index, tp_index, dp_index)
         merged_sd = None
         for state_file in state_file_list:
@@ -74,12 +81,14 @@ class ZeROCheckpoint(object):
         return merged_sd
 
     def print_3d_index_map(self, tag=None):
+        debuginfo(prj='ds')
         if tag:
             print(f'3D index map: {tag}')
         for dp_index, _2d_map in enumerate(self._3d_file_map):
             _2d_map.print_data(f'dp = {dp_index}')
 
     def print_3d_file_map(self, tag=None):
+        debuginfo(prj='ds')
         if tag:
             print(f'3D file map: {tag}')
         for dp_index, _2d_map in enumerate(self._3d_file_map):
@@ -90,10 +99,12 @@ class ZeROCheckpoint(object):
                     print(f'{pp_index}, {tp_index}, {dp_index} => {file_list}')
 
     def reshape(self, target_3d_desc: model_3d_desc):
+        debuginfo(prj='ds')
         self.target_3d = target_3d_desc
         self._3d_file_map = self.src_3d.reshape(self.target_3d)
 
     def _strip_tensor_paddings(self, sd):
+        debuginfo(prj='ds')
         param_group_states = self._get_param_group_states(sd)
         if param_group_states is None:
             return
@@ -111,12 +122,14 @@ class ZeROCheckpoint(object):
                     group_state[state_name] = torch.narrow(state_value, 0, 0, raw_length).clone()
 
     def _clear_group_paddings(self, sd):
+        debuginfo(prj='ds')
         group_paddings = self._get_optimizer_state(sd, GROUP_PADDINGS)
         if group_paddings:
             num_groups = len(group_paddings)
             sd[OPTIMIZER_STATE_DICT][GROUP_PADDINGS] = [0] * num_groups
 
     def _get_optimizer_state(self, sd, state_key):
+        debuginfo(prj='ds')
         optimizer_state = sd.get(OPTIMIZER_STATE_DICT, None)
         if optimizer_state is None:
             return None
@@ -124,6 +137,7 @@ class ZeROCheckpoint(object):
         return optimizer_state.get(state_key, None)
 
     def _get_param_group_states(self, sd):
+        debuginfo(prj='ds')
         optimizer_state = sd.get(OPTIMIZER_STATE_DICT, None)
         if optimizer_state is None:
             return None
@@ -135,6 +149,7 @@ class ZeROCheckpoint(object):
         return base_optimizer_state.get(GROUP_STATE_KEY, None)
 
     def _update_partition_count(self, sd):
+        debuginfo(prj='ds')
         partition_counts = self._get_optimizer_state(sd, PARTITION_COUNT)
         if partition_counts:
             num_groups = len(partition_counts)

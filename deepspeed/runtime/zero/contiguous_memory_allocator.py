@@ -6,7 +6,7 @@
 import torch
 
 from deepspeed import comm as dist
-
+from pydebug import debuginfo
 
 def print_rank_0(message):
     if dist.get_rank() == 0:
@@ -16,7 +16,7 @@ def print_rank_0(message):
 class ContiguousMemoryAllocator(object):
 
     def __init__(self, size, dtype, device):
-        print('ContiguousMemoryAllocator init')
+        debuginfo(prj='ds', info='ContiguousMemoryAllocator init')
         self.buffer = torch.zeros(size, dtype=dtype, device=device)
 
         #address to contiguous size available
@@ -50,6 +50,7 @@ class ContiguousMemoryAllocator(object):
     #if not enough free space will fail
     #if not enough contiguous space, will defragment and allocate
     def allocate_tensor(self, size):
+        debuginfo(prj='ds')
         free_before = self.total_free
 
         assert size <= self.total_free, "Not enough memory in buffer. Allocation failed"
@@ -82,6 +83,7 @@ class ContiguousMemoryAllocator(object):
     #any change the the underlying buffer from defragmentation will cause a
     #reassignment of the param data
     def assign_to_param(self, tensor, param, numel, shape):
+        debuginfo(prj='ds')
         tensor_id = id(tensor)
 
         assert tensor_id in self.tensor_map.keys(), "No such tensor allocated by the allocator."
@@ -96,6 +98,7 @@ class ContiguousMemoryAllocator(object):
 
     #deletes the tensor and frees up the underlying buffer
     def release_tensor(self, tensor):
+        debuginfo(prj='ds')
         free_before = self.total_free
         tensor_id = id(tensor)
         tensor_size = tensor.numel()
@@ -107,6 +110,7 @@ class ContiguousMemoryAllocator(object):
         assert self.total_free - tensor_size == free_before, "Release bookkeeping error"
 
     def release_tensor_with_id(self, tensor_id):
+        debuginfo(prj='ds')
         free_before = self.total_free
         assert tensor_id in self.tensor_map.keys(), "Invalid tensor id"
         tensor = self.tensor_map[tensor_id]
@@ -120,6 +124,7 @@ class ContiguousMemoryAllocator(object):
 
     #shows the current memory allocation at specified resolution
     def print_allocation(self, resolution=200):
+        debuginfo(prj='ds')
         total_size = self.buffer.numel() * 1.0
         empty = []
         for addr, size in self.contiguous_sizes.items():
@@ -137,15 +142,19 @@ class ContiguousMemoryAllocator(object):
     #to be called after defragmentation that moves the tensor buffers
     #this call reassigns the data of all the parameters using the tensor buffers
     def _reset_param_data(self):
+        debuginfo(prj='ds')
         for id, tensor in self.tensor_map.items():
             for param in self.id_to_params[id]:
                 param.data = tensor.narrow(0, 0, param.numel()).view(param.data.shape).data
 
     def _unassign_params(self, tensor_id):
+        debuginfo(prj='ds')
         if tensor_id in self.id_to_params.keys():
+            debuginfo(prj='ds')
             del self.id_to_params[tensor_id]
 
     def _release_tensor(self, tensor_id):
+        debuginfo(prj='ds')
         assert tensor_id in self.tensor_addresses, f"Tensor id {tensor_id} not found"
 
         address = self.tensor_addresses[tensor_id]
@@ -160,10 +169,12 @@ class ContiguousMemoryAllocator(object):
         self.largest_contiguous = self._largest_contiguous()
 
     def _consolidate_address(self, address, contiguous_size):
+        debuginfo(prj='ds')
 
         #consolidate next buffer
         end_address = address + contiguous_size
         if end_address in self.contiguous_sizes:
+            debuginfo(prj='ds')
             contiguous_size += self.contiguous_sizes[end_address]
             del self.contiguous_sizes[end_address]
 
@@ -178,6 +189,7 @@ class ContiguousMemoryAllocator(object):
         self.contiguous_sizes[address] = contiguous_size
 
     def _defragment_memory(self):
+        debuginfo(prj='ds')
         empty_addresses = sorted(self.contiguous_sizes.keys())
         tensor_addresses = sorted(self.tensor_addresses.values())
 
@@ -231,6 +243,7 @@ class ContiguousMemoryAllocator(object):
             empty_addresses = sorted(self.contiguous_sizes.keys())
 
     def _replace_old_address_with_new(self, tensor_id, new_address):
+        debuginfo(prj='ds')
 
         tensor = self.tensor_map[tensor_id]
         tensor_size = tensor.numel()
@@ -245,6 +258,7 @@ class ContiguousMemoryAllocator(object):
         self.tensor_sizes[new_address] = tensor_size
 
     def _get_new_tensor_address(self, size):
+        debuginfo(prj='ds')
         tensor_address = None
         for address, contiguous_size in self.contiguous_sizes.items():
             if contiguous_size >= size and \
@@ -255,6 +269,7 @@ class ContiguousMemoryAllocator(object):
         return tensor_address
 
     def _get_new_tensor(self, address, size):
+        debuginfo(prj='ds')
         available_contiguous_size = self.contiguous_sizes[address]
 
         assert size <= available_contiguous_size, \
@@ -274,15 +289,19 @@ class ContiguousMemoryAllocator(object):
 
     def _largest_contiguous(self):
         if len(self.contiguous_sizes) > 0:
+            debuginfo(prj='ds')
             return max([size for _, size in self.contiguous_sizes.items()])
         else:
+            debuginfo(prj='ds')
             return 0
 
     def _mark_as_occupied(self, address, size):
+        debuginfo(prj='ds')
         available_contiguous_size = self.contiguous_sizes[address]
         del self.contiguous_sizes[address]
 
         if available_contiguous_size != size:
+            debuginfo(prj='ds')
             self.contiguous_sizes[address + size] = available_contiguous_size - size
 
         self.largest_contiguous = self._largest_contiguous()

@@ -14,12 +14,12 @@ import numbers
 from ..constants import AUTOTUNING_METRIC_LATENCY
 
 INIT_NUM = 2
-
+from pydebug import debuginfo
 
 class ModelBasedTuner(BaseTuner):
     """Exploring the search space with a cost model"""
     def __init__(self, exps: list, resource_manager, metric, tuning_sapce):
-        print('ModelBasedTuner init')
+        debuginfo(prj='ds', info='ModelBasedTuner init')
         super().__init__(exps, resource_manager, metric)
         self.tuning_space = tuning_space
         self.best_iter = 0
@@ -60,6 +60,8 @@ class ModelBasedTuner(BaseTuner):
 
         configs = []
 
+        debuginfo(prj='ds')
+
         for c in self.all_configs:
             flattened_ds_config = flatten(c)
             feature_val = []
@@ -82,6 +84,7 @@ class ModelBasedTuner(BaseTuner):
 
     def next_batch(self, sample_size):
         sampled_batch = []
+        debuginfo(prj='ds')
 
         counter = 0
         while counter < sample_size:
@@ -114,9 +117,11 @@ class ModelBasedTuner(BaseTuner):
         return sampled_batch
 
     def has_next(self):
+        debuginfo(prj='ds')
         return len(self.visited) < self.num_all_configs
 
     def update(self):
+        debuginfo(prj='ds')
         for exp_id, (exp, err) in self.rm.finished_experiments.items():
             feature_val = []
             if err:

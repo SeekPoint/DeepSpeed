@@ -32,7 +32,7 @@ DEFAULT_SWEEP_CONFIG = {
 class Job(object):
 
     def __init__(self, cmd_line, output_file=None, work_dir=None):
-        print('Job init')
+        debuginfo(prj='ds', info='Job init')
         self.cmd_line = cmd_line
         self.output_file = output_file
         self.work_dir = work_dir
@@ -63,7 +63,7 @@ class Job(object):
 class SweepConfig(object):
 
     def __init__(self, args):
-        print('SweepConfig init')
+        debuginfo(prj='ds', info='SweepConfig init')
         self.nvme_dir = args.nvme_dir
         self.io_size = args.io_size
         self.search_space = get_sweep_config_dict(args.sweep_config)

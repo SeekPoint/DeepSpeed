@@ -12,7 +12,7 @@ import triton
 import triton.language as tl
 import triton._C.libtriton as libtriton
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 @triton.jit
 def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stride_hb, stride_kb, stride_nb, stride_zc,
@@ -29,6 +29,7 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
     pid1 = tl.program_id(1)
     pidz = tl.program_id(2)
     if meta['SDD']:
+        debuginfo(prj='ds')
         pid1 = pid1 + SDD_off_width
         blockidm = tl.arange(0, TM) // BLOCK
         blockidn = tl.arange(0, TN) // BLOCK
@@ -53,6 +54,7 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
         ram = i * BLOCK + (tl.arange(0, TM) % BLOCK)
         rbn = j * BLOCK + (tl.arange(0, TN) % BLOCK)
     else:
+        debuginfo(prj='ds')
         header = lut + pid0 * 6
         offset = tl.load(header + 0)
         AS1 = tl.load(header + 1)
@@ -63,6 +65,7 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
         pinc = lut + offset
         offhc = depth
         if meta['DSD']:
+            debuginfo(prj='ds')
             # output offset
             offnc = pid1 * TN
             offmc = column * TM
@@ -81,6 +84,7 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
             offha = 0
             offhb = depth
         else:
+            debuginfo(prj='ds')
             # output offset
             offmc = pid1 * TM
             offnc = column * TN
@@ -107,12 +111,16 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
     pa = A + pidz * stride_za + offha * stride_ha + offpa + ram[:, None] * stride_ma + rka[None, :] * stride_ka
     pb = B + pidz * stride_zb + offhb * stride_hb + offpb + rbn[None, :] * stride_nb + rkb[:, None] * stride_kb
     if meta['DDS']:
+        debuginfo(prj='ds')
         checkam = ram[:, None] < DS0
     else:
+        debuginfo(prj='ds')
         checkam = AS1 > 0
     if meta['DSD']:
+        debuginfo(prj='ds')
         checkbn = rbn[None, :] < DS0
     else:
+        debuginfo(prj='ds')
         checkbn = AS1 > 0
     a = tl.load(pa, mask=checkam, other=0.)
     b = tl.load(pb, mask=checkbn, other=0.)
@@ -152,6 +160,7 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
     c = acc.to(C.dtype.element_ty)
 
     if meta['SDD']:
+        debuginfo(prj='ds')
         checkc = True
         rr_blockidm = tl.arange(0, TM) // BLOCK
         rr_blockidn = tl.arange(0, TN) // BLOCK
@@ -163,27 +172,34 @@ def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stri
         rcm = tl.arange(0, TM) % BLOCK
         rcn = tl.arange(0, TN) % BLOCK
     else:
+        debuginfo(prj='ds')
         rcm = offmc + tl.arange(0, TM)
         rcn = offnc + tl.arange(0, TN)
     if meta['DSD']:
+        debuginfo(prj='ds')
         checkc = rcn[None, :] < DS0
     if meta['DDS']:
+        debuginfo(prj='ds')
         checkc = rcm[:, None] < DS0
 
     pc = C + offpc + offhc * stride_hc + pidz * stride_zc + rcm[:, None] * stride_mc + rcn[None, :] * stride_nc
     # write-back directly
     if lockid == 0:
+        debuginfo(prj='ds')
         tl.store(pc, c, mask=checkc)
     # accumulate partial results using spin-locks
     else:
+        debuginfo(prj='ds')
         plock = locks + tl.program_id(2) * nlocks * tl.num_programs(1) + tl.program_id(1) * nlocks + lockid - 1
         pcount = plock + tl.num_programs(2) * tl.num_programs(1) * nlocks
         while tl.atomic_cas(plock, 0, 1) == 1:
             pass
         count = tl.load(pcount)
         if count == 0:
+            debuginfo(prj='ds')
             tl.store(pc, c, mask=checkc)
         else:
+            debuginfo(prj='ds')
             d = tl.load(pc, mask=checkc)
             tl.store(pc, d + c, mask=checkc)
         tl.atomic_xchg(pcount, (count + 1) % maxid)
@@ -257,8 +273,10 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def get_locks(size, dev):
+        debuginfo(prj='ds')
         if dev not in _sparse_matmul.locks or \
             size > _sparse_matmul.locks[dev].size(0):
+            debuginfo(prj='ds')
             _sparse_matmul.locks[dev] = torch.zeros(size, dtype=torch.int32, device=dev)
         return _sparse_matmul.locks[dev]
 
@@ -268,6 +286,7 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def make_sdd_lut(layout, block, dtype, device):
+        debuginfo(prj='ds')
         #_sparse_matmul._load_utils()
         #start_width = 64 // block
         #segmented = _sparse_matmul.sdd_segment(layout.type(torch.int32), start_width)
@@ -296,7 +315,9 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def _sdd_matmul(a, b, trans_a, trans_b, trans_c, spdims, block, luts, num_locks, widths, packs, bench, time):
+        debuginfo(prj='ds')
         if trans_c:
+            debuginfo(prj='ds')
             a, b = b, a
             trans_a, trans_b = not trans_b, not trans_a
         AS0 = a.size(0)
@@ -383,6 +404,7 @@ class _sparse_matmul(torch.autograd.Function):
     # Construct look-up table for efficient execution on GPUs
     @staticmethod
     def make_dxx_lut(layout, block, step, trans, device, transform=lambda idx: idx):
+        debuginfo(prj='ds')
         # load-balancing
         _empty = torch.tensor([], dtype=torch.int64, device=layout.device)
         segments = _empty.clone()
@@ -413,8 +435,10 @@ class _sparse_matmul(torch.autograd.Function):
         segments *= step
         # pointer increments
         if trans:
+            debuginfo(prj='ds')
             nnz = layout.nonzero()
         else:
+            debuginfo(prj='ds')
             nnz = layout.transpose(1, 2).nonzero()
         num_blocks = nnz.size(0)
         offsets = torch.min(offsets, (num_blocks - 1) * torch.ones_like(offsets))
@@ -431,8 +455,10 @@ class _sparse_matmul(torch.autograd.Function):
         xincs = xincs.view(-1)
         # block-mode input increments
         if trans:
+            debuginfo(prj='ds')
             widx = torch.arange(num_blocks)
         else:
+            debuginfo(prj='ds')
             widx = _empty.clone()
             current_offset = 0
             for z in range(layout.size(0)):
@@ -446,9 +472,11 @@ class _sparse_matmul(torch.autograd.Function):
         wincs[1:] -= widx[:-1] * block * block
         wincs = wincs.view(-1, 1).repeat(1, div)
         if trans:
+            debuginfo(prj='ds')
             wincs[:, 1:] = step
             wincs[:, 0] -= (div - 1) * step
         else:
+            debuginfo(prj='ds')
             wincs[:, 1:] = step * block
             wincs[:, 0] -= (div - 1) * step * block
         wincs[offsets[segments > 0], 0] = widx[offsets[segments > 0]]
@@ -471,8 +499,10 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def _dds_matmul(a, b, trans_a, trans_b, trans_c, spdims, block, lut, num_locks, width, packs, bench, time):
+        debuginfo(prj='ds')
         global triton
         if triton is None:
+            debuginfo(prj='ds')
             triton = importlib.import_module('triton')
 
         # shapes / dtypes
@@ -522,8 +552,10 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def _dsd_matmul(a, b, trans_a, trans_b, trans_c, spdims, block, lut, num_locks, width, packs, bench, time):
+        debuginfo(prj='ds')
         global triton
         if triton is None:
+            debuginfo(prj='ds')
             triton = importlib.import_module('triton')
 
         # shapes / dtypes
@@ -578,6 +610,7 @@ class _sparse_matmul(torch.autograd.Function):
     def forward(ctx, a, b, trans_a, trans_b, trans_c, mode, spdims, block, c_lut, c_num_locks, c_width, c_packs,
                 c_bench, c_time, da_lut, da_num_locks, da_width, da_packs, da_bench, da_time, db_lut, db_num_locks,
                 db_width, db_packs, db_bench, db_time):
+        debuginfo(prj='ds')
         c = _sparse_matmul.fn[mode](a, b, trans_a, trans_b, trans_c, spdims, block, c_lut, c_num_locks, c_width,
                                     c_packs, c_bench, c_time)
         # save for backward
@@ -603,17 +636,20 @@ class _sparse_matmul(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, dc):
+        debuginfo(prj='ds')
         # saved for backward
         a, b = ctx.saved_tensors
         mode = ctx.mode
         # gradients w.r.t. a
         if ctx.needs_input_grad[0]:
+            debuginfo(prj='ds')
             mode_da = mode[1] + mode[0] + mode[2]
             da = _sparse_matmul.fn[mode_da](dc, b, False, not ctx.trans_b, ctx.trans_a, ctx.spdims, ctx.block,
                                             ctx.da_lut, ctx.da_num_locks, ctx.da_width, ctx.da_packs, ctx.da_bench,
                                             ctx.da_time)
         # gradients w.r.t. b
         if ctx.needs_input_grad[1]:
+            debuginfo(prj='ds')
             mode_db = mode[2] + mode[1] + mode[0]
             db = _sparse_matmul.fn[mode_db](a, dc, not ctx.trans_a, False, ctx.trans_b, ctx.spdims, ctx.block,
                                             ctx.db_lut, ctx.db_num_locks, ctx.db_width, ctx.db_packs, ctx.db_bench,
@@ -637,35 +673,46 @@ class MatMul:
     def make_lut(self, dtype, device):
         """Generates the sparsity layout/s used in block-sparse matmul
         """
+        debuginfo(prj='ds')
         key = (dtype, device)
         if key in self.lut_cache:
+            debuginfo(prj='ds')
             return self.lut_cache[key]
         # C look-up table
         layout, block = self.layout, self.block
         step = 16
         if self.mode == 'sdd':
+            debuginfo(prj='ds')
             c_lut, c_num_locks, c_width, c_packs = _sparse_matmul.make_sdd_lut(layout, block, dtype, device)
         elif self.mode == 'dsd':
+            debuginfo(prj='ds')
             c_lut, c_num_locks, c_width, c_packs = _sparse_matmul.make_dxx_lut(layout, block, step, not self.trans_a,
                                                                                device)
         elif self.mode == 'dds':
+            debuginfo(prj='ds')
             c_lut, c_num_locks, c_width, c_packs = _sparse_matmul.make_dxx_lut(layout, block, step, self.trans_b,
                                                                                device)
         # DA look-up table
         if self.mode == 'sdd':
+            debuginfo(prj='ds')
             da_lut, da_num_locks, da_width, da_packs = _sparse_matmul.make_dxx_lut(layout, block, step, True, device)
         elif self.mode == 'dsd':
+            debuginfo(prj='ds')
             da_lut, da_num_locks, da_width, da_packs = _sparse_matmul.make_sdd_lut(layout, block, dtype, device)
         elif self.mode == 'dds':
+            debuginfo(prj='ds')
             da_lut, da_num_locks, da_width, da_packs = _sparse_matmul.make_dxx_lut(layout, block, step,
                                                                                    not self.trans_b, device)
         # DB look-up table
         if self.mode == 'sdd':
+            debuginfo(prj='ds')
             db_lut, db_num_locks, db_width, db_packs = _sparse_matmul.make_dxx_lut(layout, block, step, False, device)
         elif self.mode == 'dsd':
+            debuginfo(prj='ds')
             db_lut, db_num_locks, db_width, db_packs = _sparse_matmul.make_dxx_lut(layout, block, step, self.trans_a,
                                                                                    device)
         elif self.mode == 'dds':
+            debuginfo(prj='ds')
             db_lut, db_num_locks, db_width, db_packs = _sparse_matmul.make_sdd_lut(layout, block, dtype, device)
         self.lut_cache[key] = (c_lut, c_num_locks, c_width, c_packs,\
                                da_lut, da_num_locks, da_width, da_packs,\
@@ -683,7 +730,7 @@ class MatMul:
              trans_b: optional: a boolean determining if multiplication needs to be applied on transpose of input b; default is false
              bench: optional: set if you want to do benchmarking
         """
-        print(' init')
+        debuginfo(prj='ds', info='make_lut init')
         if mode not in ['sdd', 'dsd', 'dds']:
             raise NotImplementedError('Supported modes are: sdd, dsd, dds')
         # look-up table cache
@@ -697,6 +744,7 @@ class MatMul:
         layout_dim = layout.ndim
         assert layout_dim in (2, 3), "Layout should be a 2 or 3 dimensional tensor of 0s and 1s"
         if not mode == 'sdd':
+            debuginfo(prj='ds')
             # Dims to be reduced on the 'inside' of the matmul, either -1 or -2
             trans_dense, trans_sparse, sparse_inner = (trans_b, trans_a, -1) if mode == 'dsd' else (trans_a, trans_b,
                                                                                                     -2)
@@ -710,6 +758,7 @@ class MatMul:
 
         # Support using the same layout across attention heads etc.
         if layout_dim == 2:
+            debuginfo(prj='ds')
             layout = layout.unsqueeze(0)
 
         layout = layout.long()  # Above code assumes the layout tensor is an integral type
@@ -725,6 +774,7 @@ class MatMul:
     # compatible with kernel calls
     @staticmethod
     def _pad_shape(x, is_sparse):
+        debuginfo(prj='ds')
         max_dim = 3 if is_sparse else 4
         for i in range(max_dim - x.dim()):
             x = x.unsqueeze(0)
@@ -742,7 +792,7 @@ class MatMul:
         Return:
              c: a dense/block-sparse tensor result of a X b
         """
-
+        debuginfo(prj='ds')
 
         c_lut, c_num_locks, c_width, c_packs,\
         da_lut, da_num_locks, da_width, da_packs,\
@@ -776,6 +826,7 @@ class MatMul:
         return c
 
     def _validate_inputs(self, a, b):
+        debuginfo(prj='ds')
         if a.device != b.device:
             raise ValueError(f"Inputs must be on the same device; got {a.device} for tensor A "
                              f"and {b.device} for tensor B")
@@ -784,12 +835,14 @@ class MatMul:
 
         # When autocast is enabled, torch.matmul autocasts to float16, so we do the same here
         if torch.is_autocast_enabled():
+            debuginfo(prj='ds')
             a, b = a.half(), b.half()
         elif a.dtype != b.dtype:
             raise ValueError(f"Inputs must be the same dtype; got {a.dtype} for A and {b.dtype} for B")
 
         mode, trans_a, trans_b = self.mode, self.trans_a, self.trans_b
         if mode != 'sdd':
+            debuginfo(prj='ds')
             # One input is sparse
             dense, dense_name, sparse, sparse_name = (a, 'A', b, 'B') if mode == 'dds' else (b, 'B', a, 'A')
             dense_inner = dense.shape[self.dense_inner_dim]
@@ -802,9 +855,11 @@ class MatMul:
                                  f"{sparse_name}, got {sparse.shape}")
 
         def add_extra_dims(x):
+            debuginfo(prj='ds')
             # Add extra leading singleton dimensions if needed
             dims_needed = 4 - x.ndim
             if dims_needed > 0:
+                debuginfo(prj='ds')
                 singletons = [1] * dims_needed
                 x = x.view(*singletons, *x.shape)
             elif dims_needed < 0:

@@ -17,9 +17,10 @@ from torch.distributed import ProcessGroup, all_to_all_single
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils import instrument_w_nvtx
 from deepspeed.ops import op_builder
-
+from pydebug import debuginfo
 
 def _torch_reduce_scatter_fn(input_tensor: Tensor, output_tensor: Tensor, group=None, async_op=False, prof=False):
+    debuginfo(prj='ds')
     return instrument_w_nvtx(dist.reduce_scatter_fn)(output_tensor, input_tensor, group=group, async_op=False)
 
 
@@ -29,8 +30,10 @@ quantizer_module = None
 @instrument_w_nvtx
 @torch.no_grad()
 def all_to_all_quant_reduce(tensors: List[Tensor], groups: {}) -> List[Tensor]:
+    debuginfo(prj='ds')
     global quantizer_module
     if quantizer_module is None:
+        debuginfo(prj='ds')
         quantizer_module = op_builder.QuantizerBuilder().load()
     local_world_size = get_accelerator().device_count()
     global_world_size = dist.get_world_size()
@@ -91,10 +94,12 @@ def reduce_scatter_coalesced(
     padded_partition_sz_for_each_tensor = tuple(math.ceil(t.numel() / world_sz) for t in tensors)
 
     if len(tensors) == 1 and tensors[0].numel() % world_sz == 0:
+        debuginfo(prj='ds')
         # if there's only one tensor being reduced and we don't need to pad
         # we have an opportunity to avoid a memory allocation
         tensor_partition_flat_buffer = tensors[0].view(-1)
     else:
+        debuginfo(prj='ds')
         # interleave tensor partitions such that the correct reduced partitions of each tensor
         # end up at each rank
         tensor_partitions_lst_with_padding = []

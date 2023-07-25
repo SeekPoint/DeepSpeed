@@ -7,11 +7,12 @@ from abc import abstractmethod
 import torch
 
 from .hybrid_engine import HybridEngineContainer
-
+from pydebug import debuginfo
 
 class HybridSplitQKVContainer(HybridEngineContainer):
 
     def set_attention(self, qkvw, qkvb, dense_w, dense_b):
+        debuginfo(prj='ds')
         super().set_attention(qkvw, qkvb, dense_w, dense_b)
         self.set_q_k_v()
 
@@ -33,6 +34,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
     def attention_qkv_mp(self, mp_replace, reversed_dim=False):
         # Only need to alter
         if self.module.attention.attn_qkvw is None:
+            debuginfo(prj='ds')
             params = [
                 (self.module.attention.attn_qw, self.qw),
                 (self.module.attention.attn_qb, self.qb),
@@ -46,9 +48,11 @@ class HybridSplitQKVContainer(HybridEngineContainer):
                     dst[:self.qw.shape[0] // mp_replace.mp_size], src, int8=reversed_dim,
                     allocate_tensor=reversed_dim) if src is not None else None
         else:
+            debuginfo(prj='ds')
             super().attention_qkv_mp(mp_replace)
 
     def release_qkv(self):
+        debuginfo(prj='ds')
         super().release_qkv()
         split_qkv_params = [
             (self.module.attention.attn_qw, self.qw),
@@ -62,6 +66,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         self._release_params(split_qkv_params)
 
     def reset_qkv(self):
+        debuginfo(prj='ds')
         self.qkvw.data[:self.qw.shape[0]] = self.qw.data
         self.qkvw.data[self.qw.shape[0]:2 * self.qw.shape[0]] = self.kw.data
         self.qkvw.data[2 * self.qw.shape[0]:] = self.vw.data
@@ -73,6 +78,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         self.vw.data = self.qkvw.data[2 * self.qw.shape[0]:]
 
         if self.qkvb is not None:
+            debuginfo(prj='ds')
             self.qkvb.data[:self.qw.shape[0]] = self.qb.data
             self.qkvb.data[self.qw.shape[0]:2 * self.qw.shape[0]] = self.kb.data
             self.qkvb.data[2 * self.qw.shape[0]:] = self.vb.data
@@ -91,7 +97,9 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         WIP - experimental and likely to be changed/improved.
         Unused by keeping for now.
         """
+        debuginfo(prj='ds')
         if self.module.attention.attn_qkvw is None:
+            debuginfo(prj='ds')
             self.module.attention.attn_qkvw = torch.empty(self.qw.shape[0] * 3,
                                                           self.qw.shape[0],
                                                           dtype=self.qw.dtype,
@@ -127,6 +135,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
         self.module.attention.attn_ow = self.dense_w
         self.module.attention.attn_ob = self.dense_b
         if not Z3_enabled:
+            debuginfo(prj='ds')
             # In initialize_tensors, we create a fused qkvw with the appropriate shape
             # and copy the qw, qb, kw, kb, vw, vb into it
             self.module.attention.attn_qkvw = self.qkvw
@@ -140,10 +149,12 @@ class HybridSplitQKVContainer(HybridEngineContainer):
 
             # Assume if one of the biases is not None, then all of them are not None
             if self.qb is not None:
+                debuginfo(prj='ds')
                 self.qb.data = self.qkvb[:self.qw.shape[0]]
                 self.kb.data = self.qkvb[self.qw.shape[0]:2 * self.qw.shape[0]]
                 self.vb.data = self.qkvb[self.qw.shape[0] * 2:]
         else:
+            debuginfo(prj='ds')
             # In ZeRO-3 this will be managed by ZeRO and handled separately in the
             # forward of ds_attention
             self.module.attention.attn_qw = self.qw
@@ -154,6 +165,7 @@ class HybridSplitQKVContainer(HybridEngineContainer):
             self.module.attention.attn_vb = self.vb
 
     def get_attn_params(self):
+        debuginfo(prj='ds')
         params = super().get_attn_params()
         params.extend([self.qw, self.qb, self.kw, self.kb, self.vw, self.vb])
         return params

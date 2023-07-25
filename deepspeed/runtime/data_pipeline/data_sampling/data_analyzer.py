@@ -15,7 +15,7 @@ from torch.utils.data import BatchSampler, SequentialSampler, DataLoader, Subset
 from deepspeed.utils import logger
 from .indexed_dataset import MMapIndexedDataset
 from .utils import split_dataset, split_index, create_mmap_dataset_builder, close_mmap_dataset_builder, find_fit_int_dtype
-
+from pydebug import debuginfo
 
 class DataAnalyzer(object):
 
@@ -37,6 +37,7 @@ class DataAnalyzer(object):
                  custom_map_update=None,
                  custom_map_finalize=None,
                  custom_reduce=None):
+        debuginfo(prj='ds')
         super().__init__()
         self.dataset = dataset
         self.num_workers = num_workers
@@ -57,6 +58,7 @@ class DataAnalyzer(object):
         self.custom_reduce = custom_reduce
 
     def init_metric_results(self, thread_id, metric_names, metric_types, metric_dtypes, save_path, worker_id):
+        debuginfo(prj='ds')
         metric_results = []
         for m_idx in range(len(metric_names)):
             metric_name, metric_type, metric_dtype = metric_names[m_idx], \
@@ -85,6 +87,7 @@ class DataAnalyzer(object):
         return metric_results
 
     def update_metric_results(self, data, metric_types, metric_functions, metric_results):
+        debuginfo(prj='ds')
         for m_idx in range(len(metric_types)):
             metric_type, metric_function, metric_result = metric_types[m_idx], \
                 metric_functions[m_idx], metric_results[m_idx]
@@ -109,6 +112,7 @@ class DataAnalyzer(object):
                     metric_result["metric_value"].add_(metric_values)
 
     def finalize_metric_results(self, metric_types, metric_dtypes, metric_results):
+        debuginfo(prj='ds')
         for m_idx in range(len(metric_types)):
             metric_type, metric_dtype, metric_result = metric_types[m_idx], \
                 metric_dtypes[m_idx], metric_results[m_idx]
@@ -137,8 +141,10 @@ class DataAnalyzer(object):
         thread_dataset = Subset(self.dataset, list(range(start_idx, end_idx)))
         sampler = BatchSampler(SequentialSampler(thread_dataset), batch_size=self.batch_size, drop_last=False)
         if self.collate_fn is None:
+            debuginfo(prj='ds')
             iterator = iter(DataLoader(thread_dataset, batch_sampler=sampler, num_workers=0, pin_memory=False))
         else:
+            debuginfo(prj='ds')
             iterator = iter(
                 DataLoader(thread_dataset,
                            batch_sampler=sampler,
@@ -146,9 +152,11 @@ class DataAnalyzer(object):
                            collate_fn=self.collate_fn,
                            pin_memory=False))
         if self.custom_map_init is None:
+            debuginfo(prj='ds')
             metric_results = self.init_metric_results(thread_id, self.metric_names, self.metric_types,
                                                       self.metric_dtypes, self.save_path, self.worker_id)
         else:
+            debuginfo(prj='ds')
             metric_results = self.custom_map_init(thread_id, self.metric_names, self.metric_types, self.metric_dtypes,
                                                   self.save_path, self.worker_id)
         total_sample = len(thread_dataset)
@@ -172,8 +180,10 @@ class DataAnalyzer(object):
                 logger.info(f"worker {self.worker_id} thread {thread_id}: reach end of file")
                 break
         if self.custom_map_finalize is None:
+            debuginfo(prj='ds')
             self.finalize_metric_results(self.metric_types, self.metric_dtypes, metric_results)
         else:
+            debuginfo(prj='ds')
             self.custom_map_finalize(self.metric_types, self.metric_dtypes, metric_results)
         logger.info(f"worker {self.worker_id} thread {thread_id}: finished")
 
@@ -181,10 +191,13 @@ class DataAnalyzer(object):
         self.worker_splits, self.thread_splits = split_dataset(self.dataset, self.num_workers, self.worker_id,
                                                                self.num_threads)
         if len(self.specific_threads) > 0:
+            debuginfo(prj='ds')
             threads_to_run = self.specific_threads
         else:
+            debuginfo(prj='ds')
             threads_to_run = list(range(self.num_threads))
         if self.num_threads > 1:
+            debuginfo(prj='ds')
             p = []
             for thread in threads_to_run:
                 p.append(Process(target=self.run_map_helper, args=(thread, )))
@@ -193,6 +206,7 @@ class DataAnalyzer(object):
             for thread in threads_to_run:
                 p[thread].join()
         else:
+            debuginfo(prj='ds')
             assert self.num_threads == 1
             self.run_map_helper(0)
 
@@ -208,6 +222,7 @@ class DataAnalyzer(object):
 
     def merge_gather_map_stats(self, num_workers, num_threads, num_threads_reduce, t_idx_reduce, metric_save_path,
                                metric_name, return_dict):
+        debuginfo(prj='ds')
         results = []
         for w_idx in range(num_workers):
             for t_idx in range(num_threads):
@@ -223,6 +238,7 @@ class DataAnalyzer(object):
 
     def merge_sample_to_metric(self, t_idx_reduce, metric_save_path, metric_name, metric_value_dtype,
                                map_worker_thread):
+        debuginfo(prj='ds')
         sample_to_metric_fname = f"{metric_save_path}/{metric_name}_sample_to_metric_thread{t_idx_reduce}"
         sample_to_metric_builder = create_mmap_dataset_builder(sample_to_metric_fname, metric_value_dtype)
         for w_t in map_worker_thread:
@@ -236,6 +252,7 @@ class DataAnalyzer(object):
 
     def merge_metric_to_sample(self, t_idx_reduce, metric_save_path, metric_name, sample_idx_dtype, metric_value_dtype,
                                unique_metric_values, num_workers, num_threads):
+        debuginfo(prj='ds')
         index_to_sample_fname = f"{metric_save_path}/{metric_name}_index_to_sample_thread{t_idx_reduce}"
         index_to_sample_builder = create_mmap_dataset_builder(index_to_sample_fname, sample_idx_dtype)
         index_to_metric_fname = f"{metric_save_path}/{metric_name}_index_to_metric_thread{t_idx_reduce}"
@@ -259,6 +276,7 @@ class DataAnalyzer(object):
 
     def merge_map_results(self, dataset, metric_names, metric_types, save_path, num_workers, num_threads,
                           num_threads_reduce):
+        debuginfo(prj='ds')
         total_num_samples = len(dataset)
         sample_idx_dtype = find_fit_int_dtype(0, total_num_samples - 1)
         logger.info(
@@ -410,8 +428,10 @@ class DataAnalyzer(object):
 
     def run_reduce(self):
         if self.custom_reduce is None:
+            debuginfo(prj='ds')
             self.merge_map_results(self.dataset, self.metric_names, self.metric_types, self.save_path,
                                    self.num_workers, self.num_threads, self.num_threads_reduce)
         else:
+            debuginfo(prj='ds')
             self.custom_reduce(self.dataset, self.metric_names, self.metric_types, self.save_path, self.num_workers,
                                self.num_threads, self.num_threads_reduce)

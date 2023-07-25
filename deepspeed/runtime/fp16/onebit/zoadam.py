@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-
+from pydebug import debuginfo
 
 class ZeroOneAdam(torch.optim.Optimizer):
     """Implements the 0/1 Adam algorithm. Currently GPU-only.
@@ -70,7 +70,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
-        print('ZeroOneAdam init')
+        debuginfo(prj='ds', info='ZeroOneAdam init')
 
         if amsgrad:
             raise RuntimeError('0/1 Adam does not support the AMSGrad variant.')
@@ -104,6 +104,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
+            debuginfo(prj='ds')
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
             assert (
@@ -115,6 +116,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
             self.comm_backend_handle = NcclBackend(self.deepspeed.mpu)
 
         elif self.comm_backend_name == 'mpi':
+            debuginfo(prj='ds')
             from deepspeed.runtime.comm.mpi import MpiBackend
             self.comm_backend_handle = MpiBackend(cuda_aware)
 
@@ -141,14 +143,18 @@ class ZeroOneAdam(torch.optim.Optimizer):
             loss = closure()
 
         if grads is None:
+            debuginfo(prj='ds')
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
+            debuginfo(prj='ds')
             grads_group = [grads]
         elif type(grads[0]) != list:
+            debuginfo(prj='ds')
             grads_group = [grads]
         else:
+            debuginfo(prj='ds')
             grads_group = grads
 
         for group, grads_this_group in zip(self.param_groups, grads_group):
@@ -290,7 +296,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
                                                                state['local_step_interval'] * 2)
 
             if not self.initialize:
-                print('Pop out errors', flush=True)
+                debuginfo(prj='ds', info='Pop out errors', flush=True)
                 self.freeze_key = False
                 state.pop('worker_error')
                 state.pop('server_error')
@@ -303,8 +309,10 @@ class ZeroOneAdam(torch.optim.Optimizer):
         if self.state[self.param_groups[0]['params'][0]]['step'] > self.var_freeze_step:
             self.freeze_key = True
             if self.using_pipeline:
+                debuginfo(prj='ds')
                 self.deepspeed.pipeline_enable_backward_allreduce = False
             else:
+                debuginfo(prj='ds')
                 self.deepspeed.enable_backward_allreduce = False
 
         if self.freeze_key is True and self.reinitial_error_buffer is False:
@@ -322,6 +330,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
         """
         Overrides load_state_dict() to add special handling when loading checkpoints
         """
+        debuginfo(prj='ds')
         # Because at different stage exp_avg_mask may change (e.g.,
         # BERT pre-training seqlen 128 and 512 ), we don't use the exp_avg_mask
         # in checkpoints but always use the one user provided in training script.
@@ -338,19 +347,25 @@ class ZeroOneAdam(torch.optim.Optimizer):
             if (self.state[self.param_groups[0]['params'][0]]['step'] +
                     1) % self.state[self.param_groups[0]['params'][0]]['var_interval'] == 0:
                 if self.using_pipeline:
+                    debuginfo(prj='ds')
                     self.deepspeed.pipeline_enable_backward_allreduce = True
                 else:
+                    debuginfo(prj='ds')
                     self.deepspeed.enable_backward_allreduce = True
             else:
                 if self.using_pipeline:
+                    debuginfo(prj='ds')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
+                    debuginfo(prj='ds')
                     self.deepspeed.enable_backward_allreduce = False
         else:
             self.var_freeze_key = True
             if self.using_pipeline:
+                debuginfo(prj='ds')
                 self.deepspeed.pipeline_enable_backward_allreduce = False
             else:
+                debuginfo(prj='ds')
                 self.deepspeed.enable_backward_allreduce = False
         self.reinitial_error_buffer = False
         for group in self.param_groups:

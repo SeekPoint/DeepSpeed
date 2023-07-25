@@ -14,3 +14,7 @@ from . import transformer
 from .transformer import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
 
 from ..git_version_info import compatible_ops as __compatible_ops__
+
+from pydebug import debuginfo
+
+debuginfo(prj='ds', info='ops __init__')

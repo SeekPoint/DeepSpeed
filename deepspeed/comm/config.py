@@ -5,11 +5,12 @@
 
 from pydantic import BaseModel
 from .constants import *
-
+from pydebug import debuginfo
 
 class CommsConfig(BaseModel):
 
     class Config:
+        debuginfo(prj='ds')
         validate_all = True
         validate_assignment = True
         use_enum_values = True
@@ -17,6 +18,7 @@ class CommsConfig(BaseModel):
 
 
 class CommsLoggerConfig(CommsConfig):
+    debuginfo(prj='ds')
     enabled: bool = COMMS_LOGGER_ENABLED_DEFAULT
     prof_all: bool = COMMS_LOGGER_PROF_ALL_DEFAULT
     prof_ops: list = COMMS_LOGGER_PROF_OPS_DEFAULT
@@ -27,7 +29,7 @@ class CommsLoggerConfig(CommsConfig):
 class DeepSpeedCommsConfig:
 
     def __init__(self, ds_config):
-        print('DeepSpeedCommsConfig init')
+        debuginfo(prj='ds', info='DeepSpeedCommsConfig init')
         self.comms_logger_enabled = 'comms_logger' in ds_config
 
         if self.comms_logger_enabled:

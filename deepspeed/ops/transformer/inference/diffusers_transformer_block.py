@@ -16,18 +16,22 @@ from deepspeed.utils.types import ActivationFuncType
 # Ops will be loaded on demand
 transformer_cuda_module = None
 spatial_cuda_module = None
-
+from pydebug import debuginfo
 
 def load_transformer_module():
+    debuginfo(prj='ds')
     global transformer_cuda_module
     if transformer_cuda_module is None:
+        debuginfo(prj='ds')
         transformer_cuda_module = InferenceBuilder().load()
     return transformer_cuda_module
 
 
 def load_spatial_module():
+    debuginfo(prj='ds')
     global spatial_cuda_module
     if spatial_cuda_module is None:
+        debuginfo(prj='ds')
         spatial_cuda_module = SpatialInferenceBuilder().load()
     return spatial_cuda_module
 
@@ -35,7 +39,6 @@ def load_spatial_module():
 class DeepSpeedDiffusersTransformerBlock(nn.Module):
 
     def __init__(self, equivalent_module: nn.Module, config: Diffusers2DTransformerConfig):
-        print('DeepSpeedDiffusersTransformerBlock init')
         super(DeepSpeedDiffusersTransformerBlock, self).__init__()
         self.quantizer = module_inject.GroupQuantizer(q_int8=config.int8_quantization)
         # Ensure ops are built by the time we start running
@@ -65,22 +68,27 @@ class DeepSpeedDiffusersTransformerBlock(nn.Module):
 
         # Pull the bias in if we can
         if isinstance(self.attn_1, DeepSpeedDiffusersAttention):
+            debuginfo(prj='ds')
             self.attn_1.do_out_bias = False
             self.attn_1_bias = self.attn_1.attn_ob
         else:
+            debuginfo(prj='ds')
             self.attn_1_bias = nn.Parameter(torch.zeros_like(self.norm2_g), requires_grad=False)
 
         # Pull the bias in if we can
         if isinstance(self.attn_2, DeepSpeedDiffusersAttention):
+            debuginfo(prj='ds')
             self.attn_2.do_out_bias = False
             self.attn_2_bias = self.attn_2.attn_ob
         else:
+            debuginfo(prj='ds')
             self.attn_2_bias = nn.Paramaeter(torch.zeros_like(self.norm3_g), requires_grad=False)
 
         self.transformer_cuda_module = load_transformer_module()
         load_spatial_module()
 
     def forward(self, hidden_states, context=None, timestep=None, **kwargs):
+        debuginfo(prj='ds')
         # In v0.12.0 of diffuser, several new kwargs were added. Capturing
         # those with kwargs to maintain backward compatibility
 

@@ -25,7 +25,7 @@ from torch.nn import Module
 import torch.nn.functional as F
 from deepspeed.utils import groups
 from .mappings import drop_tokens, gather_tokens
-
+from pydebug import debuginfo
 if TYPE_CHECKING:
     Base = Module[Tensor]
 else:
@@ -368,7 +368,7 @@ class TopKGate(Module):
                  noisy_gate_policy: Optional[str] = None,
                  drop_tokens: bool = True,
                  use_rts: bool = True) -> None:
-        print('TopKGate init')
+        debuginfo(prj='ds', info='TopKGate init')
         super().__init__()
 
         # Only top-1 and top-2 are supported at the moment.
@@ -443,7 +443,7 @@ class MOELayer(Base):
                  ep_size,
                  num_local_experts: int,
                  use_tutel: bool = False) -> None:
-        print('MOELayer init')
+        debuginfo(prj='ds', info='MOELayer init')
         super().__init__()
         self.gate = gate
         self.experts = experts

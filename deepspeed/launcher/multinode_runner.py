@@ -13,12 +13,12 @@ from abc import ABC, abstractmethod
 from deepspeed.accelerator import get_accelerator
 from ..utils import logger, get_numactl_cmd
 from .constants import PDSH_MAX_FAN_OUT, MVAPICH_TMP_HOSTFILE
-
+from pydebug import debuginfo
 
 class MultiNodeRunner(ABC):
 
     def __init__(self, args, world_info_base64):
-        print('MultiNodeRunner init')
+        debuginfo(prj='ds', info='MultiNodeRunner init')
         self.args = args
         self.validate_args()
         self.user_arguments = self.parse_user_args()
@@ -52,10 +52,11 @@ class MultiNodeRunner(ABC):
 class PDSHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64):
-        print('PDSHRunner init')
+        debuginfo(prj='ds', info='PDSHRunner init')
         super().__init__(args, world_info_base64)
 
     def backend_exists(self):
+        debuginfo(prj='ds')
         return shutil.which('pdsh')
 
     @property
@@ -66,6 +67,7 @@ class PDSHRunner(MultiNodeRunner):
         return list(map(lambda x: x if x.startswith("-") else f"'{x}'", self.args.user_args))
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         environment['PDSH_RCMD_TYPE'] = 'ssh'
 
         active_workers = ",".join(active_resources.keys())
@@ -109,12 +111,13 @@ class PDSHRunner(MultiNodeRunner):
 class OpenMPIRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        print('OpenMPIRunner init')
+        debuginfo(prj='ds', info='OpenMPIRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
         self.add_export('UCX_TLS', 'tcp')
 
     def backend_exists(self):
+        debuginfo(prj='ds')
         #TODO: if IB is available we should suggestion mvapich
         return shutil.which('ompi_info')
 
@@ -131,6 +134,7 @@ class OpenMPIRunner(MultiNodeRunner):
             raise ValueError(f"{self.name} backend does not support limiting num nodes/gpus")
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         total_process_count = sum(self.resource_pool.values())
 
         mpirun_cmd = [
@@ -163,11 +167,12 @@ class OpenMPIRunner(MultiNodeRunner):
 class MPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        print('MPICHRunner init')
+        debuginfo(prj='ds', info='MPICHRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
     def backend_exists(self):
+        debuginfo(prj='ds')
         #TODO: if IB is available we should suggestion mpich
         return shutil.which('mpirun')  #mpich_info
 
@@ -185,6 +190,7 @@ class MPICHRunner(MultiNodeRunner):
             raise ValueError(f"{self.name} backend does not support limiting num nodes/gpus")
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         devices_per_node = self.resource_pool.values()
         total_process_count = sum(devices_per_node)
         process_per_node = list(devices_per_node)[0]
@@ -239,6 +245,7 @@ class IMPIRunner(MultiNodeRunner):
         self.resource_pool = resource_pool
 
     def backend_exists(self):
+        debuginfo(prj='ds')
         #TODO: if IB is available we should suggestion mpich
         return shutil.which('mpirun')  #mpich_info
 
@@ -256,6 +263,7 @@ class IMPIRunner(MultiNodeRunner):
             raise ValueError(f"{self.name} backend does not support limiting num nodes/gpus")
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         devices_per_node = self.resource_pool.values()
         total_process_count = sum(devices_per_node)
         process_per_node = list(devices_per_node)[0]
@@ -317,11 +325,12 @@ class IMPIRunner(MultiNodeRunner):
 class SlurmRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        print('SlurmRunner init')
+        debuginfo(prj='ds', info='SlurmRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
     def backend_exists(self):
+        debuginfo(prj='ds')
         return shutil.which('sinfo')
 
     @property
@@ -329,6 +338,7 @@ class SlurmRunner(MultiNodeRunner):
         return 'slurm'
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         assert not getattr(self.args, 'detect_nvlink_pairs',
                            False), "slurm backend does not support remapping visible devices"
         total_process_count = sum(self.resource_pool.values())
@@ -366,7 +376,7 @@ class SlurmRunner(MultiNodeRunner):
 class MVAPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        print('MVAPICHRunner init')
+        debuginfo(prj='ds', info='MVAPICHRunner init')
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
@@ -397,9 +407,11 @@ class MVAPICHRunner(MultiNodeRunner):
         if not mpiname_exists:
             warnings.warn("mpiname does not exist, mvapich is not installed properly")
         else:
+            debuginfo(prj='ds')
             results = subprocess.check_output('mpiname', shell=True)
             mpiname_results = results.decode('utf-8').strip()
             if "MVAPICH2-GDR" in mpiname_results:
+                debuginfo(prj='ds')
                 exists = True
             else:
                 warnings.warn(f"Expected MVAPICH2-GDR as return for mpiname but received {mpiname_results}")
@@ -410,6 +422,7 @@ class MVAPICHRunner(MultiNodeRunner):
         return "mvapich"
 
     def validate_args(self):
+        debuginfo(prj='ds')
         super().validate_args()
         #TODO: Allow for include/exclude at node-level but not gpu-level
         if self.args.include != "" or self.args.exclude != "":
@@ -418,6 +431,7 @@ class MVAPICHRunner(MultiNodeRunner):
             raise ValueError(f"{self.name} backend does not support limiting num nodes/gpus")
 
     def get_cmd(self, environment, active_resources):
+        debuginfo(prj='ds')
         devices_per_node = self.resource_pool.values()
         total_process_count = sum(devices_per_node)
         process_per_node = list(devices_per_node)[0]

@@ -7,3 +7,5 @@ from .gated_mlp import HybridGatedMLPContainer
 from .megatron import MegatronContainer
 from .meta_tensor import MetaTensorContainer
 from .split_qkv import HybridSplitQKVContainer
+from pydebug import debuginfo
+debuginfo(prj='ds')

@@ -20,12 +20,12 @@ In the future, directly use NCCL/MPI/Gloo/etc without requiring torch.distribute
 # Backend is the base class
      -- NcclBackend, MpiBackend, and TorchBackend are the main subclasses. TorchBackend is the only officially supported backend for now.
 """
-
+from pydebug import debuginfo
 
 class Backend(object):
 
     def __init__(self, name='backend', rank=0, size=1):
-        print('Backend init')
+        debuginfo(prj='ds', info='Backend init')
         self.name = name
         # The world size and rank of the world process group
         self.world_group = None

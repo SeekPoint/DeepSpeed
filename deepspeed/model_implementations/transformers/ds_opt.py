@@ -5,7 +5,7 @@
 
 from deepspeed.model_implementations.transformers.ds_transformer import DeepSpeedTransformerInference
 
-
+from pydebug import debuginfo
 class DeepSpeedOPTInference(DeepSpeedTransformerInference):
     """Initialize the DeepSpeed OPT Transformer Layer.
     """
@@ -17,5 +17,5 @@ class DeepSpeedOPTInference(DeepSpeedTransformerInference):
                  quantize_groups=1,
                  merge_count=1,
                  mlp_extra_grouping=False):
-        print('DeepSpeedOPTInference init')
+        debuginfo(prj='ds', info='DeepSpeedOPTInference init')
         super().__init__(config, mp_group, quantize_scales, quantize_groups, merge_count, mlp_extra_grouping)

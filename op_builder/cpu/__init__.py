@@ -6,3 +6,5 @@
 
 from .comm import CCLCommBuilder
 from .no_impl import NotImplementedBuilder
+from pydebug import debuginfo
+debuginfo(prj='ds', info='op_builder cpu __init__')

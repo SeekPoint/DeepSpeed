@@ -9,18 +9,19 @@ try:
     import xgboost as xgb
 except ImportError:
     xgb = None
-
+from pydebug import debuginfo
 
 class XGBoostCostModel():
 
     def __init__(self, loss_type, num_threads=None, log_interval=25, upper_model=None):
-        print('XGBoostCostModel init')
+        debuginfo(prj='ds', info='XGBoostCostModel init')
 
         assert xgb is not None, "missing requirements, please install deepspeed w. 'autotuning_ml' extra."
 
         self.loss_type = loss_type
 
         if loss_type == "reg":
+            debuginfo(prj='ds')
             self.xgb_params = {
                 "max_depth": 3,
                 "gamma": 0.0001,
@@ -32,6 +33,7 @@ class XGBoostCostModel():
                 "objective": "reg:linear",
             }
         elif loss_type == "rank":
+            debuginfo(prj='ds')
             self.xgb_params = {
                 "max_depth": 3,
                 "gamma": 0.0001,
@@ -50,6 +52,7 @@ class XGBoostCostModel():
             self.xgb_params["nthread"] = num_threads
 
     def fit(self, xs, ys):
+        debuginfo(prj='ds')
         x_train = np.array(xs, dtype=np.float32)
         y_train = np.array(ys, dtype=np.float32)
         y_max = np.max(y_train)
@@ -61,6 +64,7 @@ class XGBoostCostModel():
         self.bst = xgb.train(self.xgb_params, dtrain)
 
     def predict(self, xs):
+        debuginfo(prj='ds')
 
         features = xgb.DMatrix(xs)
 

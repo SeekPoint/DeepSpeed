@@ -6,13 +6,14 @@
 Copyright NVIDIA/apex
 This file is adapted from NVIDIA/apex, commit a109f85
 """
-
+from pydebug import debuginfo
 
 class MultiTensorApply(object):
 
     def __init__(self, chunk_size):
-        print('MultiTensorApply init')
+        debuginfo(prj='ds', info='MultiTensorApply init')
         self.chunk_size = chunk_size
 
     def __call__(self, op, noop_flag_buffer, tensor_lists, *args):
+        debuginfo(prj='ds')
         return op(self.chunk_size, noop_flag_buffer, tensor_lists, *args)

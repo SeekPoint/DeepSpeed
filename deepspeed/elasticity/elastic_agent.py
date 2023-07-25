@@ -23,7 +23,7 @@ import shutil
 import copy
 from contextlib import closing
 import subprocess
-
+from pydebug import debuginfo
 
 class DSElasticAgent(LocalElasticAgent):
 
@@ -35,18 +35,20 @@ class DSElasticAgent(LocalElasticAgent):
         exit_barrier_timeout: float = 300,
         log_dir: Optional[str] = None,
     ):
-        print('DSElasticAgent init')
+        debuginfo(prj='ds', info='DSElasticAgent init')
         super().__init__(spec, start_method, exit_barrier_timeout, log_dir)
         self.ds_env = env
 
     @staticmethod
     def _set_master_addr_port(store: Store, master_addr: Optional[str], master_port: Optional[int]):
         if master_port is None:
+            debuginfo(prj='ds')
             sock = _get_socket_with_port()
             with closing(sock):
                 master_port = sock.getsockname()[1]
 
         if master_addr is None:
+            debuginfo(prj='ds')
             # master_addr = _get_fq_hostname()
             result = subprocess.check_output("hostname -I", shell=True)
             master_addr = result.decode('utf-8').split()[0]
@@ -55,6 +57,7 @@ class DSElasticAgent(LocalElasticAgent):
         store.set("MASTER_PORT", str(master_port).encode(encoding="UTF-8"))
 
     def _start_workers(self, worker_group: WorkerGroup) -> Dict[int, Any]:
+        debuginfo(prj='ds')
         spec = worker_group.spec
         store = worker_group.store
         assert store is not None
@@ -117,6 +120,7 @@ class DSElasticAgent(LocalElasticAgent):
         return self._pcontext.pids()
 
     def _invoke_run(self, role: str = "default") -> RunResult:
+        debuginfo(prj='ds')
         # NOTE: currently only works for a single role
 
         spec = self._worker_group.spec
@@ -154,6 +158,7 @@ class DSElasticAgent(LocalElasticAgent):
                 return run_result
             elif state in {WorkerState.UNHEALTHY, WorkerState.FAILED
                            } or len(participants) > len(rdzv_handler._state_holder.state.participants):
+                debuginfo(prj='ds')
                 if self._remaining_restarts > 0:
                     log.info(f"[{role}] Worker group {state.name}. "
                              f"{self._remaining_restarts}/{spec.max_restarts} attempts left;"
@@ -169,6 +174,7 @@ class DSElasticAgent(LocalElasticAgent):
                     self._exit_barrier()
                     return run_result
             elif state == WorkerState.HEALTHY:
+                debuginfo(prj='ds')
                 # membership changes do not count as retries
                 num_nodes_waiting = rdzv_handler.num_nodes_waiting()
                 group_rank = self._worker_group.group_rank

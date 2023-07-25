@@ -8,11 +8,12 @@ from deepspeed.model_implementations.transformers.ds_bert import DeepSpeedBERTIn
 import torch
 from torch.nn.parameter import Parameter
 from ..policy import TransformerPolicy
-
+from pydebug import debuginfo
 
 class DS_DistilBERTContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        debuginfo(prj='ds')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
@@ -21,6 +22,7 @@ class DS_DistilBERTContainer(BaseTransformerContainer):
         self.use_triton = kwargs['config'].use_triton and deepspeed.HAS_TRITON
 
     def create_module(self, config=None):
+        debuginfo(prj='ds')
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedBERTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
@@ -31,6 +33,7 @@ class HFDistilBertLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
 
     def __init__(self, client_module, inference=False, preln=False):
+        debuginfo(prj='ds')
         super().__init__(inference)
         self.client_module = client_module
         self.preln = preln
@@ -45,12 +48,14 @@ class HFDistilBertLayerPolicy(TransformerPolicy):
                 HFDistilBertLayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
+        debuginfo(prj='ds')
         return self.client_module.attention.q_lin.weight.shape[1], \
                 self.client_module.attention.n_heads, \
                 self.client_module.sa_layer_norm.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
+        debuginfo(prj='ds')
         qw = self.client_module.attention.q_lin.weight
         qb = self.client_module.attention.q_lin.bias
         kw = self.client_module.attention.k_lin.weight
@@ -67,6 +72,7 @@ class HFDistilBertLayerPolicy(TransformerPolicy):
                self.client_module.attention.out_lin.bias
 
     def mlp(self, enable_training=False):
+        debuginfo(prj='ds')
         intermediate_ff = self.client_module.ffn.lin1
 
         return intermediate_ff.weight, intermediate_ff.bias, \
@@ -74,6 +80,7 @@ class HFDistilBertLayerPolicy(TransformerPolicy):
             self.client_module.ffn.lin2.bias
 
     def layernorm(self):
+        debuginfo(prj='ds')
         attention_layernorm = self.client_module.sa_layer_norm
         transformer_layernorm = self.client_module.output_layer_norm
         return attention_layernorm.weight, \

@@ -5,12 +5,11 @@
 
 from deepspeed.runtime.config_utils import get_scalar_param, DeepSpeedConfigObject
 from deepspeed.nebula.constants import *
-
+from pydebug import debuginfo
 
 class DeepSpeedNebulaConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
-        print('DeepSpeedNebulaConfig init')
         super(DeepSpeedNebulaConfig, self).__init__()
 
         self.enabled = None
@@ -20,13 +19,16 @@ class DeepSpeedNebulaConfig(DeepSpeedConfigObject):
         self.enable_nebula_load = None
 
         if NEBULA in param_dict.keys():
+            debuginfo(prj='ds')
             nebula_dict = param_dict[NEBULA]
         else:
+            debuginfo(prj='ds')
             nebula_dict = {}
 
         self._initialize(nebula_dict)
 
     def _initialize(self, nebula_dict):
+        debuginfo(prj='ds')
         self.enabled = get_scalar_param(nebula_dict, NEBULA_ENABLED, NEBULA_ENABLED_DEFAULT)
 
         self.load_path = get_scalar_param(nebula_dict, NEBULA_LOAD_PATH, NEBULA_LOAD_PATH_DEFAULT)

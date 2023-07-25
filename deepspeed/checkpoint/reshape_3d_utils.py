@@ -12,17 +12,18 @@ from .reshape_meg_2d import (reshape_meg_2d_parallel, meg_2d_parallel_map)
 PP_DIM = 'PP'
 TP_DIM = 'TP'
 DP_DIM = 'DP'
-
+from pydebug import debuginfo
 
 class model_3d_desc(object):
 
     def __init__(self, pp_degree=1, tp_degree=1, dp_degree=1):
-        print('model_3d_desc init')
+        debuginfo(prj='ds', info='model_3d_desc init')
         self.pp_degree = pp_degree
         self.tp_degree = tp_degree
         self.dp_degree = dp_degree
 
     def reshape(self, target_3d_desc, verbose=False):
+        debuginfo(prj='ds')
         valid_reshape, reshape_errors = self.can_reshape(target_3d_desc)
         assert valid_reshape, ','.join(reshape_errors)
         tgt_2d_map = reshape_meg_2d_parallel(old_pp_degree=self.pp_degree,
@@ -44,6 +45,7 @@ class model_3d_desc(object):
         return self.pp_degree * self.tp_degree * self.dp_degree
 
     def is_valid(self, pp_index, tp_index, dp_index):
+        debuginfo(prj='ds')
         err_msg = []
         valid = True
         for index, degree, dim_name in [(pp_index, self.pp_degree, PP_DIM), (tp_index, self.tp_degree, TP_DIM),
@@ -55,6 +57,7 @@ class model_3d_desc(object):
         return valid, err_msg
 
     def can_reshape(self, target_3d_desc):
+        debuginfo(prj='ds')
         err_msg = []
         if target_3d_desc.pp_degree > self.pp_degree:
             err_msg.append(
@@ -72,6 +75,7 @@ class model_3d_desc(object):
 
 
 def get_model_3d_descriptor(dir):
+    debuginfo(prj='ds')
     file_list = get_files(dir)
     zero_file_list = get_zero_files(dir)
     num_pp0_files = len(get_files_with_prefix(file_list, f'{LAYER_FILE_PREFIX}01'))
@@ -88,6 +92,7 @@ def get_model_3d_descriptor(dir):
 
 
 def flatten_dp_dimension(meg_2d_map, src_2d_size, dp_degree):
+    debuginfo(prj='ds')
     new_meg_2d_map = meg_2d_parallel_map(meg_2d_map.pp_degree, meg_2d_map.tp_degree)
     for pp_index in range(meg_2d_map.pp_degree):
         for tp_index in range(meg_2d_map.tp_degree):
@@ -99,6 +104,7 @@ def flatten_dp_dimension(meg_2d_map, src_2d_size, dp_degree):
 
 
 def unflatten_dp_dimension(meg_2d_map, dp_degree):
+    debuginfo(prj='ds')
     pp_degree = meg_2d_map.pp_degree
     tp_degree = meg_2d_map.tp_degree
     meg_2d_map_list = [meg_2d_parallel_map(pp_degree=pp_degree, tp_degree=tp_degree) for _ in range(dp_degree)]

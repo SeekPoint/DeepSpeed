@@ -5,3 +5,5 @@
 
 from .module import PipelineModule, LayerSpec, TiedLayerSpec
 from .topology import ProcessTopology
+from pydebug import debuginfo
+debuginfo(prj='ds')

@@ -13,7 +13,7 @@ Returns:
 """
 
 random_ltd_module = None
-
+from pydebug import debuginfo
 
 def gpt_sample_tokens(reserved_length: int,
                       seq_length: int,
@@ -28,6 +28,7 @@ def gpt_sample_tokens(reserved_length: int,
     sampled_indices = sampled_indices.reshape(layers, batch_size, reserved_length).to(torch.int32)
     global random_ltd_module
     if random_ltd_module is None:
+        debuginfo(prj='ds')
         random_ltd_module = RandomLTDBuilder().load()
     sampled_indices = random_ltd_module.token_sort_(sampled_indices, seq_length)
 
@@ -35,8 +36,10 @@ def gpt_sample_tokens(reserved_length: int,
     # with alignment right if the sequence length is not divisible by like 16
     # new_mask = random_ltd_module.mask_gather_gpt(attn_mask, reserved_length)
     if attn_mask is not None:
+        debuginfo(prj='ds')
         new_mask = attn_mask[:, :, :reserved_length, :reserved_length]
     else:
+        debuginfo(prj='ds')
         new_mask = None
 
     return sampled_indices, new_mask
@@ -55,6 +58,7 @@ def bert_sample_tokens(reserved_length: int,
                        layers: int = 1,
                        device: str = 'cpu',
                        attn_mask: torch.Tensor = None):
+    debuginfo(prj='ds')
     assert attn_mask is not None
     prob_dist = torch.ones((layers * batch_size, seq_length), device=device)
     sampled_indices = torch.multinomial(prob_dist, reserved_length)
@@ -62,6 +66,7 @@ def bert_sample_tokens(reserved_length: int,
     sampled_indices = sampled_indices.reshape(layers, batch_size, reserved_length).to(torch.int32)
     global random_ltd_module
     if random_ltd_module is None:
+        debuginfo(prj='ds')
         random_ltd_module = RandomLTDBuilder().load()
 
     sampled_indices = random_ltd_module.token_sort_(sampled_indices, seq_length)
@@ -83,8 +88,10 @@ class GatherTokens(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, activations: torch.Tensor, sorted_indices: torch.Tensor, batch_first: bool):
+        debuginfo(prj='ds')
         global random_ltd_module
         if random_ltd_module is None:
+            debuginfo(prj='ds')
             random_ltd_module = RandomLTDBuilder().load()
         ctx.save_for_backward(activations, sorted_indices)
         ctx.batch_first = batch_first
@@ -92,10 +99,11 @@ class GatherTokens(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, a_gradients: torch.Tensor, g_gradients: torch.Tensor):
-
+        debuginfo(prj='ds')
         g_gradients = g_gradients.contiguous()
         global random_ltd_module
         if random_ltd_module is None:
+            debuginfo(prj='ds')
             random_ltd_module = RandomLTDBuilder().load()
         activations, sorted_indices = ctx.saved_tensors
         batch_first = ctx.batch_first
@@ -108,8 +116,10 @@ class ScatterTokens(torch.autograd.Function):
     @staticmethod
     def forward(ctx, all_activations: torch.Tensor, layer_activations: torch.Tensor, sorted_indices: torch.Tensor,
                 batch_first: bool):
+        debuginfo(prj='ds')
         global random_ltd_module
         if random_ltd_module is None:
+            debuginfo(prj='ds')
             random_ltd_module = RandomLTDBuilder().load()
         scatter_results = random_ltd_module.token_scatter_(all_activations.clone(), layer_activations, sorted_indices,
                                                            batch_first)
@@ -120,10 +130,11 @@ class ScatterTokens(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, out_gradients: torch.Tensor):
-
+        debuginfo(prj='ds')
         out_gradients = out_gradients.contiguous()
         global random_ltd_module
         if random_ltd_module is None:
+            debuginfo(prj='ds')
             random_ltd_module = RandomLTDBuilder().load()
         sorted_indices, = ctx.saved_tensors
         batch_first = ctx.batch_first

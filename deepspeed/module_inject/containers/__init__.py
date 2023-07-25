@@ -17,3 +17,5 @@ from .opt import DS_OPTContainer, HFOPTLayerPolicy
 from .clip import DS_CLIPContainer, HFCLIPLayerPolicy
 from .unet import UNetPolicy
 from .vae import VAEPolicy
+from pydebug import debuginfo
+debuginfo(prj='ds')

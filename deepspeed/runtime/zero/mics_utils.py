@@ -17,6 +17,7 @@ from torch import Tensor
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils import logger
+from pydebug import debuginfo
 
 
 def _log_rank0(msg):
@@ -26,6 +27,31 @@ def _log_rank0(msg):
 
 @torch.jit.script
 def scale_tensors(tensors: List[Tensor], scale: int):
+    # debuginfo(prj='ds')
+    '''
+    yk==
+        File "/home/ub2004/yk_fork/DeepSpeed/deepspeed/runtime/zero/mics.py", line 15, in <module>
+          from deepspeed.runtime.zero.mics_utils import (MiCS_CommGroups, create_mics_comm_groups, scale_tensors)
+        File "/home/ub2004/yk_fork/DeepSpeed/deepspeed/runtime/zero/mics_utils.py", line 29, in <module>
+          def scale_tensors(tensors: List[Tensor], scale: int):
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/_script.py", line 1341, in script
+          fn = torch._C._jit_script_compile(
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/_recursive.py", line 867, in try_compile_fn
+          return torch.jit.script(fn, _rcb=rcb)
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/_script.py", line 1338, in script
+          ast = get_jit_def(obj, obj.__name__)
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/frontend.py", line 297, in get_jit_def
+          return build_def(parsed_def.ctx, fn_def, type_line, def_name, self_name=self_name, pdt_arg_types=pdt_arg_types)
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/frontend.py", line 348, in build_def
+          build_stmts(ctx, body))
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/frontend.py", line 141, in build_stmts
+          stmts = [build_stmt(ctx, s) for s in stmts]
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/frontend.py", line 141, in <listcomp>
+          stmts = [build_stmt(ctx, s) for s in stmts]
+        File "/home/ub2004/anaconda3/lib/python3.10/site-packages/torch/jit/frontend.py", line 319, in __call__
+          raise UnsupportedNodeError(ctx, node)
+      torch.jit.frontend.UnsupportedNodeError: import statements aren't supported:
+    '''
     for t in tensors:
         t.div_(scale)
 
@@ -51,6 +77,7 @@ def create_mics_comm_groups(
     hierarchical_allgather=False,
     mpu=None,
 ):
+    debuginfo(prj='ds')
     """
     create shard-group, replicate-group from config_file
     TODO: consider broadcast the config from rank0
@@ -75,6 +102,7 @@ def create_mics_comm_groups(
     ranks_of_shard_group = config['shard_groups']
     ranks_of_repli_group = config['replicate_groups']
     if len(ranks_of_repli_group) == 0:
+        debuginfo(prj='ds')
         assert len(ranks_of_shard_group) == 1, "replicate groups are empty only for single shard group"
         for r in ranks_of_shard_group[0]:
             ranks_of_repli_group.append([r])
@@ -119,6 +147,7 @@ def create_mics_comm_groups(
     assert groups.param_shard_size == len(ranks_of_shard_group[0])
 
     if hierarchical_allgather:
+        debuginfo(prj='ds')
         # create hierarchy inter-node, intra-node groups
         # n_span_nodes = config['shard_span']
         n_span_nodes = config['span_nodes']
@@ -174,6 +203,7 @@ def _generate_mics_config(world_size, ndev_per_node, shard_size, pp_size=1):
         pipeline parallelism + zero
 
     """
+    debuginfo(prj='ds')
     assert world_size % pp_size == 0
     assert (world_size // pp_size) % shard_size == 0, \
         f"dp group size is not dividable by dp_shard_size, "\
@@ -195,6 +225,7 @@ def _generate_mics_config(world_size, ndev_per_node, shard_size, pp_size=1):
 
 
 def _sizes_all_same(groups):
+    debuginfo(prj='ds')
     """all groups have same length"""
     all_same = True
     for g in groups:

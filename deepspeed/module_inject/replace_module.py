@@ -26,15 +26,16 @@ import time
 from .utils import policy_to_ds_container
 
 import gc
-
+from pydebug import debuginfo
 
 class ReplaceWithTensorSlicing:
 
     def __init__(self, mp_group=None, mp_size=1, out_dim=1, in_dim=0):
-        print('ReplaceWithTensorSlicing init')
         if mp_group is not None:
+            debuginfo(prj='ds')
             self.gpu_index = dist.get_rank(group=mp_group)
         else:
+            debuginfo(prj='ds')
             self.gpu_index = 0
         self.out_dim = out_dim
         self.in_dim = in_dim
@@ -52,6 +53,7 @@ class ReplaceWithTensorSlicing:
                      num_splits: int,
                      int8: bool = False,
                      allocate_tensor: bool = False):
+        debuginfo(prj='ds')
         if src is None:
             return src
         src_shape = src.shape
@@ -60,14 +62,18 @@ class ReplaceWithTensorSlicing:
         outer_dim = 0 if int8 else -1
 
         if allocate_tensor:
+            debuginfo(prj='ds')
             dst = torch.empty_like(dst)
 
         src_split = torch.split(src.data, src.shape[outer_dim] // num_splits, dim=outer_dim)
         if (len(src_shape) == 2 and len(dst_shape) == 2):
+            debuginfo(prj='ds')
             if src_shape[outer_dim] == dst_shape[self.out_dim]:
+                debuginfo(prj='ds')
                 dst = dst.reshape(-1).data.copy_(src.data.reshape(-1)).reshape(src.shape)
                 dst = torch.nn.parameter.Parameter(dst, requires_grad=False)
                 if hasattr(src, 'scale'):
+                    debuginfo(prj='ds')
                     dst.scale = src.scale
                 return dst
             self.merge_assert(src_shape[outer_dim], dst_shape[self.out_dim])
@@ -79,7 +85,9 @@ class ReplaceWithTensorSlicing:
             dst = dst.reshape(-1).data.copy_(weight_split[self.gpu_index].contiguous().reshape(-1)).reshape(
                 weight_split[self.gpu_index].shape)
         else:
+            debuginfo(prj='ds')
             if src_shape[0] == dst_shape[0]:
+                debuginfo(prj='ds')
                 return torch.nn.parameter.Parameter(src)
             qkv_size = dst_shape[0] // num_splits
             qkv_split = [torch.split(src_s, qkv_size, dim=0) for src_s in src_split]
@@ -88,14 +96,18 @@ class ReplaceWithTensorSlicing:
 
         dst = torch.nn.parameter.Parameter(dst, requires_grad=False)
         if hasattr(src, 'scale'):
+            debuginfo(prj='ds')
             dst.scale = src.scale
         return dst
 
     def copy(self, dst, src, int8=False, allocate_tensor=False):
+        debuginfo(prj='ds')
         if src is None:
+            debuginfo(prj='ds')
             return src
         assert not dst.data.is_meta  # the torch.Tensor.copy_ method used below will silently fail on meta tensors
         if allocate_tensor:
+            debuginfo(prj='ds')
             dst = torch.empty_like(dst)
         outer_dim = 0 if int8 else 1
         inner_dim = 1 if int8 else 0
@@ -104,29 +116,36 @@ class ReplaceWithTensorSlicing:
         if (len(src_shape) == 2 and len(dst_shape) == 2):
 
             if src_shape[inner_dim] == dst_shape[self.in_dim] and src_shape[outer_dim] == dst_shape[self.out_dim]:
+                debuginfo(prj='ds')
                 dst = dst.reshape(-1).data.copy_(src.data.reshape(-1)).reshape(src.shape)
             else:
                 if src_shape[inner_dim] != dst_shape[self.in_dim]:
+                    debuginfo(prj='ds')
                     self.merge_assert(src_shape[inner_dim], dst_shape[self.in_dim])
                     dst.data.copy_(src[:, self.gpu_index * dst_shape[self.in_dim]: (self.gpu_index + 1) * dst_shape[self.in_dim]] if inner_dim == 1 else \
                                    src[self.gpu_index * dst_shape[self.in_dim]: (self.gpu_index + 1) * dst_shape[self.in_dim], :])
                 else:
+                    debuginfo(prj='ds')
                     self.merge_assert(src_shape[outer_dim], dst_shape[self.out_dim])
                     dst.data.copy_(src[:, self.gpu_index * dst_shape[self.out_dim]: (self.gpu_index + 1) * dst_shape[self.out_dim]] if outer_dim == 1 else \
                                    src[self.gpu_index * dst_shape[self.out_dim]: (self.gpu_index + 1) * dst_shape[self.out_dim], :])
         else:
             if src_shape[0] == dst_shape[0]:
+                debuginfo(prj='ds')
                 dst = src if src.dtype == dst.dtype else dst.data.copy_(src)
             else:
+                debuginfo(prj='ds')
                 dst.data.copy_(src[self.gpu_index * dst_shape[-1]:(self.gpu_index + 1) * dst_shape[-1]])
         dst = torch.nn.parameter.Parameter(dst, requires_grad=False)
         if hasattr(src, 'scale'):
+            debuginfo(prj='ds')
             dst.scale = src.scale
 
         return dst
 
 
 def get_transformer_name(replaced_module):
+    debuginfo(prj='ds')
     from .containers import supported_models
     from torch.nn import ModuleList
     transformer_name = ''
@@ -144,7 +163,7 @@ def get_transformer_name(replaced_module):
 class GroupQuantizer:
 
     def __init__(self, q_int8=True, group_size=1, num_bits=8, num_groups=0):
-        print('GroupQuantizer init')
+        debuginfo(prj='ds', info='GroupQuantizer init')
         self.group_size = group_size
         self.num_bits = num_bits
         self.q_int8 = q_int8
@@ -152,7 +171,9 @@ class GroupQuantizer:
         self.num_groups = num_groups
 
     def quantize(self, inputs, qkv=True, count=1, parallel_dim=0):
+        debuginfo(prj='ds')
         if not self.q_int8 or not qkv:
+            debuginfo(prj='ds')
             inputs = torch.nn.Parameter(inputs, requires_grad=False)
             inputs.scale = torch.empty(1)
             return inputs
@@ -179,6 +200,7 @@ class GroupQuantizer:
 
 
 def _module_match(module):
+    debuginfo(prj='ds')
     for policy in generic_policies:
         policy = policy()
         if policy.match(module):
@@ -191,10 +213,13 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
     def replace_attn(child, policy):
         policy_attn = policy.attention(child)
         if policy_attn is None:
+            debuginfo(prj='ds')
             return child
         if len(policy_attn) == 5:
+            debuginfo(prj='ds')
             qkvw, attn_ow, attn_ob, hidden_size, heads = policy_attn
         else:
+            debuginfo(prj='ds')
             qw, kw, vw, attn_ow, attn_ob, hidden_size, heads = policy_attn
 
         config = transformer_inference.DeepSpeedInferenceConfig(
@@ -208,6 +233,7 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
         attn_module = DeepSpeedDiffusersAttention(config)
 
         def transpose(data):
+            debuginfo(prj='ds')
             data = data.contiguous()
             data.reshape(-1).copy_(data.transpose(-1, -2).contiguous().reshape(-1))
             data = data.reshape(data.shape[-1], data.shape[-2])
@@ -215,8 +241,10 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
             return data
 
         if len(policy_attn) == 5:
+            debuginfo(prj='ds')
             attn_module.attn_qkvw.data = transpose(qkvw.data)
         else:
+            debuginfo(prj='ds')
             attn_module.attn_qkvw = None
             attn_module.attn_qw.data = transpose(qw.data)
             attn_module.attn_kw.data = transpose(kw.data)
@@ -228,6 +256,7 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
         return attn_module
 
     def replace_attn_block(child, policy):
+        debuginfo(prj='ds')
         config = Diffusers2DTransformerConfig()
         return DeepSpeedDiffusersTransformerBlock(child, config)
 
@@ -240,8 +269,10 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
         try:
             import diffusers
             if hasattr(diffusers.models.attention, 'CrossAttention'):
+                debuginfo(prj='ds')
                 cross_attention = diffusers.models.attention.CrossAttention
             else:
+                debuginfo(prj='ds')
                 cross_attention = diffusers.models.attention_processor.Attention
             attention_block = diffusers.models.attention.BasicTransformerBlock
             new_policies = {
@@ -249,6 +280,7 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
                 attention_block: replace_attn_block,
             }
         except ImportError:
+            debuginfo(prj='ds')
             new_policies = {}
 
         #replace_transformer_layer(None,
@@ -294,6 +326,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
     Returns:
         Updated nn.module with replaced transformer layers
     """
+    debuginfo(prj='ds')
     # defining globals as internally defined functions inherit these everywhere
     quantize = (config.dtype == torch.int8)
     # todo: Refactor later. In future, let's minimize the style used above and use config.** instead
@@ -310,6 +343,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                                           mp_size=config.tensor_parallel.tp_size)  #, out_dim=0, in_dim=1)
 
     def replace_with_policy(child, policy_cls, triangular_masking, inference=False, layer_id=0):
+        debuginfo(prj='ds')
         policy = policy_cls(child, inference=inference)
         if not policy.cuda_graph_supported:
             # policy says cuda graph is not supported raise an error if set
@@ -318,6 +352,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         from deepspeed.moe.layer import MoE
         moe = False
         if hasattr(child, 'mlp') and isinstance(child.mlp, MoE):
+            debuginfo(prj='ds')
             num_experts = child.mlp.num_experts
             moe = True
 
@@ -367,15 +402,19 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         return _container.module
 
     def replace_wo_policy(module, all_reduce_linears, prefix="", state_dict=None):
+        debuginfo(prj='ds')
         mp_size = config.tensor_parallel.tp_size
         mp_group = config.tensor_parallel.tp_group
 
         def _replace(child, name, conv_linear_layer):
+            debuginfo(prj='ds')
             if getattr(child, "replaced", False) == True:
+                debuginfo(prj='ds')
                 return
             mp_replace = ReplaceWithTensorSlicing(mp_group=mp_group)
             weight_shape = child.weight.shape
             if name in all_reduce_linears:
+                debuginfo(prj='ds')
                 new_weight = torch.empty((
                     weight_shape[1] if conv_linear_layer else weight_shape[0],
                     (weight_shape[0] if conv_linear_layer else weight_shape[1]) // mp_size,
@@ -383,15 +422,18 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                                          device=child.weight.device,
                                          dtype=child.weight.dtype)
                 if conv_linear_layer:
+                    debuginfo(prj='ds')
                     child.weight.data = child.weight.data.transpose(-1, -2).contiguous()
                 data = mp_replace.copy(new_weight, child.weight.data)
                 new_bias = torch.empty((weight_shape[0]), device=child.weight.device, dtype=child.weight.dtype)
                 if child.bias is not None:
+                    debuginfo(prj='ds')
                     new_bias.data.copy_(child.bias.data)
                 setattr(child, "replaced", True)
                 return LinearAllreduce(data, child.bias if child.bias is None else \
                             torch.nn.parameter.Parameter(new_bias.to(get_accelerator().current_device_name())), mp_group)
             else:
+                debuginfo(prj='ds')
                 new_weight = torch.empty((
                     (weight_shape[1] if conv_linear_layer else weight_shape[0]) // mp_size,
                     weight_shape[0] // mp_size if conv_linear_layer else weight_shape[1],
@@ -399,6 +441,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                                          device=child.weight.device,
                                          dtype=child.weight.dtype)
                 if conv_linear_layer:
+                    debuginfo(prj='ds')
                     child.weight.data = child.weight.data.transpose(-1, -2).contiguous()
                 data = mp_replace.copy(new_weight, child.weight.data)
 
@@ -427,12 +470,14 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
 
         def update_mp_params(child):
             if getattr(child, "replaced", False) == True:
+                debuginfo(prj='ds')
                 return
             for param in [
                     "n_heads", "inner_dim", "num_heads", "num_kv", "num_attention_heads", "num_attn_heads",
                     "all_head_size", "embed_dim", "hidden_size"
             ]:
                 if hasattr(child, param):
+                    debuginfo(prj='ds')
                     param_val = getattr(child, param)
                     assert param_val % mp_size == 0, f"{param} ({param_val}) must be divisible by mp_size ({mp_size})"
                     setattr(child, param, param_val // mp_size)
@@ -440,21 +485,28 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
 
         conv_linear_layer = False
         if linear_layer_setting is not None:
+            debuginfo(prj='ds')
             linear_policies = {linear_layer_setting[0]: _replace}
             if len(linear_layer_setting) == 2:
+                debuginfo(prj='ds')
                 linear_policies.update({linear_layer_setting[1]: _slice_embedding})
         else:
+            debuginfo(prj='ds')
             if orig_layer_impl is HFGPT2LayerPolicy._orig_layer_class:
                 try:
+                    debuginfo(prj='ds')
                     import transformers
                     conv_linear_layer = True
                     linear_policies = {transformers.model_utils.Conv1D: _replace}
                 except ImportError:
+                    debuginfo(prj='ds')
                     linear_policies = {nn.Linear: _replace}
             else:
+                debuginfo(prj='ds')
                 linear_policies = {nn.Linear: _replace, nn.Embedding: _slice_embedding}
 
         def _replace_module(r_module, prev_name='', prev_class_name=''):
+            debuginfo(prj='ds')
             for name, child in r_module.named_children():
                 if prev_class_name == "":
                     class_name = prev_name
@@ -493,23 +545,27 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
     def replace_fn(child, _policy, layer_id=0, prefix="", state_dict=None):
         training = False  # todo: refactor this part to go in the config
         if training:
+            debuginfo(prj='ds')
             # copy relevant state from child -> new module
             new_module = replace_with_policy(child, _policy, config.triangular_masking)
 
         else:
             # copy relevant state from child -> new module
             if config.replace_with_kernel_inject:
+                debuginfo(prj='ds')
                 new_module = replace_with_policy(child,
                                                  _policy,
                                                  config.triangular_masking,
                                                  inference=True,
                                                  layer_id=layer_id)
             else:
+                debuginfo(prj='ds')
                 new_module = replace_wo_policy(child, _policy, prefix=prefix, state_dict=state_dict)
 
         return new_module
 
     if checkpoint_dict is not None and not config.replace_with_kernel_inject:
+        debuginfo(prj='ds')
         # AutoTP shard loading
         checkpoint = checkpoint_dict["checkpoints"]
         pbar = tqdm.tqdm(total=len(checkpoint), desc=f"Loading {len(checkpoint)} checkpoint shards")
@@ -522,6 +578,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
             pbar.update(1)
             gc.collect()
     else:
+        debuginfo(prj='ds')
         replaced_module = replace_module(model=model,
                                          orig_class=orig_layer_impl,
                                          replace_fn=replace_fn,
@@ -531,6 +588,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
     world_size = dist.get_world_size() if dist.is_initialized() else 1
     rank = dist.get_rank() if dist.is_initialized() else 0
     if checkpoint_dict is not None and config.replace_with_kernel_inject:
+        debuginfo(prj='ds')
         assert container_g.ckpt_load_enabled, \
                f"Meta Tensor checkpoint loading not supported in {container_g.__class__.__name__} container"
         start_time = time.time()
@@ -542,6 +600,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         base_dir1 = checkpoint_dict.get('base_dir', config.base_dir)
 
         if ckpt_type == 'pp' and type(checkpoint) is list:
+            debuginfo(prj='ds')
             pbar = tqdm.tqdm(total=len(checkpoint), desc=f"Loading {len(checkpoint)} checkpoint shards")
 
             for i in range(len(checkpoint)):
@@ -555,6 +614,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                                            container=container_g)
                 pbar.update(1)
         else:
+            debuginfo(prj='ds')
             num_checkpoints = len(ckpt_list) // ckpt_mp_size
             tp_split_size = (world_size / ckpt_mp_size)
             sd_offset = int(rank / tp_split_size)
@@ -580,6 +640,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                 gc.collect()
 
             if "non_tp" in checkpoint:
+                debuginfo(prj='ds')
                 pbar = tqdm.tqdm(total=len(checkpoint["non_tp"]),
                                  desc=f"Loading {len(checkpoint['non_tp'])} checkpoint shards")
 
@@ -601,6 +662,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         print(f"checkpoint loading time at rank {rank}: {time.time()-start_time} sec")
 
     if config.save_mp_checkpoint_path is not None:
+        debuginfo(prj='ds')
         from collections import OrderedDict
         import json
         num_partitions = 8
@@ -608,14 +670,18 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         if checkpoint_dict is None:
             ckpt_name = "ds_model"
             try:
+                debuginfo(prj='ds')
                 from transformers.models.bloom.modeling_bloom import BloomForCausalLM
                 if isinstance(model, BloomForCausalLM):
                     ckpt_name = "bloom"
             except ImportError:
+                debuginfo(prj='ds')
                 ckpt_name = "ds_model"
         else:
+            debuginfo(prj='ds')
             ckpt_name = checkpoint_dict['type']
         if dist.is_initialized():
+            debuginfo(prj='ds')
             dist.barrier()
         transformer_name = get_transformer_name(replaced_module)
         non_tp_ckpt_name = f'non-tp.pt'
@@ -668,6 +734,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
 
 
 def revert_transformer_layer(orig_layer_impl, model, config, preln=False):
+    debuginfo(prj='ds')
     """ Revert DeepSpeed's transformer layer back to original bert-style transformer layer
     Arguments:
         orig_layer_impl (torch.nn.Module): the original transformer layer implementation that was replaced,
@@ -679,6 +746,7 @@ def revert_transformer_layer(orig_layer_impl, model, config, preln=False):
     """
 
     def replace_fn(child, _replace_policy, layer_id):
+        debuginfo(prj='ds')
         #from turing.nvidia_modelingpreln import BertLayer
         orig_module = orig_layer_impl(config)
 
@@ -702,18 +770,22 @@ def revert_transformer_layer(orig_layer_impl, model, config, preln=False):
         attn_ln_w = child.attn_nw.data
         attn_ln_b = child.attn_nb.data
         if preln:
+            debuginfo(prj='ds')
             orig_module.PostAttentionLayerNorm.weight.data = attn_ln_w
             orig_module.PostAttentionLayerNorm.bias.data = attn_ln_b
         else:
+            debuginfo(prj='ds')
             orig_module.attention.output.LayerNorm.weight.data = attn_ln_w
             orig_module.attention.output.LayerNorm.bias.data = attn_ln_b
 
         inter_ff_w = child.inter_w.data
         inter_ff_b = child.inter_b.data
         if preln:
+            debuginfo(prj='ds')
             orig_module.intermediate.dense_act.weight.data = inter_ff_w
             orig_module.intermediate.dense_act.bias.data = inter_ff_b
         else:
+            debuginfo(prj='ds')
             orig_module.intermediate.dense.weight.data = inter_ff_w
             orig_module.intermediate.dense.bias.data = inter_ff_b
 
@@ -723,9 +795,11 @@ def revert_transformer_layer(orig_layer_impl, model, config, preln=False):
         transformer_ln_w = child.norm_w.data
         transformer_ln_b = child.norm_b.data
         if preln:
+            debuginfo(prj='ds')
             orig_module.PreAttentionLayerNorm.weight.data = transformer_ln_w
             orig_module.PreAttentionLayerNorm.bias.data = transformer_ln_b
         else:
+            debuginfo(prj='ds')
             orig_module.output.LayerNorm.weight.data = transformer_ln_w
             orig_module.output.LayerNorm.bias.data = transformer_ln_b
         return orig_module
@@ -748,11 +822,14 @@ def replace_module(model, orig_class, replace_fn, _replace_policy, checkpoint=No
     """
     sd = None
     if checkpoint is not None:
+        debuginfo(prj='ds')
         sd = torch.load(checkpoint, map_location='cpu')
     policy = {}
     if orig_class is not None:
+        debuginfo(prj='ds')
         policy.update({orig_class: (replace_fn, _replace_policy)})
     else:
+        debuginfo(prj='ds')
         for plcy in replace_policies:
             # instantiate a throw-away policy in order to populate the _orig_layer_class
             _ = plcy(None)
@@ -760,6 +837,7 @@ def replace_module(model, orig_class, replace_fn, _replace_policy, checkpoint=No
                 for orig_layer_class in plcy._orig_layer_class:
                     policy.update({orig_layer_class: (replace_fn, plcy)})
             elif plcy._orig_layer_class is not None:
+                debuginfo(prj='ds')
                 policy.update({plcy._orig_layer_class: (replace_fn, plcy)})
     assert len(policy.items()) > 0,\
         "No default policy found! Please specify your policy injection_policy (like {BertLayer:HFBEertLayerPolicy})." +\
@@ -767,12 +845,14 @@ def replace_module(model, orig_class, replace_fn, _replace_policy, checkpoint=No
 
     replaced_module, _ = _replace_module(model, policy, state_dict=sd)
     if checkpoint is not None:
+        debuginfo(prj='ds')
         embedding_weight = None
         for n, p in replaced_module.named_parameters():
             if "word_embeddings." in n or "embed_tokens." in n or "wte." in n:
                 embedding_weight = p
         if embedding_weight is not None and hasattr(replaced_module, "lm_head") and hasattr(
                 replaced_module.lm_head, "weight") and replaced_module.lm_head.weight.is_meta:
+            debuginfo(prj='ds')
             replaced_module.lm_head.weight = embedding_weight
     return replaced_module
 
@@ -783,6 +863,7 @@ import re
 
 
 def skip_level_0_prefix(model, name):
+    debuginfo(prj='ds')
     model = str(model)
     key = re.search(r": (.*?)Model", model)
     if key is None:
@@ -797,6 +878,7 @@ def skip_level_0_prefix(model, name):
 
 
 def load_buffer(module, state_dict, prefix):
+    debuginfo(prj='ds')
     for name in module._buffers.keys():
         if module._buffers[name].data.is_meta:
             module._buffers[name] = torch.nn.parameter.Parameter(
@@ -815,13 +897,16 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
         Modified ``model``.
     """
     try:
+        debuginfo(prj='ds')
         import transformers
         OPTLearnedPositionalEmbedding = transformers.models.opt.modeling_opt.OPTLearnedPositionalEmbedding
     except:
+        debuginfo(prj='ds')
         OPTLearnedPositionalEmbedding = None
     load_layers = [nn.Linear, nn.Embedding, nn.LayerNorm, OPTLearnedPositionalEmbedding]
     for name, child in model.named_children():
         if child.__class__ in policies:
+            debuginfo(prj='ds')
             replaced_module = policies[child.__class__][0](child,
                                                            policies[child.__class__][-1],
                                                            layer_id,
@@ -834,9 +919,11 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
                 model.forward_funcs[model.fwd_map[name]] = replaced_module
             layer_id += 1
         else:
+            debuginfo(prj='ds')
             checking_key = prefix + name + '.'
             if child.__class__ in load_layers and state_dict is not None:
                 if any(checking_key in item for item in state_dict):
+                    debuginfo(prj='ds')
                     load(
                         child,
                         state_dict,
@@ -845,6 +932,7 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
                 else:
                     continue
             if len(child._buffers) != 0 and state_dict is not None:
+                debuginfo(prj='ds')
                 load_buffer(child, state_dict, checking_key)
             _, layer_id = _replace_module(child,
                                           policies,
@@ -860,21 +948,28 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
 
 
 def load(module, state_dict, prefix, mp_group=None):
+    debuginfo(prj='ds')
     mp_replace = ReplaceWithTensorSlicing(mp_group=mp_group)
     if hasattr(module, 'weight'):
+        debuginfo(prj='ds')
         if module.weight.data.is_meta:
             # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
             module.weight = torch.nn.parameter.Parameter(data=torch.empty_like(module.weight.data, device="cpu"),
                                                          requires_grad=module.weight.data.requires_grad)
             if 'query_key_value' in prefix:
+                debuginfo(prj='ds')
                 module.weight = mp_replace.strided_copy(module.weight.data,
                                                         state_dict[prefix + 'weight'],
                                                         num_splits=3)
             else:
+                debuginfo(prj='ds')
                 module.weight = mp_replace.copy(module.weight.data, state_dict[prefix + 'weight'])
     else:
+        debuginfo(prj='ds')
         if hasattr(module, 'norm') and hasattr(module.norm, 'weight'):
+            debuginfo(prj='ds')
             if module.norm.weight.data.is_meta:
+                debuginfo(prj='ds')
                 # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                 module.norm.weight = torch.nn.parameter.Parameter(data=torch.empty_like(module.norm.weight.data,
                                                                                         device="cpu"),
@@ -882,15 +977,21 @@ def load(module, state_dict, prefix, mp_group=None):
             module.norm.weight = mp_replace.copy(module.norm.weight.data, state_dict[prefix + 'weight'])
 
     if prefix + 'bias' in state_dict.keys():
+        debuginfo(prj='ds')
         if hasattr(module, 'bias'):
+            debuginfo(prj='ds')
             if module.bias.data.is_meta:
+                debuginfo(prj='ds')
                 # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                 module.bias = torch.nn.parameter.Parameter(data=torch.empty_like(module.bias.data, device="cpu"),
                                                            requires_grad=module.bias.data.requires_grad)
             module.bias = mp_replace.copy(module.bias, state_dict[prefix + 'bias'])
         else:
+            debuginfo(prj='ds')
             if hasattr(module, 'norm') and hasattr(module.norm, 'bias'):
+                debuginfo(prj='ds')
                 if module.norm.bias.data.is_meta:
+                    debuginfo(prj='ds')
                     # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                     module.norm.bias = torch.nn.parameter.Parameter(data=torch.empty_like(module.norm.bias.data,
                                                                                           device="cpu"),

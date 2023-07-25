@@ -20,7 +20,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-
+from pydebug import debuginfo
 # while this script doesn't use deepspeed to recover data, since the checkpoints are pickled with
 # DeepSpeed data structures it has to be available in the current python environment.
 from deepspeed.utils import logger
@@ -39,7 +39,7 @@ class zero_model_state:
     frozen_param_fragments: dict()
 
 
-debug = 0
+debug = 1 #yk== 
 
 # load to cpu
 device = torch.device('cpu')
@@ -59,6 +59,7 @@ def natural_keys(text):
 
 
 def get_model_state_file(checkpoint_dir, zero_stage):
+    debuginfo(prj='ds')
     if not os.path.isdir(checkpoint_dir):
         raise FileNotFoundError(f"Directory '{checkpoint_dir}' doesn't exist")
 
@@ -75,6 +76,7 @@ def get_model_state_file(checkpoint_dir, zero_stage):
 
 
 def get_checkpoint_files(checkpoint_dir, glob_pattern):
+    debuginfo(prj='ds')
     # XXX: need to test that this simple glob rule works for multi-node setup too
     ckpt_files = sorted(glob.glob(os.path.join(checkpoint_dir, glob_pattern)), key=natural_keys)
 
@@ -95,6 +97,7 @@ def get_model_state_files(checkpoint_dir):
 def parse_model_states(files):
     zero_model_states = []
     for file in files:
+        debuginfo(prj='ds', info=f'Load file {file}')
         state_dict = torch.load(file, map_location=device)
 
         if BUFFER_NAMES not in state_dict:
@@ -143,6 +146,7 @@ def parse_optim_states(files, ds_checkpoint_dir):
     total_files = len(files)
     state_dicts = []
     for f in files:
+        debuginfo(prj='ds', info=f'Load file {f}')
         state_dicts.append(torch.load(f, map_location=device))
 
     if not ZERO_STAGE in state_dicts[0][OPTIMIZER_STATE_DICT]:
@@ -232,6 +236,7 @@ def _zero2_merge_frozen_params(state_dict, zero_model_states):
     total_params = 0
     total_numel = 0
     for name, shape in frozen_param_shapes.items():
+        debuginfo(prj='ds', info=f'name: {name} -- shape: {shape}')
         total_params += 1
         unpartitioned_numel = shape.numel()
         total_numel += unpartitioned_numel
@@ -250,7 +255,7 @@ def _zero2_merge_trainable_params(state_dict, world_size, fp32_flat_groups, zero
     # Reconstruction protocol:
     #
     # XXX: document this
-
+    
     if debug:
         for i in range(world_size):
             for j in range(len(fp32_flat_groups[0])):

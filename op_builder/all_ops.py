@@ -18,9 +18,10 @@ except ImportError:
 op_builder_dir = get_accelerator().op_builder_dir()
 op_builder_module = importlib.import_module(op_builder_dir)
 __op_builders__ = []
-
+from pydebug import debuginfo
 for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(op_builder_module.__file__)]):
     # avoid self references
+    debuginfo(prj='ds', info='2-module_name:' + str(module_name))
     if module_name != 'all_ops' and module_name != 'builder':
         module = importlib.import_module("{}.{}".format(op_builder_dir, module_name))
         for member_name in module.__dir__():
@@ -30,3 +31,4 @@ for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(op_builder_module
                 __op_builders__.append(builder)
 
 ALL_OPS = {op.name: op for op in __op_builders__ if op is not None}
+debuginfo(prj='ds', info='ALL_OPS:' + str(ALL_OPS))

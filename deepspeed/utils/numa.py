@@ -14,6 +14,8 @@ import os
 import psutil
 import subprocess
 
+from pydebug import debuginfo
+debuginfo(prj='ds')
 
 # return a list of list for cores to numa mapping
 # [
@@ -38,6 +40,7 @@ def get_numa_cores():
 
 
 def check_for_numactl_pkg():
+    debuginfo(prj='ds')
     libs = dict(
         dpkg=["-l", "numactl", "apt"],
         pacman=["-Q", "numactl", "pacman"],
@@ -60,6 +63,7 @@ def check_for_numactl_pkg():
 
 
 def parse_range(rng):
+    debuginfo(prj='ds')
     try:
         value = int(rng)
         return range(value, value + 1)
@@ -84,6 +88,7 @@ def parse_range(rng):
 # 2. Sub ranges must be in ascend order and not overlap with each other
 # 3. No space in the range expression
 def parse_range_list(range_str):
+    debuginfo(prj='ds')
     number_list = []
     last = -1
     range_list = range_str.split(',')
@@ -99,6 +104,7 @@ def parse_range_list(range_str):
 
 
 def get_numactl_cmd(bind_core_list, num_local_procs, local_rank):
+    debuginfo(prj='ds')
     numactl_cmd = []
     check_for_numactl_pkg()
     if 'KMP_AFFINITY' in os.environ.keys():

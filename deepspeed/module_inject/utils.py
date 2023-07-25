@@ -4,10 +4,11 @@
 # DeepSpeed Team
 
 from deepspeed.utils import log_dist
-
+from pydebug import debuginfo
 
 # helper function to map between DS policies and DS containers
 def policy_to_ds_container(**kwargs):
+    debuginfo(prj='ds')
     from .containers import HFGPT2LayerPolicy, DS_GPT2Container
     from .containers import HFBertLayerPolicy, DS_BERTContainer
     from .containers import BLOOMLayerPolicy, DS_BloomContainer
@@ -40,6 +41,7 @@ def policy_to_ds_container(**kwargs):
     if policy_type not in policy_to_container:
         log_dist(f"Policy type {policy_type} not supported", [0])
     else:
+        debuginfo(prj='ds')
         container = policy_to_container[policy_type](**kwargs)
 
     return container

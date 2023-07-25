@@ -5,6 +5,7 @@
 
 import torch
 
+from pydebug import debuginfo
 
 def quantize_transformer_layer(orig_layer_impl, model, megatron=False, preln=False):
     """ Quantize bert-style transformer layers with DeepSpeed's transformer layer
@@ -23,9 +24,11 @@ def quantize_transformer_layer(orig_layer_impl, model, megatron=False, preln=Fal
     """
 
     def quantize_weight(weight):
+        debuginfo(prj='ds')
         return weight.to(torch.int8)
 
     def megatron_layer_quantize(layer):
+        debuginfo(prj='ds')
         layer.attention.query_key_value.weight.data = quantize_weight(layer.attention.query_key_value.weight.data)
         layer.attention.dense.weight.data = quantize_weight(layer.attention.dense.weight.data)
         layer.mlp.dense_h_to_4h.weight.data = quantize_weight(layer.mlp.dense_h_to_4h.weight.data)
@@ -37,16 +40,20 @@ def quantize_transformer_layer(orig_layer_impl, model, megatron=False, preln=Fal
         layer.attention.self.value.weight.data = quantize_weight(layer.attention.self.value.weight.data)
         layer.attention.output.dense.weight.data = quantize_weight(layer.attention.output.dense.weight.data)
         if preln:
+            debuginfo(prj='ds')
             layer.intermediate.dense_act.weight.data = quantize_weight(layer.intermediate.dense_act.weight.data)
         else:
+            debuginfo(prj='ds')
             layer.intermediate.dense.weight.data = quantize_weight(layer.intermediate.dense.weight.data)
         layer.output.dense.weight.data = quantize_weight(layer.output.dense.weight.data)
 
     def quantize_fn(child):
         if megatron:
+            debuginfo(prj='ds')
             # Quantize megatron GPT2 / GPT3 trained model
             megatron_layer_quantize(child)
         else:
+            debuginfo(prj='ds')
             # Quantize either DeepSpeed or HuggingFace trained model
             bert_layer_quantize(child)
 
@@ -56,11 +63,13 @@ def quantize_transformer_layer(orig_layer_impl, model, megatron=False, preln=Fal
 
 
 def quantize_module(model, orig_class, quantize_fn):
+    debuginfo(prj='ds')
     policy = {orig_class: quantize_fn}
     return _quantize_module(model, policy)
 
 
 def _quantize_module(model, policies):
+    debuginfo(prj='ds')
     for name, child in model.named_children():
         if child.__class__ in policies:
             orig = repr(child)

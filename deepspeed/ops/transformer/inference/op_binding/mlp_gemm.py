@@ -11,12 +11,12 @@ import torch.nn.functional as F
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
 from deepspeed.utils.types import NormType
-
+from pydebug import debuginfo
 
 class MLPGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        print('MLPGemmOp init')
+        debuginfo(prj='ds', info='MLPGemmOp init')
         super(MLPGemmOp, self).__init__(config)
         try:
             if self.config.norm_type == NormType.LayerNorm:
@@ -37,14 +37,17 @@ class MLPGemmOp(BaseOp):
                     self.mlp_gemm_func = self.inference_module.rms_mlp_gemm_fp32  # type: ignore
         except AttributeError:
             if self.config.norm_type == NormType.LayerNorm:
+                debuginfo(prj='ds')
                 self.mlp_gemm_func = self.mlp_gemm_fallback
             elif self.config.norm_type == NormType.RMSNorm:
+                debuginfo(prj='ds')
                 self.mlp_gemm_func = self.rms_mlp_gemm_fallback
 
     def mlp_gemm_fallback(self, input, residual, input_bias, weight_interm, weight_out, bias, gamma, beta, eps,
                           pre_layer_norm, mlp_after_attn, interm_scale, out_scale, dtype, mlp_act_func_type,
                           transpose):
         if os.environ.get('DS_KI_FALLBACK') == 'True' and mlp_after_attn and not transpose:
+            debuginfo(prj='ds')
             residual_add = F.layer_norm(input + residual + input_bias, (input.shape[2], ), gamma, beta,
                                         self.config.epsilon)
             tmp = torch.matmul(residual_add, weight_interm)
@@ -68,6 +71,7 @@ class MLPGemmOp(BaseOp):
                 gamma: Optional[torch.Tensor] = None,
                 beta: Optional[torch.Tensor] = None):
         if self.config.norm_type == NormType.LayerNorm:
+            debuginfo(prj='ds')
             output, residual_add = self.mlp_gemm_func(
                 input,
                 residual,
@@ -86,6 +90,7 @@ class MLPGemmOp(BaseOp):
                 self.config.mlp_act_func_type,
                 self.config.transposed_mode)
         else:
+            debuginfo(prj='ds')
             output, residual_add = self.mlp_gemm_func(
                 input,
                 residual,

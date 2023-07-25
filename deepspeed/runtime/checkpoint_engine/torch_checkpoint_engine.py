@@ -7,11 +7,13 @@ import torch
 from deepspeed.utils import logger, log_dist
 from deepspeed.runtime.checkpoint_engine.checkpoint_engine import \
     CheckpointEngine
-
+from pydebug import debuginfo
+debuginfo(prj='ds')
 
 class TorchCheckpointEngine(CheckpointEngine):
 
     def __init__(self, config_params=None):
+        debuginfo(prj='ds')
         super().__init__(config_params)
 
     def create(self, tag):

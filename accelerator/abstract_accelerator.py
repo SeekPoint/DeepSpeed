@@ -5,11 +5,12 @@
 
 import abc
 from abc import ABC
-
+from pydebug import debuginfo
 
 class DeepSpeedAccelerator(ABC):
 
     def __init__(self):
+        debuginfo(prj='ds', info='DeepSpeedAccelerator init')
         self._name = None
         self._communication_backend_name = None
 

@@ -30,8 +30,9 @@ from .constants import ELASTIC_TRAINING_ID_DEFAULT
 
 PID_FILE_BASEPATH = "/tmp"
 
-
+from pydebug import debuginfo
 def parse_args():
+    debuginfo(prj='ds')
     parser = ArgumentParser(description="DeepSpeed distributed training launch"
                             " utility that creates multiple distributed"
                             " processes on a single node")
@@ -116,6 +117,7 @@ def parse_args():
 
 # Adapted from https://psutil.readthedocs.io/en/latest/#kill-process-tree
 def terminate_process_tree(pid):
+    debuginfo(prj='ds')
     process = psutil.Process(pid)
     children = process.children(recursive=True)
     children.append(process)
@@ -130,6 +132,7 @@ def terminate_process_tree(pid):
 
 
 def main():
+    debuginfo(prj='ds')
     args = parse_args()
     current_env = os.environ.copy()
 
@@ -311,6 +314,7 @@ def main():
     last_return_code = None
 
     def sigkill_handler(signum, frame):
+        debuginfo(prj='ds')
         for process in processes:
             logger.info(f"Killing subprocess {process.pid}")
             try:
@@ -352,4 +356,5 @@ def main():
 
 
 if __name__ == "__main__":
+    debuginfo(prj='ds')
     main()

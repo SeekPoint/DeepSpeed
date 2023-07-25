@@ -4,13 +4,13 @@
 # DeepSpeed Team
 
 import os
-
+from pydebug import debuginfo
 
 class CheckpointEngine(object):
 
     # init checkpoint engine for save/load
     def __init__(self, config_params=None):
-        print('CheckpointEngine init')
+        debuginfo(prj='ds', info='CheckpointEngine init')
         pass
 
     def create(self, tag):

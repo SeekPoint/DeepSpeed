@@ -14,18 +14,19 @@ from ..policy import maybe_copy
 from ..policy import maybe_get_lora
 
 supported_models = {None}
-
+from pydebug import debuginfo
 
 class DS_BloomContainer(MetaTensorContainer, HybridEngineContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        print('DS_BloomContainer init')
+        debuginfo(prj='ds', info='DS_BloomContainer init')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
         self.bigscience_bloom = True
 
     def create_module(self, config=None):
+        debuginfo(prj='ds')
         _config = config if config is not None else self.ds_model_config
 
         self.module = DeepSpeedBloomInference(_config, mp_group=self.mp_group)
@@ -40,6 +41,7 @@ class DS_BloomContainer(MetaTensorContainer, HybridEngineContainer, BaseTransfor
         """
         Necessary to implement for `HybridEngineContainer`
         """
+        debuginfo(prj='ds')
         fc1_lora, fc2_lora, qkv_lora, out_lora = self.get_lora_params()
         ret = [(fc1_lora, self._h4h_w), (fc2_lora, self._4hh_w), (qkv_lora, self.qkvw), (out_lora, self.dense_w)]
         return ret
@@ -48,6 +50,7 @@ class DS_BloomContainer(MetaTensorContainer, HybridEngineContainer, BaseTransfor
         """
         Necessary to implement for `HybridEngineContainer`
         """
+        debuginfo(prj='ds')
         self.lora_params = [
             maybe_get_lora(p) for p in [
                 self.policy.client_module.mlp.dense_h_to_4h, self.policy.client_module.mlp.dense_4h_to_h, self.policy.
@@ -70,6 +73,7 @@ class DS_BloomContainer(MetaTensorContainer, HybridEngineContainer, BaseTransfor
             'input_layernorm.weight', \
             'input_layernorm.bias'
         )
+        debuginfo(prj='ds')
         for i in range(0, 2):
             maybe_copy(module.attention,
                        sd,
@@ -94,7 +98,7 @@ class BLOOMLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
 
     def __init__(self, client_module, inference=True, use_load_prefix=True, split_qkv=False):
-        print('BLOOMLayerPolicy init')
+        debuginfo(prj='ds', info='BLOOMLayerPolicy init')
         super().__init__(inference, linear_layer=True, use_load_prefix=use_load_prefix, split_qkv=split_qkv)
         self.client_module = client_module
         try:
@@ -107,24 +111,28 @@ class BLOOMLayerPolicy(TransformerPolicy):
             BLOOMLayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
+        debuginfo(prj='ds')
         return self.client_module.self_attention.hidden_size, \
                 self.client_module.self_attention.num_heads, \
                 self.client_module.input_layernorm.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
+        debuginfo(prj='ds')
         return self.client_module.self_attention.query_key_value.weight, \
                 self.client_module.self_attention.query_key_value.bias, \
                 self.client_module.self_attention.dense.weight, \
                 self.client_module.self_attention.dense.bias,
 
     def mlp(self, enable_training=False):
+        debuginfo(prj='ds')
         return self.client_module.mlp.dense_h_to_4h.weight, \
                self.client_module.mlp.dense_h_to_4h.bias, \
                self.client_module.mlp.dense_4h_to_h.weight, \
                self.client_module.mlp.dense_4h_to_h.bias
 
     def layernorm(self):
+        debuginfo(prj='ds')
         return self.client_module.post_attention_layernorm.weight, \
                self.client_module.post_attention_layernorm.bias, \
                self.client_module.input_layernorm.weight, \

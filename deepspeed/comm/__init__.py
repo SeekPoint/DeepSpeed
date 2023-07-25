@@ -5,3 +5,6 @@
 
 from .utils import *
 from .comm import *
+
+from pydebug import debuginfo
+debuginfo(prj='ds')

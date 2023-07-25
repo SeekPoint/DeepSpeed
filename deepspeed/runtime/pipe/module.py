@@ -21,6 +21,7 @@ from .topology import PipeDataParallelTopology, PipelineParallelGrid
 from deepspeed.runtime.state_dict_factory import SDLoaderFactory
 from deepspeed.accelerator import get_accelerator
 
+from pydebug import debuginfo
 
 class PipelineError(Exception):
     """Errors related to the use of deepspeed.PipelineModule """
@@ -50,7 +51,7 @@ class LayerSpec:
     """
 
     def __init__(self, typename, *module_args, **module_kwargs):
-        print('LayerSpec init')
+        debuginfo(prj='ds', info='LayerSpec init')
         self.typename = typename
         self.module_args = module_args
         self.module_kwargs = module_kwargs
@@ -77,6 +78,7 @@ class LayerSpec:
 class TiedLayerSpec(LayerSpec):
 
     def __init__(self, key, typename, *module_args, forward_fn=None, tied_weight_attr='weight', **module_kwargs):
+        debuginfo(prj='ds')
         super().__init__(typename, *module_args, **module_kwargs)
         self.key = key
         self.forward_fn = forward_fn
@@ -131,6 +133,8 @@ class PipelineModule(nn.Module):
                  activation_checkpoint_interval=0,
                  activation_checkpoint_func=checkpointing.checkpoint,
                  checkpointable_layers=None):
+        
+        debuginfo(prj='ds')
 
         super().__init__()
 
@@ -163,9 +167,11 @@ class PipelineModule(nn.Module):
         assert self.local_rank is not None
 
         if topology:
+            debuginfo(prj='ds')
             self._topo = topology
             self.num_stages = self._topo.get_dim('pipe')
         else:
+            debuginfo(prj='ds')
             self.num_stages = num_stages
             if topology is None:
                 if self.world_size % self.num_stages != 0:
@@ -207,6 +213,7 @@ class PipelineModule(nn.Module):
         self.activation_checkpoint_func = activation_checkpoint_func
 
     def _build(self):
+        debuginfo(prj='ds')
         specs = self._layer_specs
 
         for local_idx, layer in enumerate(specs[self._local_start:self._local_stop]):
@@ -268,6 +275,7 @@ class PipelineModule(nn.Module):
         Returns:
             A list of the number of parameters in each layer.
         """
+        debuginfo(prj='ds')
         param_counts = [0] * len(self._layer_specs)
         for idx, layer in enumerate(self._layer_specs):
             if isinstance(layer, LayerSpec):
@@ -280,6 +288,7 @@ class PipelineModule(nn.Module):
         return param_counts
 
     def _find_layer_type(self, layername):
+        debuginfo(prj='ds')
         idxs = []
         typeregex = regex.compile(layername, regex.IGNORECASE)
         for idx, layer in enumerate(self._layer_specs):
@@ -331,9 +340,11 @@ class PipelineModule(nn.Module):
             return exec_func
 
         if self.activation_checkpoint_interval == 0:
+            debuginfo(prj='ds')
             func = exec_range_func(0, len(self.forward_funcs))
             x = func(forward_input)
         else:
+            debuginfo(prj='ds')
             num_layers = len(self.forward_funcs)
             x = forward_input
             for start_idx in range(0, num_layers, self.activation_checkpoint_interval):
@@ -362,12 +373,15 @@ class PipelineModule(nn.Module):
 
         # Each stage gets a simple uniform number of layers.
         if method == 'uniform':
+            debuginfo(prj='ds')
             num_layers = len(self._layer_specs)
             self.parts = ds_utils.partition_uniform(num_items=num_layers, num_parts=num_stages)
         elif method == 'parameters':
+            debuginfo(prj='ds')
             param_counts = self._count_layer_params()
             self.parts = ds_utils.partition_balanced(weights=param_counts, num_parts=num_stages)
         elif method.startswith('type:'):
+            debuginfo(prj='ds')
             layertype = method.split(':')[1]
             binary_weights = [0] * len(self._layer_specs)
             for idx in self._find_layer_type(layertype):
@@ -405,12 +419,14 @@ class PipelineModule(nn.Module):
         self._set_bounds(start=self.parts[stage_id], stop=self.parts[stage_id + 1])
 
     def allreduce_tied_weight_gradients(self):
+        debuginfo(prj='ds')
         '''All reduce the gradients of the tied weights between tied stages'''
         for key, comm in self.tied_comms.items():
             weight = getattr(self.tied_modules[key], comm['weight_attr'])
             dist.all_reduce(weight.grad, group=comm['group'])
 
     def get_tied_weights_and_groups(self):
+        debuginfo(prj='ds')
         weight_group_list = []
         for key, comm in self.tied_comms.items():
             weight = getattr(self.tied_modules[key], comm['weight_attr'])
@@ -418,6 +434,7 @@ class PipelineModule(nn.Module):
         return weight_group_list
 
     def _synchronize_tied_weights(self):
+        debuginfo(prj='ds')
         for key, comm in self.tied_comms.items():
             dist.broadcast(
                 getattr(comm['module'], comm['weight_attr']),
@@ -426,9 +443,11 @@ class PipelineModule(nn.Module):
             )
 
     def _index_tied_modules(self):
+        debuginfo(prj='ds')
         ''' Build communication structures for tied modules. '''
         tied_comms = {}
         if self._topo.get_dim('pipe') == 1:
+            debuginfo(prj='ds')
             return tied_comms
 
         specs = self._layer_specs
@@ -477,9 +496,11 @@ class PipelineModule(nn.Module):
         return tied_comms
 
     def partitions(self):
+        debuginfo(prj='ds')
         return self.parts
 
     def stage_owner(self, layer_idx):
+        debuginfo(prj='ds')
         assert 0 <= layer_idx < self._num_layers
         for stage in range(self._topo.get_dim('pipe')):
             if self.parts[stage] <= layer_idx < self.parts[stage + 1]:
@@ -493,24 +514,30 @@ class PipelineModule(nn.Module):
         exclusive. The default of None for both results in all layers being built
         locally.
         """
+        debuginfo(prj='ds')
         self._local_start = start
         self._local_stop = stop
 
     def set_checkpoint_interval(self, interval):
+        debuginfo(prj='ds')
         assert interval >= 0
         self.checkpoint_interval = interval
 
     def topology(self):
+        debuginfo(prj='ds')
         """ ProcessTopology object to query process mappings. """
         return self._topo
 
     def mpu(self):
+        debuginfo(prj='ds')
         return self._grid
 
     def num_pipeline_stages(self):
+        debuginfo(prj='ds')
         return self._topo.get_dim('pipe')
 
     def ckpt_prefix(self, checkpoints_path, tag):
+        debuginfo(prj='ds')
         """Build a prefix for all checkpoint files written by this module. """
         # All checkpoint files start with this
         rank_name = 'module'
@@ -527,16 +554,19 @@ class PipelineModule(nn.Module):
         return ckpt_name
 
     def ckpt_layer_path(self, ckpt_dir, local_layer_idx):
+        debuginfo(prj='ds')
         """Customize a prefix for a specific pipeline module layer. """
         idx = local_layer_idx + self._local_start
         layer_ckpt_path = os.path.join(ckpt_dir, f'layer_{idx:02d}')
         rank_repr = self._grid._topo.get_rank_repr(rank=self.global_rank)
         if rank_repr != '':
+            debuginfo(prj='ds')
             layer_ckpt_path += f'-{rank_repr}'
         layer_ckpt_path += '-model_states.pt'
         return layer_ckpt_path
 
     def ckpt_layer_path_list(self, ckpt_dir, local_layer_idx):
+        debuginfo(prj='ds')
         """Get all ckpt file list for a specific pipeline module layer. """
         idx = local_layer_idx + self._local_start
         layer_ckpt_path = os.path.join(ckpt_dir, f'layer_{idx:02d}-')
@@ -555,12 +585,15 @@ class PipelineModule(nn.Module):
         dp_size = self._grid.data_parallel_size
         num_layers = len(self.forward_funcs)
         if self.checkpoint_parallel_write_pipeline:
+            debuginfo(prj='ds')
             # spread layers evenly across data parallel ranks
             offsets = ds_utils.partition_uniform(num_layers, dp_size)
             start, end = offsets[dp_rank], offsets[dp_rank + 1]
         else:
+            debuginfo(prj='ds')
             # data parallel rank 0 writes all layers
             if dp_rank != 0:
+                debuginfo(prj='ds')
                 return
             start, end = 0, num_layers
         layer_list = self.forward_funcs[start:end]
@@ -581,6 +614,7 @@ class PipelineModule(nn.Module):
             checkpoint_engine.save(final_state_dict, model_ckpt_path)
 
     def load_state_dir(self, load_dir, checkpoint_engine, strict=True):
+        debuginfo(prj='ds')
         for idx, layer in enumerate(self.forward_funcs):
             # Functions, etc. will not have state_dicts
             if not hasattr(layer, 'load_state_dict'):
@@ -610,8 +644,10 @@ class PipelineModule(nn.Module):
         # Some layers like torch.nn.Embedding will not receive grads if checkpointed, which breaks things.
         # I presume it's related to the discrete inputs that cannot require_grad? Need to revisit.
         if self.__class__.__name__ in ('GPTModelPipe', 'GPT2ModelPipe'):
+            debuginfo(prj='ds')
             return all('ParallelTransformerLayerPipe' in f.__class__.__name__ for f in funcs)
         if self.checkpointable_layers is not None:
+            debuginfo(prj='ds')
             return all(f.__class__.__name__ in self.checkpointable_layers for f in funcs)
 
         params = [f.parameters() for f in funcs if isinstance(f, torch.nn.Module)]

@@ -11,17 +11,20 @@ from deepspeed.utils.logging import logger
 from deepspeed.accelerator import get_accelerator
 
 from deepspeed import comm as dist
+from pydebug import debuginfo
 
 MIN_AIO_BYTES = 1024**2
 AIO_ALIGNED_BYTES = 1024
 
 
 def swap_in_tensors(swap_handle, tensor_buffers, swap_paths):
+    debuginfo(prj='ds')
     for buffer, path in zip(tensor_buffers, swap_paths):
         assert (swap_handle.async_pread(buffer, path) == 0)
 
 
 def swap_out_tensors(swap_handle, tensor_buffers, swap_paths):
+    debuginfo(prj='ds')
     for buffer, path in zip(tensor_buffers, swap_paths):
         assert (swap_handle.async_pwrite(buffer, path) == 0)
 
@@ -37,10 +40,12 @@ def print_object(obj, name, exclude_list=[]):
 class SwapBuffer(object):
 
     def __init__(self, buffer):
+        debuginfo(prj='ds')
         self.buffer = buffer
         self.reset()
 
     def reset(self):
+        debuginfo(prj='ds')
         self.offset = 0
         self.swap_tensors = {}
         self.compute_tensors = {}
@@ -48,11 +53,13 @@ class SwapBuffer(object):
         self.num_elem = 0
 
     def insert_tensor(self, tensor, swap_path, aligned_numel):
+        debuginfo(prj='ds')
         swap_tensor, compute_tensor = self.allocate_tensor(swap_path, tensor.numel(), aligned_numel)
         compute_tensor.data.copy_(tensor.data)
         return swap_tensor, compute_tensor
 
     def allocate_tensor(self, swap_path, numel, aligned_numel):
+        debuginfo(prj='ds')
         assert self.has_space(aligned_numel)
         assert not self.offset in self.swap_tensors
 
@@ -96,30 +103,37 @@ class SwapBuffer(object):
 class SwapBufferPool(object):
 
     def __init__(self, buffers):
+        debuginfo(prj='ds')
         assert all([buf.is_pinned() for buf in buffers])
         self.buffers = [SwapBuffer(buf) for buf in buffers]
         self.current_index = 0
 
     def reset(self):
+        debuginfo(prj='ds')
         self.current_index = 0
         for buffer in self.buffers:
             buffer.reset()
 
     def allocate_tensor(self, numel, swap_path, aligned_numel):
+        debuginfo(prj='ds')
         if self.has_space(aligned_numel):
+            debuginfo(prj='ds')
             swap_tensor, compute_tensor = self._get_current_buffer().allocate_tensor(swap_path, numel, aligned_numel)
             return swap_tensor, compute_tensor
 
         return None, None
 
     def insert_tensor(self, tensor, swap_path, aligned_numel):
+        debuginfo(prj='ds')
         if self.has_space(aligned_numel):
+            debuginfo(prj='ds')
             swap_tensor, compute_tensor = self._get_current_buffer().insert_tensor(tensor, swap_path, aligned_numel)
             return swap_tensor, compute_tensor
 
         return None, None
 
     def get_swap_tensors(self):
+        debuginfo(prj='ds')
         swap_tensors = []
         for buffer in self._get_used_buffers():
             swap_tensors += buffer.get_swap_tensors()
@@ -127,6 +141,7 @@ class SwapBufferPool(object):
         return swap_tensors
 
     def get_swap_paths(self):
+        debuginfo(prj='ds')
         swap_paths = []
         for buffer in self._get_used_buffers():
             swap_paths += buffer.get_swap_paths()
@@ -134,6 +149,7 @@ class SwapBufferPool(object):
         return swap_paths
 
     def get_compute_tensors(self):
+        debuginfo(prj='ds')
         compute_tensors = []
         for buffer in self._get_used_buffers():
             compute_tensors += buffer.get_compute_tensors()
@@ -141,16 +157,20 @@ class SwapBufferPool(object):
         return compute_tensors
 
     def has_space(self, numel):
+        debuginfo(prj='ds')
         if self._get_current_buffer().has_space(numel):
+            debuginfo(prj='ds')
             return True
 
         if self.current_index == len(self.buffers) - 1:
+            debuginfo(prj='ds')
             return False
 
         self.current_index += 1
         return self._get_current_buffer().has_space(numel)
 
     def swap_out(self, aio_handle, async_op=False):
+        debuginfo(prj='ds')
         swap_tensors = self.get_swap_tensors()
         swap_paths = self.get_swap_paths()
         assert all([p is not None for p in swap_paths])
@@ -161,6 +181,7 @@ class SwapBufferPool(object):
             assert len(swap_tensors) == aio_handle.wait()
 
     def swap_in(self, aio_handle, async_op=False):
+        debuginfo(prj='ds')
         swap_tensors = self.get_swap_tensors()
         swap_paths = self.get_swap_paths()
         assert all([p is not None for p in swap_paths])
@@ -171,15 +192,18 @@ class SwapBufferPool(object):
             assert len(swap_tensors) == aio_handle.wait()
 
     def _get_current_buffer(self):
+        debuginfo(prj='ds')
         return self.buffers[self.current_index]
 
     def _get_used_buffers(self):
+        debuginfo(prj='ds')
         return self.buffers[:self.current_index + 1]
 
 
 class SwapBufferManager(object):
 
     def __init__(self, num_elems, count, dtype):
+        debuginfo(prj='ds')
         self.num_elems = num_elems
         self.count = count
         self.dtype = dtype
@@ -195,9 +219,11 @@ class SwapBufferManager(object):
             print_object(obj=self, name='SwapBufferManager', exclude_list=exclude_list)
 
     def allocate(self, num_elems, count, dtype):
+        debuginfo(prj='ds')
         assert dtype == self.dtype
         assert num_elems <= self.num_elems
         if count > len(self.free_buffer_index):
+            debuginfo(prj='ds')
             return None
 
         used_indices = self.free_buffer_index[-count:]
@@ -211,9 +237,11 @@ class SwapBufferManager(object):
         return buffers
 
     def allocate_all(self, num_elems, dtype):
+        debuginfo(prj='ds')
         return self.allocate(num_elems=num_elems, count=len(self.free_buffer_index), dtype=dtype)
 
     def free(self, buffers):
+        debuginfo(prj='ds')
         buffer_ids = []
         for buf in buffers:
             buffer_ids.append(id(buf))
@@ -226,12 +254,14 @@ class SwapBufferManager(object):
 
 
 def get_sized_buffer(buffer, num_elems):
+    debuginfo(prj='ds')
     assert num_elems <= buffer.numel(), \
         f'num_elems {num_elems} > buffer {buffer.numel()}'
     return buffer.narrow(0, 0, num_elems) if num_elems < buffer.numel() else buffer
 
 
 def get_sized_buffers(buffer_list, num_elems_list):
+    debuginfo(prj='ds')
     swap_buffers = [
         get_sized_buffer(buffer, num_elems) \
         for buffer, num_elems in zip(buffer_list, num_elems_list)

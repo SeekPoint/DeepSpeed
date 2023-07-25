@@ -6,11 +6,12 @@
 from deepspeed.runtime.config_utils import get_scalar_param, DeepSpeedConfigObject
 from deepspeed.profiling.constants import *
 
+from pydebug import debuginfo
 
 class DeepSpeedFlopsProfilerConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
-        print('DeepSpeedFlopsProfilerConfig init')
+        debuginfo(prj='ds', info='DeepSpeedFlopsProfilerConfig init')
         super(DeepSpeedFlopsProfilerConfig, self).__init__()
 
         self.enabled = None
@@ -27,6 +28,7 @@ class DeepSpeedFlopsProfilerConfig(DeepSpeedConfigObject):
         self._initialize(flops_profiler_dict)
 
     def _initialize(self, flops_profiler_dict):
+        debuginfo(prj='ds')
         self.enabled = get_scalar_param(flops_profiler_dict, FLOPS_PROFILER_ENABLED, FLOPS_PROFILER_ENABLED_DEFAULT)
 
         self.recompute_fwd_factor = get_scalar_param(flops_profiler_dict, FLOPS_PROFILER_RECOMPUTE_FWD_FACTOR,
