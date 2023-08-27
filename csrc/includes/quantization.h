@@ -39,32 +39,33 @@ void launch_dequantize_kernel(T* dequant_data,
                               int elems_per_group,
                               int total_elems,
                               cudaStream_t stream);
+// 在GPU上进行并行化量化操作
+void launch_swizzled_quant(int8_t* q_data,// 量化后的数据的存储位置。
+                           float* q_scales, //量化比例因子的存储位置。
+                           const __half* input_data, //输入数据，这些数据将被量化。
+                           int num_bits, //量化的位数。
+                           quantize::Type q_type, //量化的类型，可能包含不同的量化策略。
+                           int groups, //数据将被分割成的组数。
+                           int elems_per_group, //每组元素的数量。
+                           int pipelining, //是否使用流水线并行化。
+                           int nodes, //计算节点数量。
+                           int devices_per_node, //每个节点上设备的数量。
+                           cudaStream_t stream); //CUDA流，用于在GPU上异步并行执行操作。
 
-void launch_swizzled_quant(int8_t* q_data,
-                           float* q_scales,
-                           const __half* input_data,
-                           int num_bits,
-                           quantize::Type q_type,
-                           int groups,
-                           int elems_per_group,
-                           int pipelining,
-                           int nodes,
-                           int devices_per_node,
-                           cudaStream_t stream);
-
-void launch_dequant_reduce(int8_t* reduced_data,
-                           float* reduced_scales,
-                           const int8_t* input_data,
-                           const float* input_scales,
-                           int num_gpus,
-                           int num_bits,
-                           quantize::Type quant_type,
-                           int out_groups,
-                           int elems_per_out_group,
-                           int elems_per_in_tensor,
-                           int groups_per_in_tensor,
-                           int elems_per_in_group,
-                           cudaStream_t stream);
+// GPU上进行并行化的反量化并执行reduce操作
+void launch_dequant_reduce(int8_t* reduced_data, //reduce后的数据的存储位置。
+                           float* reduced_scales, //reduce后的量化比例因子的存储位置。
+                           const int8_t* input_data, // 输入的量化数据。
+                           const float* input_scales, //  输入的量化比例因子。
+                           int num_gpus, // 用于计算的GPU数量。
+                           int num_bits, //  量化的位数。
+                           quantize::Type quant_type, // 量化的类型，可能包含不同的量化策略。
+                           int out_groups, // 输出数据将被分割成的组数。
+                           int elems_per_out_group, // 每组输出元素的数量。
+                           int elems_per_in_tensor, // 每个输入张量的元素数量。
+                           int groups_per_in_tensor, // 每个输入张量被分割成的组数。
+                           int elems_per_in_group, // 每个输入组的元素数量。
+                           cudaStream_t stream);//CUDA流，用于在GPU上异步并行执行操作。
 
 template <typename T>
 void launch_fake_quantize_kernel(T* vals,

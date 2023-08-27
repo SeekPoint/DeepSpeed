@@ -136,6 +136,7 @@ at::Tensor dequantize(at::Tensor& quantized_data,
     return output;
 }
 
+// 这个函数用于将输入数据集进行分组并进行量化处理。
 std::vector<at::Tensor> ds_swizzle_quant(at::Tensor& input_vals,
                                          int groups,
                                          int num_bits,
@@ -144,26 +145,42 @@ std::vector<at::Tensor> ds_swizzle_quant(at::Tensor& input_vals,
                                          int nodes,
                                          int devices_per_node)
 {
+    // 定义了一个at::TensorOptions对象，它描述了接下来要创建的张量的属性。
+    // 这个张量的数据类型是float，布局是strided，设备是CUDA设备，且不需要计算梯度。
     auto scales_options = at::TensorOptions()
                               .dtype(at::kFloat)
                               .layout(at::kStrided)
                               .device(at::kCUDA)
                               .requires_grad(false);
+
+    // 通过检查量化类型是否需要偏移，来确定比例因子的数量。
     const int scales_elems = (quantize::requires_offset(quant_type)) ? 2 : 1;
+
+    // 创建一个未初始化的张量，其大小为{groups, scales_elems}，并使用之前定义的张量属性。
     auto scales = torch::empty({groups, scales_elems}, scales_options);
 
+    // 同样地，创建了一个未初始化的张量用于存储输出结果。其数据类型是char，
+    // 布局是strided，设备是CUDA设备，且不需要计算梯度。
     auto output_options = at::TensorOptions()
                               .dtype(at::kChar)
                               .layout(at::kStrided)
                               .device(at::kCUDA)
                               .requires_grad(false);
 
+    // 计算量化因子，它由8位除以量化位数得出。
     const int quantization_scalar = 8 / num_bits;
+
+    // 计算量化后的值的数量，通过输入值的元素总数除以量化因子得出。
     const int compressed_vals = at::numel(input_vals) / quantization_scalar;
 
+    // 创建一个未初始化的张量，用于存储量化后的值。
     auto output = torch::empty({compressed_vals}, output_options);
+
+    // 计算每组的元素数量，通过输入值的元素总数除以组数得出。
     const int elems_per_group = at::numel(input_vals) / groups;
 
+    // 调用之前定义的函数launch_swizzled_quant，对输入的张量进行量化操作。
+    // 参数包括输入的数据、量化位数、量化类型、组数、每组的元素数量等等。
     launch_swizzled_quant((int8_t*)output.data_ptr(),
                           (float*)scales.data_ptr(),
                           (__half*)input_vals.data_ptr(),
@@ -176,9 +193,11 @@ std::vector<at::Tensor> ds_swizzle_quant(at::Tensor& input_vals,
                           devices_per_node,
                           at::cuda::getCurrentCUDAStream());
 
+    // 返回一个包含两个元素的向量，第一个元素是量化后的值，第二个元素是量化的缩放因子。
     return {output, scales};
 }
 
+// 这是一个将输入的量化数据进行降维和反量化的操作
 std::vector<at::Tensor> quantized_reduction(at::Tensor& input_vals,
                                             at::Tensor& input_scales,
                                             int in_groups,
@@ -186,29 +205,50 @@ std::vector<at::Tensor> quantized_reduction(at::Tensor& input_vals,
                                             int num_bits,
                                             quantize::Type quant_type)
 {
+    // 定义一个TensorOptions对象scales_options，表示接下来要创建的张量的属性，
+    // 这个张量的数据类型是float，布局是strided，设备是CUDA设备，并且不需要计算梯度。
     auto scales_options = at::TensorOptions()
                               .dtype(at::kFloat)
                               .layout(at::kStrided)
                               .device(at::kCUDA)
                               .requires_grad(false);
+
+    // 根据量化类型是否需要偏移量，确定量化缩放因子的数量。
     const int scales_elems = (quantize::requires_offset(quant_type)) ? 2 : 1;
+
+    // 使用scales_options定义一个空的张量scales，大小为{out_groups, scales_elems}，用来存储量化缩放因子。
     auto scales = torch::empty({out_groups, scales_elems}, scales_options);
 
+    // 定义一个新的TensorOptions对象output_options，表示接下来要创建的输出张量的属性，
+    // 这个张量的数据类型是char，布局是strided，设备是CUDA设备，并且不需要计算梯度。
     auto output_options = at::TensorOptions()
                               .dtype(at::kChar)
                               .layout(at::kStrided)
                               .device(at::kCUDA)
                               .requires_grad(false);
 
+    // 将input_vals的大小转化为一个std::vector<long int>对象。
     std::vector<long int> sz(input_vals.sizes().begin(), input_vals.sizes().end());
+
+    // 这里假设每个节点上有16个GPU。这个值可能会根据实际的机器配置有所不同。
     const int gpu_per_node = 16;                   // depend on machine in_groups/out_groups;
+
+    // 修改最后一个维度的大小，使其等于原来的大小除以节点上的GPU数量。这可能是为了将数据在节点的各个GPU之间进行分割。
     sz[sz.size() - 1] = sz.back() / gpu_per_node;  // num of GPU per nodes
+
+    // 计算每个GPU处理的输入元素数量。
     const int elems_per_in_tensor = at::numel(input_vals) / gpu_per_node;
+
+    // 创建一个空的张量output，其大小为sz，用于存储输出结果。
     auto output = torch::empty(sz, output_options);
 
+    // 计算每个输入组和每个输出组的元素数量。
     const int elems_per_in_group = elems_per_in_tensor / (in_groups / gpu_per_node);
     const int elems_per_out_group = elems_per_in_tensor / out_groups;
 
+    // 调用之前定义的launch_dequant_reduce函数，对输入的张量进行降维和反量化操作。
+    // 参数包括输出张量、输入张量、量化比例、GPU数量、量化位数、量化类型、输出组数、
+    // 每个输出组的元素数量、每个输入张量的元素数量、每个GPU处理的输入组数、每个输入组的元素数量等。
     launch_dequant_reduce((int8_t*)output.data_ptr(),
                           (float*)scales.data_ptr(),
                           (const int8_t*)input_vals.data_ptr(),
@@ -222,6 +262,8 @@ std::vector<at::Tensor> quantized_reduction(at::Tensor& input_vals,
                           in_groups / gpu_per_node,
                           elems_per_in_group,
                           at::cuda::getCurrentCUDAStream());
+
+    // 返回一个包含两个元素的向量，第一个元素是输出结果，第二个元素是量化缩放因子。
     return {output, scales};
 }
 

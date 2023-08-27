@@ -625,44 +625,56 @@ class QuantizationInfo:
         self.scale_buffer = None
 
 
+# 这段代码定义了一个叫做 CUDAQuantizer 的类，主要用于实现对参数的量化和反量化操作。
 class CUDAQuantizer:
-    async_flag = True
-    target_group_size = 8000  # the optimal size is 4k, so we set the target to be below 8k
-    group_size_cache = dict()
+    async_flag = True  # 这个没用到
+    # the optimal size is 4k, so we set the target to be below 8k
+    target_group_size = 8000  # 定义了一个类变量，表示目标分组大小，可能是用于进行参数分组操作的。
+    group_size_cache = dict()  # 定义了一个类变量，用作缓存各种参数数目（numel）对应的组大小。
 
     def __init__(self):
+        # 调用deepspeed.ops.op_builder.QuantizerBuilder().load()来加载一个量化器模块，
+        # 赋值给self.quantizer_cuda_module。
         self.quantizer_cuda_module = deepspeed.ops.op_builder.QuantizerBuilder().load()
 
+    # 定义量化方法，接受一个参数param，以及可选的参数groups，
+    # 如果没有提供groups，则通过计算和缓存来确定。
     def quantize(self, param, groups=None):
         if groups is None:
             try:
+                # 尝试从缓存中获取param的元素数量对应的组大小。
                 groups = self.group_size_cache[param.numel()]
             except KeyError:
+                # 如果缓存中没有，则计算一个初步的组大小，即param元素数量除以目标组大小向上取整。
                 groups = math.ceil(param.numel() / self.target_group_size)
+                # 两个循环，用于调整groups大小，使得它满足：能被param元素数量整除，
+                # 并且使得每个组的大小接近但不超过目标组大小。
                 while groups < param.numel():
                     if param.numel() % (8 * groups) == 0:
                         break
                     groups += 1
                 while True:
                     if param.numel() % (8 * groups * 2) == 0 and param.numel(
-                    ) / groups > self.target_group_size:  #hard limit of 16k group_size
+                    ) / groups > self.target_group_size:  # hard limit of 16k group_size
                         groups *= 2
                     else:
                         break
+
                 assert (
-                    param.numel() % (8 * groups) == 0
+                        param.numel() % (8 * groups) == 0
                 ), f"Qantized weight requires the number of weights be a multiple of 8. Yet {param.numel()} cannot be divided by 8*{groups}"
                 assert (param.numel() / groups < 16000), f"{param.numel()} / {groups} is larger than 16k"
                 assert param.numel(
                 ) > groups, f"Adaptive grouping algorithm cannot find a group size for input tensor of size {param.numel()}"
-                self.group_size_cache[param.numel()] = groups
+                self.group_size_cache[param.numel()] = groups  # 将计算得到的groups大小缓存起来。
+        # 最后调用quantizer_cuda_module的quantize方法进行量化。
         return self.quantizer_cuda_module.quantize(param.to(get_accelerator().device_name()), groups, 8,
                                                    self.quantizer_cuda_module.Symmetric)
 
+    # 定义反量化方法，接受已经被量化的参数和一个比例因子。
     def dequantize(self, quantized_param, scale):
         return self.quantizer_cuda_module.dequantize(quantized_param, scale, scale.numel(), 8,
                                                      self.quantizer_cuda_module.Symmetric)
-
 
 def _no_gather_coalesced(params: Iterable[Parameter]) -> AllGatherCoalescedHandle:
     for param in params:
@@ -1033,21 +1045,42 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                 # otherwise could mix data between tensors.
                 assert_ints_same_as_other_ranks([p.ds_tensor.ds_numel for p in params])
 
+            # 这段代码的主要目的是执行AllGather操作，将所有设备上的参数值收集到每个设备上，并且这个过程可能会对参数值进行量化，以减小通信带宽的需求。
+            # 检查 params（应该是一个包含模型参数的列表）的长度是否为 1。如果是，那么可以避免一些额外的内存分配。
+            '''
+            这里再额外对param.ds_secondary_tensor做一个解释：
+
+            ds_secondary_tensor 是 DeepSpeed ZeRO 阶段 3（ZeRO-3）中用于存储模型参数的第二存储。在 ZeRO-3 中，模型的每个参数都被划分成多个部分，并在多个设备（例如，多个 GPU）之间进行分布存储。
+            每个设备都存储一部分参数，这部分参数存储在 ds_tensor 属性中。
+            同时，每个设备还有一个 ds_secondary_tensor，用于存储该设备需要的其他设备上的参数部分。这种设计可以减小每个设备的内存占用，从而允许在有限的内存中训练更大的模型。
+            
+            具体来说，上面代码中的 param.ds_secondary_tensor 是指向当前参数在当前设备上的第二存储的引用。
+            如果 param.ds_secondary_tensor 为 None，说明当前参数没有第二存储，即所有的参数都存储在 ds_tensor 中。
+            '''
             if len(params) == 1:
                 # have an opportunity to avoid some intermediate memory allocations
                 param, = params
+                # 计算缓冲区的大小。这个大小是参数的元素数量（param.ds_numel）除以设备的数量（world_size）然后向上取整，
+                # 再乘以设备的数量。这样做是为了确保缓冲区的大小是设备数量的整数倍。
                 buffer_size = math.ceil(param.ds_numel / world_size) * world_size
+                # 如果当前是在进行反向传播，并且参数有第二存储（param.ds_secondary_tensor），
+                # 那么更新缓冲区的大小，使其等于第二存储的大小乘以设备的数量。
                 if not forward and param.ds_secondary_tensor is not None:
-                    buffer_size = param.ds_secondary_tensor.shape[0] * world_size  #make sure out is appropriately sized
+                    buffer_size = param.ds_secondary_tensor.shape[0] * world_size  # make sure out is appropriately sized
 
+                # 创建一个空的 PyTorch 张量 param_buffer，用于存储全局收集的结果。
+                # 这个张量的大小是 buffer_size，数据类型根据是否进行量化而变化，设备是当前设备，不需要计算梯度。
                 param_buffer = torch.empty(
                     buffer_size,
                     dtype=param.dtype if not quant else torch.int8,
                     device=get_accelerator().current_device_name(),
                     requires_grad=False,
                 )
+                # 根据当前是否在进行反向传播和参数是否有第二存储，从 param.ds_tensor 或 param.ds_secondary_tensor 中获取数据。
                 param_ds_tensor = param.ds_secondary_tensor if not forward and param.ds_secondary_tensor is not None else param.ds_tensor
                 if not quant:
+                    # 如果不进行量化，那么直接执行AllGather操作，并将结果存储到 param.data 中。
+                    # 返回一个 AllGatherHandle 对象，包含了AllGather的句柄和参数对象。
                     handles = _dist_allgather_fn(
                         param_ds_tensor.to(get_accelerator().current_device_name()),
                         param_buffer,
@@ -1056,28 +1089,43 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                     param.data = param_buffer.narrow(0, 0, param.ds_numel).view(param.ds_shape).to(param.device)
                     return AllGatherHandle(handles, param)
                 else:
+                    # 这段代码主要完成了对参数的量化处理以及AllGather操作，并对量化信息进行了保存。
+                    # 使用 self.quantizer_module 的 quantize 方法对参数 param_ds_tensor 进行量化。
+                    # 这个方法返回两个值：量化后的参数 quantized_param 和量化所使用的尺度 scales。
                     quantized_param, scales = self.quantizer_module.quantize(param_ds_tensor)
+                    # 调用 _dist_allgather_fn 函数执行AllGather操作，将 quantized_param Gather
+                    # 到 param_buffer 中。这个函数返回一个句柄 handle，用于表示这个AllGather操作。
                     handle = _dist_allgather_fn(quantized_param.to(get_accelerator().current_device_name()),
                                                 param_buffer, ds_process_group)
-
+                    # 创建一个空的 PyTorch 张量 quant_scale_buffer，用于存储AllGather的尺度。
+                    # 这个张量的大小是尺度元素数量乘以设备数量，数据类型是 torch.float32，设备是当前设备，不需要计算梯度。
                     quant_scale_buffer = torch.empty(
                         scales.numel() * world_size,
                         dtype=torch.float32,
                         device=get_accelerator().current_device_name(),
                         requires_grad=False,
                     )
-                    quant_handle = _dist_allgather_fn(scales.to(get_accelerator().current_device_name()),
-                                                      quant_scale_buffer, ds_process_group)
-                    quant_info = QuantizationInfo()
+                # 调用 _dist_allgather_fn 函数执行AllGather操作，将 scales 收集到 quant_scale_buffer 中。
+                # 这个函数返回一个句柄 quant_handle，用于表示这个AllGather操作。
+                quant_handle = _dist_allgather_fn(scales.to(get_accelerator().current_device()),
+                                                  quant_scale_buffer, ds_process_group)
+                # 创建一个 QuantizationInfo 对象 quant_info，用于存储量化的信息。
+                quant_info = QuantizationInfo()
 
-                    quant_info.quantized_param = param_buffer.narrow(0, 0, param.ds_numel).view(param.ds_shape).to(
-                        param.device)
-                    quant_info.backend = self.quantizer_module
-                    quant_info.quant_handle = quant_handle
-                    quant_info.scale_buffer = quant_scale_buffer
-                    return AllGatherHandle(handle, param, quantization=quant_info)
+                # 将 param_buffer 中的量化参数拷贝到 quant_info.quantized_param 中。
+                quant_info.quantized_param = param_buffer.narrow(0, 0, param.ds_numel).view(param.ds_shape).to(
+                    param.device)
+                # 将量化模块 self.quantizer_module 保存到 quant_info.backend 中。
+                quant_info.backend = self.quantizer_module
+                # 将量化的AllGather句柄 quant_handle 保存到 quant_info.quant_handle 中。
+                quant_info.quant_handle = quant_handle
+                # 将量化的尺度缓冲区 quant_scale_buffer 保存到 quant_info.scale_buffer 中。
+                quant_info.scale_buffer = quant_scale_buffer
+                # 返回一个 AllGatherHandle 对象，包含了AllGather的句柄 handle、参数对象 param 和量化的信息 quant_info。
+                return AllGatherHandle(handle, param, quantization=quant_info)
 
             else:
+                # 下面的代码比较类似，就不做解释了
                 partition_sz = sum(p.ds_tensor.ds_numel for p in params)
 
                 if params[0].ds_secondary_tensor is not None and not forward:
@@ -1103,7 +1151,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                             torch.cat)([p.ds_tensor.to(get_accelerator().current_device_name()) for p in params],
                                        out=partitions[rank_in_group])
                     handle = _dist_allgather_fn(partitions[rank_in_group], flat_tensor, ds_process_group)
-                    #Fix get_partition_dp_group(params[0]))
+                    # Fix get_partition_dp_group(params[0]))
 
                     return AllGatherCoalescedHandle(
                         allgather_handle=handle,
