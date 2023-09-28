@@ -1,0 +1,4 @@
+https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7
+
+
+https://codeantenna.com/a/qFkTMGoUL3  DeepSpeed教程

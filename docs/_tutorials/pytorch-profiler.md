@@ -12,6 +12,9 @@ For more details, refer to [PYTORCH PROFILER](https://pytorch.org/tutorials/reci
 
 ## Profile the model training loop
 
+【DeepSpeed 教程翻译】三，在 DeepSpeed 中使用 PyTorch Profiler做性能调试和Flops Profiler教程翻译
+https://zhuanlan.zhihu.com/p/639803472
+
 Below shows how to profile the training loop by wrapping the code in the profiler context manager. The Profiler assumes that the training process is composed of steps (which are numbered starting from zero). PyTorch profiler accepts a number of parameters, e.g. `schedule`, `on_trace_ready`, `with_stack`, etc.
 
 In the example below, the profiler will skip the first `5` steps, use the next `2` steps as the warm up, and actively record the next `6` steps. The profiler will stop the recording after the first two cycles since `repeat` is set to `2`.

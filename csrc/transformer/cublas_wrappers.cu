@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+//封装不同平台的blas（Basic Linear Algebra Subprograms）函数
+// CuBLAS == CUDA Basic Linear Algebra Subprograms
+// rocBLAS == AMD library for Basic Linear Algebra Subprograms
+// HIP ==  Heterogenous-computing Interface for Portability
+// 这里仅仅调研cuXXX这一系列
 #include "cublas_wrappers.h"
 
 #ifdef __HIP_PLATFORM_HCC__
