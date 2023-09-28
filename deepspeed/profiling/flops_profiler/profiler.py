@@ -12,7 +12,9 @@ from typing import List, Optional
 from collections import OrderedDict
 import numpy as np
 from deepspeed.accelerator import get_accelerator
+from deepspeed.utils import logger
 from deepspeed.moe.layer import MoE
+from deepspeed.utils.timer import FORWARD_GLOBAL_TIMER, BACKWARD_GLOBAL_TIMER, STEP_GLOBAL_TIMER
 
 from pydebug import debuginfo
 
@@ -22,6 +24,8 @@ Tensor = torch.Tensor
 module_flop_count = []
 module_mac_count = []
 old_functions = {}
+
+DEFAULT_PRECISION = 2
 
 
 class FlopsProfiler(object):
@@ -77,7 +81,11 @@ class FlopsProfiler(object):
         Args:
             ignore_list (list, optional): the list of modules to ignore while profiling. Defaults to None.
         """
+<<<<<<< HEAD
         debuginfo(prj='ds')
+=======
+        logger.info("Flops profiler started")
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
         self.reset_profile()
         _patch_functionals()
         _patch_tensor_methods()
@@ -199,6 +207,7 @@ class FlopsProfiler(object):
                     expert_parallelism = int(param.group_name[offset:])
                 except ValueError:
                     pass
+<<<<<<< HEAD
                     debuginfo(prj='ds')
             is_moe = expert_parallelism > 0
             return param.numel(), is_moe, expert_parallelism
@@ -206,13 +215,23 @@ class FlopsProfiler(object):
         def add_or_reset_attrs(module):
             debuginfo(prj='ds')
             parameters = [get_param_count_and_ep(p) for p in module.parameters()]
+=======
+            return param.numel(), expert_parallelism, param.element_size()
+
+        def add_or_reset_attrs(module):
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             module.__flops__ = 0
             module.__macs__ = 0
-            module.__params__ = sum(count for count, is_expert, _ in parameters if not is_expert)
-            module.__expert_params__ = sum(count for count, is_expert, _ in parameters if is_expert)
-            # number of expert parameters taking into account other expert parallel groups
-            module.__model_expert_params__ = sum(count * expert_parallelism
-                                                 for count, is_expert, expert_parallelism in parameters if is_expert)
+            module.__params__ = module.__expert_params__ = module.__model_expert_params__ = 0
+            parameters = (get_param_count_and_ep(p) for p in module.parameters())
+            for num_params, expert_parallelism, per_param_size in parameters:
+                params = num_params if not expert_parallelism else 0
+                expert_params = num_params if expert_parallelism else 0
+                # number of expert parameters taking into account other expert parallel groups
+                model_expert_params = num_params * expert_parallelism
+                module.__params__ += params
+                module.__expert_params__ += expert_params
+                module.__model_expert_params__ += model_expert_params
             module.__start_time__ = 0
             module.__duration__ = 0
 
@@ -255,6 +274,7 @@ class FlopsProfiler(object):
                 debuginfo(prj='ds')
 
         self.model.apply(remove_profile_attrs)
+        logger.info("Flops profiler finished")
 
     def get_total_flops(self, as_string=False):
         """Returns the total flops of the model.
@@ -267,7 +287,7 @@ class FlopsProfiler(object):
         """
         debuginfo(prj='ds')
         total_flops = get_module_flops(self.model)
-        return num_to_string(total_flops) if as_string else total_flops
+        return number_to_string(total_flops) if as_string else total_flops
 
     def get_total_macs(self, as_string=False):
         """Returns the total MACs of the model.
@@ -351,10 +371,16 @@ class FlopsProfiler(object):
             debuginfo(prj='ds')
             total_model_nonexpert_params = self.model.__params__ * self.ds_engine.mp_world_size
             if self.ds_engine.has_moe_layers:
+<<<<<<< HEAD
                 debuginfo(prj='ds')
                 expert_tensor_parallelism = self.is_expert_tensor_parallelism_enabled()
                 total_model_expert_params = self.model.__model_expert_params__ * (self.ds_engine.mp_world_size
                                                                                   if expert_tensor_parallelism else 1)
+=======
+                expert_tensor_parallelism = self.ds_engine.mp_world_size if self.is_expert_tensor_parallelism_enabled(
+                ) else 1
+                total_model_expert_params = self.model.__model_expert_params__ * expert_tensor_parallelism
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
         self.flops = total_flops
         self.macs = total_macs
@@ -362,81 +388,93 @@ class FlopsProfiler(object):
 
         print("\n-------------------------- DeepSpeed Flops Profiler --------------------------")
         print(f'Profile Summary at step {profile_step}:')
-        print(
-            "Notations:\ndata parallel size (dp_size), model parallel size(mp_size),\nnumber of parameters (params), number of multiply-accumulate operations(MACs),\nnumber of floating-point operations (flops), floating-point operations per second (FLOPS),\nfwd latency (forward propagation latency), bwd latency (backward propagation latency),\nstep (weights update latency), iter latency (sum of fwd, bwd and step latency)\n"
-        )
+        print("Notations:\n"
+              "data parallel size (dp_size), model parallel size(mp_size),\n"
+              "number of parameters (params), number of multiply-accumulate operations(MACs),\n"
+              "number of floating-point operations (flops), floating-point operations per second (FLOPS),\n"
+              "fwd latency (forward propagation latency), bwd latency (backward propagation latency),\n"
+              "step (weights update latency), iter latency (sum of fwd, bwd and step latency)\n")
+        line_fmt = '{:<70}  {:<8}'
         if self.ds_engine:
-            print('{:<60}  {:<8}'.format('world size: ', self.ds_engine.world_size))
-            print('{:<60}  {:<8}'.format('data parallel size: ', self.ds_engine.dp_world_size))
-            print('{:<60}  {:<8}'.format('model parallel size: ', self.ds_engine.mp_world_size))
-            print('{:<60}  {:<8}'.format('batch size per GPU: ', self.ds_engine.train_micro_batch_size_per_gpu()))
+            print(line_fmt.format('world size: ', self.ds_engine.world_size))
+            print(line_fmt.format('data parallel size: ', self.ds_engine.dp_world_size))
+            print(line_fmt.format('model parallel size: ', self.ds_engine.mp_world_size))
+            print(line_fmt.format('batch size per GPU: ', self.ds_engine.train_micro_batch_size_per_gpu()))
             if self.ds_engine.has_moe_layers:
-                print('{:<60}  {:<8}'.format('expert tensor parallelism enabled: ', expert_tensor_parallelism))
+                print(line_fmt.format('expert tensor parallelism enabled: ', expert_tensor_parallelism > 1))
 
-        print('{:<60}  {:<8}'.format('params per gpu: ', params_to_string(total_params)))
+        print(line_fmt.format('params per GPU: ', params_to_string(total_params)))
         if total_model_expert_params > 0:
-            print('{:<60}  {:<8}'.format('params of model: ',
-                                         params_to_string(total_model_nonexpert_params + total_model_expert_params)))
-            print('{:<60}  {:<8}'.format('   non-expert params of model: ',
-                                         params_to_string(total_model_nonexpert_params)))
-            print('{:<60}  {:<8}'.format('   expert params of model: ', params_to_string(total_model_expert_params)))
+            print(
+                line_fmt.format('params of model: ',
+                                params_to_string(total_model_nonexpert_params + total_model_expert_params)))
+            print(line_fmt.format('   non-expert params of model: ', params_to_string(total_model_nonexpert_params)))
+            print(line_fmt.format('   expert params of model: ', params_to_string(total_model_expert_params)))
         else:
-            print('{:<60}  {:<8}'.format('params of model = params per GPU * mp_size: ',
-                                         params_to_string(total_model_nonexpert_params)))
+            print(
+                line_fmt.format('params of model = params per GPU * mp_size: ',
+                                params_to_string(total_model_nonexpert_params)))
 
-        print('{:<60}  {:<8}'.format('fwd MACs per GPU: ', macs_to_string(total_macs)))
+        print(line_fmt.format('fwd MACs per GPU: ', macs_to_string(total_macs)))
 
-        print('{:<60}  {:<8}'.format('fwd flops per GPU: ', num_to_string(total_flops)))
+        print(line_fmt.format('fwd flops per GPU: ', number_to_string(total_flops)))
 
-        print('{:<60}  {:<8}'.format(
-            'fwd flops of model = fwd flops per GPU * mp_size: ',
-            num_to_string(total_flops * ((self.ds_engine.mp_world_size) if self.ds_engine else 1))))
+        print(
+            line_fmt.format('fwd flops of model = fwd flops per GPU * mp_size: ',
+                            number_to_string(total_flops * (self.ds_engine.mp_world_size if self.ds_engine else 1))))
 
         fwd_latency = self.get_total_duration()
         if self.ds_engine and self.ds_engine.wall_clock_breakdown():
-            fwd_latency = self.ds_engine.timers('forward').elapsed(False) / 1000.0
-        print('{:<60}  {:<8}'.format('fwd latency: ', duration_to_string(fwd_latency)))
-        print('{:<60}  {:<8}'.format('fwd FLOPS per GPU = fwd flops per GPU / fwd latency: ',
-                                     flops_to_string(total_flops / fwd_latency)))
+            fwd_latency = self.ds_engine.timers(FORWARD_GLOBAL_TIMER).elapsed(False) / 1000.0
+        print(line_fmt.format('fwd latency: ', duration_to_string(fwd_latency)))
+        print(
+            line_fmt.format('fwd FLOPS per GPU = fwd flops per GPU / fwd latency: ',
+                            flops_to_string(total_flops / fwd_latency)))
 
         if self.ds_engine and self.ds_engine.wall_clock_breakdown():
             bwd_factor = 2 + self.recompute_fwd_factor
-            bwd_latency = self.ds_engine.timers('backward').elapsed(False) / 1000.0
-            step_latency = self.ds_engine.timers('step').elapsed(False) / 1000.0
-            print('{:<60}  {:<8}'.format('bwd latency: ', duration_to_string(bwd_latency)))
-            print('{:<60}  {:<8}'.format(f'bwd FLOPS per GPU = {bwd_factor} * fwd flops per GPU / bwd latency: ',
-                                         flops_to_string(bwd_factor * total_flops / bwd_latency)))
-            print('{:<60}  {:<8}'.format(
-                f'fwd+bwd FLOPS per GPU = {bwd_factor+1} * fwd flops per GPU / (fwd+bwd latency): ',
-                flops_to_string((bwd_factor + 1) * total_flops / (fwd_latency + bwd_latency))))
+            bwd_latency = self.ds_engine.timers(BACKWARD_GLOBAL_TIMER).elapsed(False) / 1000.0
+            step_latency = self.ds_engine.timers(STEP_GLOBAL_TIMER).elapsed(False) / 1000.0
+            print(line_fmt.format('bwd latency: ', duration_to_string(bwd_latency)))
+            print(
+                line_fmt.format(f'bwd FLOPS per GPU = {bwd_factor:g} * fwd flops per GPU / bwd latency: ',
+                                flops_to_string(bwd_factor * total_flops / bwd_latency)))
+            print(
+                line_fmt.format(
+                    f'fwd+bwd FLOPS per GPU = {bwd_factor + 1:g} * fwd flops per GPU / (fwd+bwd latency): ',
+                    flops_to_string((bwd_factor + 1) * total_flops / (fwd_latency + bwd_latency))))
 
-            print('{:<60}  {:<8}'.format('step latency: ', duration_to_string(step_latency)))
+            print(line_fmt.format('step latency: ', duration_to_string(step_latency)))
 
             iter_latency = fwd_latency + bwd_latency + step_latency
-            print('{:<60}  {:<8}'.format('iter latency: ', duration_to_string(iter_latency)))
-            print('{:<60}  {:<8}'.format(f'FLOPS per GPU = {bwd_factor+1} * fwd flops per GPU / iter latency: ',
-                                         flops_to_string((bwd_factor + 1) * total_flops / iter_latency)))
+            print(line_fmt.format('iter latency: ', duration_to_string(iter_latency)))
+            print(
+                line_fmt.format(f'FLOPS per GPU = {bwd_factor + 1:g} * fwd flops per GPU / iter latency: ',
+                                flops_to_string((bwd_factor + 1) * total_flops / iter_latency)))
 
             samples_per_iter = self.ds_engine.train_micro_batch_size_per_gpu() * self.ds_engine.world_size
-            print('{:<60}  {:<8.2f}'.format('samples/second: ', samples_per_iter / iter_latency))
+            print(line_fmt.format('samples/second: ', round(samples_per_iter / iter_latency, DEFAULT_PRECISION)))
 
         def flops_repr(module):
             debuginfo(prj='ds')
             params = module.__params__ + module.__expert_params__
             flops = get_module_flops(module)
             macs = get_module_macs(module)
-            items = [
-                params_to_string(params),
-                "{:.2%} Params".format(params / total_params if total_params else 0),
-                macs_to_string(macs),
-                "{:.2%} MACs".format(0.0 if total_macs == 0 else macs / total_macs),
-            ]
             duration = get_module_duration(module)
-
-            items.append(duration_to_string(duration))
-            items.append("{:.2%} latency".format(0.0 if total_duration == 0 else duration / total_duration))
-            items.append(flops_to_string(0.0 if duration == 0 else flops / duration))
-            items.append(module.original_extra_repr())
+            items = [
+                "{} = {:g}% Params".format(
+                    params_to_string(params),
+                    round(100 * params / total_params, DEFAULT_PRECISION) if total_params else 0),
+                "{} = {:g}% MACs".format(macs_to_string(macs),
+                                         round(100 * macs / total_macs, DEFAULT_PRECISION) if total_macs else 0),
+                "{} = {:g}% latency".format(
+                    duration_to_string(duration),
+                    round(100 * duration / total_duration, DEFAULT_PRECISION) if total_duration else 0),
+                flops_to_string(round(flops / duration, DEFAULT_PRECISION) if duration else 0),
+            ]
+            original_extra_repr = module.original_extra_repr()
+            if original_extra_repr:
+                items.append(original_extra_repr)
             return ", ".join(items)
 
         def add_extra_repr(module):
@@ -1045,11 +1083,11 @@ def _reload_tensor_methods():
 
 
 def _rnn_flops(flops, rnn_module, w_ih, w_hh, input_size):
-    input_size, hidden_size = w_ih.shape
+    gates_size = w_ih.shape[0]
     # matrix matrix mult ih state and internal state
-    flops += 2 * input_size * hidden_size - hidden_size
+    flops += 2 * w_ih.shape[0] * w_ih.shape[1] - gates_size
     # matrix matrix mult hh state and internal state
-    flops += 2 * hidden_size * hidden_size - hidden_size
+    flops += 2 * w_hh.shape[0] * w_hh.shape[1] - gates_size
     if isinstance(rnn_module, (nn.RNN, nn.RNNCell)):
         debuginfo(prj='ds')
         # add both operations
@@ -1131,6 +1169,7 @@ MODULE_HOOK_MAPPING = {
 }
 
 
+<<<<<<< HEAD
 def num_to_string(num, precision=2):
     debuginfo(prj='ds')
     if num // 10**9 > 0:
@@ -1141,10 +1180,15 @@ def num_to_string(num, precision=2):
         return str(round(num / 10.0**3, precision)) + " K"
     else:
         return str(num)
+=======
+def macs_to_string(macs, units=None, precision=DEFAULT_PRECISION):
+    return f"{number_to_string(macs, units=units, precision=precision)}MACs"
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
 
-def macs_to_string(macs, units=None, precision=2):
+def number_to_string(num, units=None, precision=DEFAULT_PRECISION):
     if units is None:
+<<<<<<< HEAD
         debuginfo(prj='ds')
         if macs // 10**9 > 0:
             return str(round(macs / 10.0**9, precision)) + " GMACs"
@@ -1152,9 +1196,24 @@ def macs_to_string(macs, units=None, precision=2):
             return str(round(macs / 10.0**6, precision)) + " MMACs"
         elif macs // 10**3 > 0:
             return str(round(macs / 10.0**3, precision)) + " KMACs"
+=======
+        if num >= 1e12:
+            magnitude, units = 1e12, "T"
+        elif num >= 1e9:
+            magnitude, units = 1e9, "G"
+        elif num >= 1e6:
+            magnitude, units = 1e6, "M"
+        elif num >= 1e3:
+            magnitude, units = 1e3, "K"
+        elif num >= 1 or num == 0:
+            magnitude, units = 1, ""
+        elif num >= 1e-3:
+            magnitude, units = 1e-3, "m"
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
         else:
-            return str(macs) + " MACs"
+            magnitude, units = 1e-6, "u"
     else:
+<<<<<<< HEAD
         debuginfo(prj='ds')
         if units == "GMACs":
             return str(round(macs / 10.0**9, precision)) + " " + units
@@ -1181,14 +1240,26 @@ def number_to_string(num, units=None, precision=2):
         debuginfo(prj='ds')
         if units == "G":
             return str(round(num / 10.0**9, precision)) + " " + units
+=======
+        if units == "T":
+            magnitude = 1e12
+        elif units == "G":
+            magnitude = 1e9
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
         elif units == "M":
-            return str(round(num / 10.0**6, precision)) + " " + units
+            magnitude = 1e6
         elif units == "K":
-            return str(round(num / 10.0**3, precision)) + " " + units
+            magnitude = 1e3
+        elif units == "m":
+            magnitude = 1e-3
+        elif units == "u":
+            magnitude = 1e-6
         else:
-            return str(num) + " "
+            magnitude = 1
+    return f"{round(num / magnitude, precision):g} {units}"
 
 
+<<<<<<< HEAD
 def flops_to_string(flops, units=None, precision=2):
     if units is None:
         debuginfo(prj='ds')
@@ -1254,6 +1325,23 @@ def duration_to_string(duration, units=None, precision=2):
             return str(round(duration * 10.0**3, precision)) + " " + units
         else:
             return str(round(duration, precision)) + " s"
+=======
+def flops_to_string(flops, units=None, precision=DEFAULT_PRECISION):
+    return f"{number_to_string(flops, units=units, precision=precision)}FLOPS"
+
+
+def bytes_to_string(b, units=None, precision=DEFAULT_PRECISION):
+    return f"{number_to_string(b, units=units, precision=precision)}B"
+
+
+def params_to_string(params_num, units=None, precision=DEFAULT_PRECISION):
+    units = units.replace("B", "G") if units else units
+    return number_to_string(params_num, units=units, precision=precision).replace("G", "B").strip()
+
+
+def duration_to_string(duration, units=None, precision=DEFAULT_PRECISION):
+    return f"{number_to_string(duration, units=units, precision=precision)}s"
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
 
     # can not iterate over all submodules using self.model.modules()
@@ -1343,6 +1431,8 @@ def get_model_profile(model,
 
         args = [input]
     assert (len(args) > 0) or (len(kwargs) > 0), "args and/or kwargs must be specified if input_shape is None"
+
+    logger.info("Flops profiler warming-up...")
     for _ in range(warm_up):
         if kwargs:
             if mode == 'forward':

@@ -58,16 +58,30 @@ class MegatronLayerPolicy(TransformerPolicy):
                     from megatron.model.transformer import ParallelTransformerLayer
                     debuginfo(prj='ds')
                     MegatronLayerPolicy._orig_layer_class = ParallelTransformerLayer
+                    MegatronLayerPolicy.version = 1
                 except ImportError:
                     debuginfo(prj='ds')
                     MegatronLayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
+<<<<<<< HEAD
         debuginfo(prj='ds')
         return self.client_module.attention.query_key_value.weight.shape[1], \
                 self.client_module.attention.num_attention_heads, \
                 self.client_module.input_layernorm.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
+=======
+        if MegatronLayerPolicy.version == 0:
+            return self.client_module.attention.query_key_value.weight.shape[1], \
+                    self.client_module.attention.num_attention_heads, \
+                    self.client_module.input_layernorm.eps, \
+                    DEFAULT_INTERMEDIATE_SIZE
+        else:
+            return self.client_module.self_attention.query_key_value.weight.shape[1], \
+                    self.client_module.self_attention.num_attention_heads, \
+                    self.client_module.input_layernorm.eps, \
+                    DEFAULT_INTERMEDIATE_SIZE
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
     def attention(self, enable_training=False):
         debuginfo(prj='ds')

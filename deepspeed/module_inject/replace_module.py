@@ -4,7 +4,6 @@
 # DeepSpeed Team
 
 import os
-from typing import Optional
 import torch
 import tqdm
 import deepspeed
@@ -13,21 +12,19 @@ from deepspeed.ops.transformer.inference.diffusers_attention import DeepSpeedDif
 from deepspeed.ops.transformer.inference.diffusers_transformer_block import DeepSpeedDiffusersTransformerBlock
 from deepspeed.ops.transformer.inference.diffusers_2d_transformer import Diffusers2DTransformerConfig
 from deepspeed.accelerator import get_accelerator
-from .replace_policy import HFGPT2LayerPolicy
 from .replace_policy import replace_policies, generic_policies
+from .auto_tp import AutoTP, ReplaceWithTensorSlicing, Loading
 
 from deepspeed import comm as dist
-from torch import nn
 
-from .layers import LinearAllreduce, LinearLayer
 from .load_checkpoint import load_model_with_checkpoint
 import time
 
 from .utils import policy_to_ds_container
-
 import gc
 from pydebug import debuginfo
 
+<<<<<<< HEAD
 class ReplaceWithTensorSlicing:
 
     def __init__(self, mp_group=None, mp_size=1, out_dim=1, in_dim=0):
@@ -144,6 +141,8 @@ class ReplaceWithTensorSlicing:
         return dst
 
 
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 def get_transformer_name(replaced_module):
     debuginfo(prj='ds')
     from .containers import supported_models
@@ -208,7 +207,7 @@ def _module_match(module):
     return None
 
 
-def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
+def generic_injection(module, dtype=None, enable_cuda_graph=True):
 
     def replace_attn(child, policy):
         policy_attn = policy.attention(child)
@@ -225,8 +224,7 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
         config = transformer_inference.DeepSpeedInferenceConfig(
             hidden_size=hidden_size,
             heads=heads,
-            fp16=fp16,
-            bf16=bf16,
+            dtype=dtype,
             triangular_masking=False,
             max_out_tokens=4096,
         )
@@ -263,8 +261,8 @@ def generic_injection(module, fp16=False, bf16=False, enable_cuda_graph=True):
     if isinstance(module, torch.nn.Module):
         pass
     else:
-        if fp16 is False and bf16 is False:
-            raise ValueError("Generic injection only supported with FP16 or BF16")
+        if dtype not in [torch.float16, torch.half]:
+            raise ValueError("Generic injection only supported with FP16")
 
         try:
             import diffusers
@@ -318,7 +316,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
     """ Replace bert-style transformer layers with DeepSpeed's transformer layer
     Arguments:
         orig_layer_impl (torch.nn.Module): the original transformer layer implementation to look for,
-            e.g., transformers.modeling_bert.BertLayer.
+            e.g., transformers.models.bert.modeling_bert.BertLayer or transformers.BertLayer
         model (torch.nn.Module): user's nn.module representing their model
         checkpoint_dict: Dictionary for checkpoint passed from the Inference Engine
         config: top-level DS Inference config defined in inference/config.py
@@ -402,6 +400,7 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         return _container.module
 
     def replace_wo_policy(module, all_reduce_linears, prefix="", state_dict=None):
+<<<<<<< HEAD
         debuginfo(prj='ds')
         mp_size = config.tensor_parallel.tp_size
         mp_group = config.tensor_parallel.tp_group
@@ -444,30 +443,20 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
                     debuginfo(prj='ds')
                     child.weight.data = child.weight.data.transpose(-1, -2).contiguous()
                 data = mp_replace.copy(new_weight, child.weight.data)
+=======
+        #mp_replace = ReplaceWithTensorSlicing(mp_group=config.tensor_parallel.tp_group)
 
-                new_bias = torch.empty((weight_shape[0] // mp_size),
-                                       device=child.weight.device,
-                                       dtype=child.weight.dtype)
-                bias_data = None if child.bias is None else mp_replace.copy(new_bias, child.bias.data).to(
-                    get_accelerator().current_device_name())
-                setattr(child, "replaced", True)
-                return LinearLayer(weight=data.to(get_accelerator().current_device_name()), bias=bias_data)
+        # 1. Create AutoTP object
+        _autotp = AutoTP(module, all_reduce_linears, prefix, state_dict, linear_layer_setting, orig_layer_impl)
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
-        def _slice_embedding(child, name, conv_linear_layer):
-            if getattr(child, "replaced", False) == True:
-                return
-            mp_replace = ReplaceWithTensorSlicing(mp_group=mp_group)
-            new_weight = torch.empty((child.weight.shape[0], child.weight.shape[1] // mp_size),
-                                     device=child.weight.device,
-                                     dtype=child.weight.dtype)
-            data = mp_replace.copy(new_weight,
-                                   child.weight.ds_tensor.data if hasattr(child.weight, 'ds_tensor') else \
-                                   child.weight.data)
-            new_embedding = nn.Embedding(child.weight.shape[0], child.weight.shape[1] // mp_size)
-            new_embedding.weight.data.copy_(data)
-            setattr(child, "replaced", True)
-            return new_embedding
+        # 2. Set the tensor parallelism config
+        _autotp.set_tensor_parallel_config(config.tensor_parallel.tp_size, config.tensor_parallel.tp_group)
 
+        # 3. Set linear policies
+        _autotp.update_linear_policies()
+
+<<<<<<< HEAD
         def update_mp_params(child):
             if getattr(child, "replaced", False) == True:
                 debuginfo(prj='ds')
@@ -541,6 +530,10 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
             return r_module
 
         return _replace_module(module)
+=======
+        # 4. Replace modules
+        return _autotp._replace_module(module)
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
     def replace_fn(child, _policy, layer_id=0, prefix="", state_dict=None):
         training = False  # todo: refactor this part to go in the config
@@ -570,11 +563,12 @@ def replace_transformer_layer(orig_layer_impl, model, checkpoint_dict, config, m
         checkpoint = checkpoint_dict["checkpoints"]
         pbar = tqdm.tqdm(total=len(checkpoint), desc=f"Loading {len(checkpoint)} checkpoint shards")
         for i in range(len(checkpoint)):
+            checkpoint_file = os.path.join(config.base_dir, checkpoint[i])
             replaced_module = replace_module(model=model,
                                              orig_class=orig_layer_impl,
                                              replace_fn=replace_fn,
                                              _replace_policy=config.injection_policy_tuple,
-                                             checkpoint=checkpoint[i])
+                                             checkpoint=checkpoint_file)
             pbar.update(1)
             gc.collect()
     else:
@@ -738,7 +732,7 @@ def revert_transformer_layer(orig_layer_impl, model, config, preln=False):
     """ Revert DeepSpeed's transformer layer back to original bert-style transformer layer
     Arguments:
         orig_layer_impl (torch.nn.Module): the original transformer layer implementation that was replaced,
-            e.g., transformers.modeling_bert.BertLayer.
+            e.g., transformers.models.bert.modeling_bert.BertLayer or transformers.BertLayer
         model (torch.nn.Module): user's nn.module representing their model
         config (dict): model config containing hidden size, attention heads, etc.
     Returns:
@@ -862,21 +856,29 @@ from ..pipe import PipelineModule
 import re
 
 
+<<<<<<< HEAD
 def skip_level_0_prefix(model, name):
     debuginfo(prj='ds')
+=======
+def skip_level_0_prefix(model, state_dict):
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
     model = str(model)
     key = re.search(r": (.*?)Model", model)
     if key is None:
         key = re.search(r": (.*?)Stack", model)
     if key is None:
         key = re.match(r"(.*?)Model", model)
-    if key is not None and key.group(1).lower() in "bloom":
-        # if keys start with 'model.', don't skip level 0 prefix
-        if not re.match("^model[.]", name):
-            return True
+    # if keys start with 'model.', don't skip level 0 prefix
+    if state_dict != None:
+        for item in state_dict.keys():
+            if re.match("^model[.]", item):
+                return False
+    if key is not None and key.group(1).lower() in ["bloom", "opt"]:
+        return True
     return False
 
 
+<<<<<<< HEAD
 def load_buffer(module, state_dict, prefix):
     debuginfo(prj='ds')
     for name in module._buffers.keys():
@@ -888,6 +890,8 @@ def load_buffer(module, state_dict, prefix):
             module._buffers[name].data.copy_(state_dict[prefix + name])
 
 
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_dict=None):
     """ Traverse model's children recursively and apply any transformations in ``policies``.
     Arguments:
@@ -896,6 +900,7 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
     Returns:
         Modified ``model``.
     """
+<<<<<<< HEAD
     try:
         debuginfo(prj='ds')
         import transformers
@@ -904,6 +909,8 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
         debuginfo(prj='ds')
         OPTLearnedPositionalEmbedding = None
     load_layers = [nn.Linear, nn.Embedding, nn.LayerNorm, OPTLearnedPositionalEmbedding]
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
     for name, child in model.named_children():
         if child.__class__ in policies:
             debuginfo(prj='ds')
@@ -921,10 +928,14 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
         else:
             debuginfo(prj='ds')
             checking_key = prefix + name + '.'
-            if child.__class__ in load_layers and state_dict is not None:
+            if Loading.is_load_module(child) and state_dict is not None:
                 if any(checking_key in item for item in state_dict):
+<<<<<<< HEAD
                     debuginfo(prj='ds')
                     load(
+=======
+                    Loading.load(
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
                         child,
                         state_dict,
                         checking_key,
@@ -932,11 +943,15 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
                 else:
                     continue
             if len(child._buffers) != 0 and state_dict is not None:
+<<<<<<< HEAD
                 debuginfo(prj='ds')
                 load_buffer(child, state_dict, checking_key)
+=======
+                Loading.load_buffer(child, state_dict, checking_key)
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             _, layer_id = _replace_module(child,
                                           policies,
-                                          prefix if level_id == 0 and skip_level_0_prefix(model, name) else \
+                                          prefix if level_id == 0 and skip_level_0_prefix(model, state_dict) else \
                                           prefix + name + '.',
                                           layer_id=layer_id,
                                           level_id=level_id + 1,
@@ -945,6 +960,7 @@ def _replace_module(model, policies, prefix='', layer_id=0, level_id=0, state_di
     # Add the reset_cache func to the model, so that it can be called in the beginning of text-generation.
     model.reset_cache = transformer_inference.DeepSpeedTransformerInference.reset_cache
     return model, layer_id
+<<<<<<< HEAD
 
 
 def load(module, state_dict, prefix, mp_group=None):
@@ -997,3 +1013,5 @@ def load(module, state_dict, prefix, mp_group=None):
                                                                                           device="cpu"),
                                                                     requires_grad=module.norm.bias.data.requires_grad)
                 module.norm.bias = mp_replace.copy(module.norm.bias, state_dict[prefix + 'bias'])
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6

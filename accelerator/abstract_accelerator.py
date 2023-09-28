@@ -157,6 +157,10 @@ class DeepSpeedAccelerator(ABC):
     def is_fp16_supported(self):
         ...
 
+    @abc.abstractmethod
+    def supported_dtypes(self):
+        ...
+
     # Misc
     @abc.abstractmethod
     def amp(self):
@@ -180,6 +184,10 @@ class DeepSpeedAccelerator(ABC):
 
     @abc.abstractmethod
     def communication_backend_name(self):
+        ...
+
+    @abc.abstractmethod
+    def is_triton_supported(self):
         ...
 
     # Tensor operations

@@ -17,7 +17,7 @@ from pydebug import debuginfo
 debuginfo(prj='ds', info='deepspeed __init__')
 
 try:
-    import triton  # noqa: F401
+    import triton  # noqa: F401 # type: ignore
     HAS_TRITON = True
 except ImportError:
     HAS_TRITON = False

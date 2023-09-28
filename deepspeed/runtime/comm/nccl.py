@@ -9,6 +9,7 @@ import cupy
 import numpy as np
 
 from deepspeed.runtime.compression.cupy import CupyBackend
+from deepspeed.runtime.utils import required_torch_version
 from deepspeed.accelerator import get_accelerator
 from pydebug import debuginfo
 
@@ -25,12 +26,16 @@ class NcclBackend(object):
         self.rank = dist.get_rank(group=self.world_group)
         self.size = dist.get_world_size(group=self.world_group)
         self.compression_backend = CupyBackend()
+<<<<<<< HEAD
         self.bool_not_supported = False
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if (TORCH_MAJOR == 1 and TORCH_MINOR >= 10) or TORCH_MAJOR == 2:
             debuginfo(prj='ds')
             self.bool_not_supported = True
+=======
+        self.bool_not_supported = required_torch_version(min_version=1.10)
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
     def my_igather(self, rank, size, group, sendbuf, recvbuf, root):
         req = []

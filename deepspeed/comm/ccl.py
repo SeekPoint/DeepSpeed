@@ -63,6 +63,9 @@ class CCLBackend(TorchBackend):
             debuginfo(prj='ds')
             self.ccl_comm_op.all_reduce(tensor, op, group, async_op)
 
+    def inference_all_reduce(self, tensor, op=ReduceOp.SUM, group=None, async_op=False):
+        self.ccl_comm_op.inference_all_reduce(tensor, op, group, async_op)
+
     def barrier(self, group=None, async_op=False):
         debuginfo(prj='ds')
         self.ccl_comm_op.barrier(group, async_op)

@@ -11,13 +11,26 @@ import torch
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
 from deepspeed.runtime import DeepSpeedOptimizer
-from deepspeed.runtime.utils import get_global_norm, get_grad_norm, CheckOverflow, get_weight_norm
+from deepspeed.runtime.utils import get_global_norm, get_grad_norm, CheckOverflow, get_weight_norm, required_torch_version
 from deepspeed.runtime.fp16.loss_scaler import INITIAL_LOSS_SCALE, SCALE_WINDOW, MIN_LOSS_SCALE
 from deepspeed.utils import groups, logger, log_dist
 from deepspeed import comm as dist
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT, CLIP_GRAD
 from deepspeed.accelerator import get_accelerator
+<<<<<<< HEAD
 from pydebug import debuginfo
+=======
+
+OVERFLOW_CHECK_TIMER = 'overflow_check'
+COMPUTE_NORM_TIMER = 'compute_norm'
+UNSCALE_AND_CLIP_TIMER = 'unscale_and_clip'
+BASIC_STEP_TIMER = 'basic_step'
+UPDATE_FP16_TIMER = 'update_fp16'
+
+OVERFLOW_TIMERS = [COMPUTE_NORM_TIMER, OVERFLOW_CHECK_TIMER]
+STEP_TIMERS = OVERFLOW_TIMERS + [UNSCALE_AND_CLIP_TIMER, BASIC_STEP_TIMER, UPDATE_FP16_TIMER]
+
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 
 class FP16_Optimizer(DeepSpeedOptimizer):
     """
@@ -104,10 +117,14 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         self.norm_type = 2
         self.step_count = 0
 
+<<<<<<< HEAD
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if TORCH_MAJOR == 0 and TORCH_MINOR <= 4:
             debuginfo(prj='ds')
+=======
+        if required_torch_version(max_version=0.4):
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm
         else:
             debuginfo(prj='ds')
@@ -193,6 +210,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                 p.data = q.data
         return self.overflow
 
+<<<<<<< HEAD
     def start_timers(self, name_list):
         debuginfo(prj='ds')
         if self.timers is not None:
@@ -210,6 +228,8 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         if self.timers is not None:
             self.timers.log(name_list)
 
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
     def set_lr(self, lr):
         debuginfo(prj='ds')
         """Set the learning rate."""
@@ -238,21 +258,13 @@ class FP16_Optimizer(DeepSpeedOptimizer):
             debuginfo(prj='ds')
             return self.step_fused_adam()
 
-        COMPUTE_NORM = "compute_norm"
-        OVERFLOW_CHECK = 'overflow_check'
-        OVERFLOW_TIMERS = [COMPUTE_NORM, OVERFLOW_CHECK]
-        UNSCALE_AND_CLIP = 'unscale_and_clip'
-        BASIC_STEP = 'basic_step'
-        UPDATE_FP16 = 'update_fp16'
-        STEP_TIMERS = OVERFLOW_TIMERS + [UNSCALE_AND_CLIP, BASIC_STEP, UPDATE_FP16]
-
         # First determine if there is overflow.
-        self.start_timers([OVERFLOW_CHECK])
+        self.timers(OVERFLOW_CHECK_TIMER).start()
         fp16_params = []
         for i, group in enumerate(self.fp16_groups):
             fp16_params.extend([p for p in group if p.grad is not None])
         self.overflow = self.overflow_checker.has_overflow(fp16_params)
-        self.stop_timers([OVERFLOW_CHECK])
+        self.timers(OVERFLOW_CHECK_TIMER).stop()
         prev_scale = self.cur_scale
         self._update_scale(self.overflow)
         if self.overflow:
@@ -267,7 +279,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                 for p in group:
                     p.grad = None
 
-            self.log_timers(OVERFLOW_TIMERS)
+            self.timers.log(OVERFLOW_TIMERS)
             return self.overflow
 
         grads_groups_flat = []
@@ -285,11 +297,11 @@ class FP16_Optimizer(DeepSpeedOptimizer):
 
             self.fp32_groups_flat[i].grad = grads_groups_flat[i]
 
-        self.start_timers([COMPUTE_NORM])
+        self.timers(COMPUTE_NORM_TIMER).start()
 
         all_groups_norm = get_grad_norm(self.fp32_groups_flat, mpu=self.mpu)
 
-        self.stop_timers([COMPUTE_NORM])
+        self.timers(COMPUTE_NORM_TIMER).stop()
 
         if self.has_moe_layers:
             debuginfo(prj='ds')
@@ -300,28 +312,28 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         # Stash unscaled gradient norm
         self._global_grad_norm = scaled_global_grad_norm / self.cur_scale
 
-        self.start_timers([UNSCALE_AND_CLIP])
+        self.timers(UNSCALE_AND_CLIP_TIMER).start()
         self.unscale_and_clip_grads(grads_groups_flat, scaled_global_grad_norm)
-        self.stop_timers([UNSCALE_AND_CLIP])
+        self.timers(UNSCALE_AND_CLIP_TIMER).stop()
 
-        self.start_timers([BASIC_STEP])
+        self.timers(BASIC_STEP_TIMER).start()
         self.optimizer.step()
-        self.stop_timers([BASIC_STEP])
+        self.timers(BASIC_STEP_TIMER).stop()
 
         #get rid of the fp32 gradients. Not needed anymore
         for group in self.fp32_groups_flat:
             group.grad = None
 
-        self.start_timers([UPDATE_FP16])
+        self.timers(UPDATE_FP16_TIMER).start()
 
         for i in range(len(self.fp16_groups)):
             updated_params = _unflatten_dense_tensors(self.fp32_groups_flat[i], self.fp16_groups[i])
             for p, q in zip(self.fp16_groups[i], updated_params):
                 p.data.copy_(q.data)
 
-        self.stop_timers([UPDATE_FP16])
+        self.timers(UPDATE_FP16_TIMER).stop()
 
-        self.log_timers(STEP_TIMERS)
+        self.timers.log(STEP_TIMERS)
 
         self.step_count += 1
 

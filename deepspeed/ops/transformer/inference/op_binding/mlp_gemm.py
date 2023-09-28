@@ -90,7 +90,12 @@ class MLPGemmOp(BaseOp):
                 self.config.mlp_act_func_type,
                 self.config.transposed_mode)
         else:
+<<<<<<< HEAD
             debuginfo(prj='ds')
+=======
+            if input_bias is not None:
+                input += input_bias
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             output, residual_add = self.mlp_gemm_func(
                 input,
                 residual,

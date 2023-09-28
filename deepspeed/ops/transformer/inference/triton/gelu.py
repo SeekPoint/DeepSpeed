@@ -14,7 +14,7 @@ def gelu_functor(x):
     debuginfo(prj='ds')
     # Using approximation introduces greater parity errors.
     # return tl.sigmoid(1.702 * x) * x
-    return x * 0.5 * (1.0 + tl.libdevice.erf(x / 1.41421356237))
+    return x * 0.5 * (1.0 + tl.math.erf(x / 1.41421356237))
 
 
 @triton.jit

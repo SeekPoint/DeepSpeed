@@ -7,6 +7,7 @@ import types
 import torch
 import numpy as np
 from deepspeed import comm as dist
+from deepspeed.runtime.utils import required_torch_version
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 from deepspeed.accelerator import get_accelerator
 from pydebug import debuginfo
@@ -113,11 +114,14 @@ class OnebitLamb(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
+<<<<<<< HEAD
             debuginfo(prj='ds')
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             assert (
-                (TORCH_MAJOR == 1 and TORCH_MINOR >= 8) or TORCH_MAJOR >= 2
+                required_torch_version(min_version=1.8)
             ), "Please use torch 1.8 or greater to enable NCCL backend in 1-bit Adam. Alternatively, please specify 'mpi' as the 'comm_backend_name' in config file to proceed with the MPI backend"
             assert dist.is_initialized() == True, "Please initialize the torch distributed backend."
             from deepspeed.runtime.comm.nccl import NcclBackend

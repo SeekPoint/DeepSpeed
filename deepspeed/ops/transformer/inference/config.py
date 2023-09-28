@@ -33,8 +33,6 @@ class DeepSpeedInferenceConfig(TransformerConfig):
             mp_size (optional): This argument is mainly used to create the parameters on the kernel side
                 using model-parallel architecture. If the client model already takes care of this, there is no
                 need to pass this argument.
-            fp16: Enable half-precision computation
-            bf16: Enable bf16 floating point computation
             pre_layer_norm: Select between Pre-LN or Post-LN transformer architecture
             stochastic_mode:  Enable for high performance, please note that this flag has some level of
                 non-determinism and can produce different results on different runs.  However, we have seen
@@ -81,8 +79,13 @@ class DeepSpeedInferenceConfig(TransformerConfig):
                  set_empty_params=False,
                  transposed_mode=False,
                  use_triton=False,
+<<<<<<< HEAD
                  triton_autotune=False):
         debuginfo(prj='ds', info='DeepSpeedInferenceConfig init')
+=======
+                 triton_autotune=False,
+                 num_kv=-1):
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
         super(DeepSpeedInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers)
@@ -116,6 +119,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
         self.transposed_mode = transposed_mode
         self.use_triton = use_triton
         self.triton_autotune = triton_autotune
+        self.num_kv = num_kv
 
     @classmethod
     def from_dict(cls, json_object):

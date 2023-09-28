@@ -16,12 +16,19 @@ from .containers import HFCLIPLayerPolicy
 from .containers import LLAMALayerPolicy
 from .containers import UNetPolicy
 from .containers import VAEPolicy
+<<<<<<< HEAD
 from pydebug import debuginfo
 debuginfo(prj='ds')
+=======
+from .containers import LLAMA2LayerPolicy
+from .containers import InternLMLayerPolicy
+
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
 # transformer-based policies
 replace_policies = [
     HFBertLayerPolicy, HFGPTNEOLayerPolicy, GPTNEOXLayerPolicy, HFGPTJLayerPolicy, MegatronLayerPolicy,
-    HFGPT2LayerPolicy, BLOOMLayerPolicy, HFOPTLayerPolicy, HFCLIPLayerPolicy, HFDistilBertLayerPolicy, LLAMALayerPolicy
+    HFGPT2LayerPolicy, BLOOMLayerPolicy, HFOPTLayerPolicy, HFCLIPLayerPolicy, HFDistilBertLayerPolicy,
+    LLAMALayerPolicy, LLAMA2LayerPolicy, InternLMLayerPolicy
 ]
 
 # non-transformer-based policies

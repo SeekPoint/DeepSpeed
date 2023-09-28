@@ -193,8 +193,7 @@ class PreBackwardFunction(torch.autograd.Function):
 class PostBackwardFunction(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, module, pre_backward_function, output):
-        debuginfo(prj='ds')
+    def forward(ctx, module, post_backward_function, output):
         ctx.module = module
         if output.requires_grad:
             debuginfo(prj='ds')
@@ -207,7 +206,7 @@ class PostBackwardFunction(torch.autograd.Function):
             #if module.ds_grads_remaining == 0:
             #    print(f"Before Forward: {ctx.module.__class__.__name__}")
             module.ds_grads_remaining += 1
-            ctx.pre_backward_function = pre_backward_function
+            ctx.post_backward_function = post_backward_function
         output = output.detach()
         return output
 
@@ -216,30 +215,31 @@ class PostBackwardFunction(torch.autograd.Function):
         debuginfo(prj='ds')
         ctx.module.ds_grads_remaining = ctx.module.ds_grads_remaining - 1
         if ctx.module.ds_grads_remaining == 0:
-            debuginfo(prj='ds')
-            ctx.pre_backward_function(ctx.module)
+            ctx.post_backward_function(ctx.module)
             #print(f"After Backward: {ctx.module.__class__.__name__}")
         return (None, None) + args
 
 
 class DeepSpeedZeRoOffload(object):
-
-    def __init__(self,
-                 module,
-                 timers,
-                 ds_config,
-                 overlap_comm=True,
-                 prefetch_bucket_size=50000000,
-                 max_reuse_distance=1000000000,
-                 max_live_parameters=1000000000,
-                 param_persistence_threshold=100000,
-                 model_persistence_threshold=sys.maxsize,
-                 offload_param_config=None,
-                 mpu=None,
-                 zero_param_parallel_group=None,
-                 zero_quantized_weights=False):
+    def __init__(
+        self,
+        module,
+        timers,
+        ds_config,
+        overlap_comm=True,
+        prefetch_bucket_size=50000000,
+        max_reuse_distance=1000000000,
+        max_live_parameters=1000000000,
+        param_persistence_threshold=100000,
+        model_persistence_threshold=sys.maxsize,
+        dp_process_group=None,
+        offload_param_config=None,
+        mpu=None,
+        zero_param_parallel_group=None,
+        zero_quantized_weights=False,
+        zero_quantized_nontrainable_weights=False,
+    ):
         debuginfo(prj='ds')
-
         see_memory_usage("DeepSpeedZeRoOffload initialize [begin]", force=True)
 
         print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)
@@ -247,10 +247,12 @@ class DeepSpeedZeRoOffload(object):
         self.module = module
         self.timers = timers
         self.dtype = list(module.parameters())[0].dtype
+        self.dp_process_group = dp_process_group
         self.offload_device = None
         self.offload_param_pin_memory = False
         self.zero_param_parallel_group = zero_param_parallel_group
         self.zero_quantized_weights = zero_quantized_weights
+        self.zero_quantized_nontrainable_weights = zero_quantized_nontrainable_weights
 
         if offload_param_config is not None and offload_param_config.device != OffloadDeviceEnum.none:
             debuginfo(prj='ds')
@@ -273,7 +275,8 @@ class DeepSpeedZeRoOffload(object):
         self._prefetch_bucket_sz = int(prefetch_bucket_size)
         self._max_reuse_distance_in_numel = int(max_reuse_distance)
         self._max_available_parameters_in_numel = int(max_live_parameters)
-        self.__allgather_stream = get_accelerator().Stream() if overlap_comm else get_accelerator().default_stream()
+        self.__allgather_stream = None if get_accelerator().is_synchronized_device() else get_accelerator().Stream(
+        ) if overlap_comm else get_accelerator().default_stream()
 
         if not hasattr(module, "ds_inflight_param_registry"):
             debuginfo(prj='ds')
@@ -315,6 +318,8 @@ class DeepSpeedZeRoOffload(object):
                 inflight_param_registry=self.__inflight_param_registry[training],
                 prefetch_nvme=self.offload_device == OffloadDeviceEnum.nvme,
                 timers=self.timers,
+                zero_quantized_weights=self.zero_quantized_weights,
+                zero_quantized_nontrainable_weights=self.zero_quantized_nontrainable_weights,
             )
 
         return self.param_coordinators[training]
@@ -346,7 +351,8 @@ class DeepSpeedZeRoOffload(object):
                      pin_memory=self.offload_param_pin_memory,
                      mpu=mpu,
                      zero_param_parallel_group=self.zero_param_parallel_group,
-                     zero_quantized_weights=self.zero_quantized_weights)
+                     zero_quantized_weights=self.zero_quantized_weights,
+                     zero_quantized_nontrainable_weights=self.zero_quantized_nontrainable_weights)
 
     def destroy(self):
         debuginfo(prj='ds')
@@ -535,11 +541,12 @@ class DeepSpeedZeRoOffload(object):
         # post backward hook
         self.backward_hooks.append(module.register_forward_pre_hook(_post_backward_module_hook))
 
-    @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
         debuginfo(prj='ds')
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=False)
-
+        prev_grad_state = torch.is_grad_enabled(
+        )  # we don't want to enable grad for sub modules fetching, yet the subfunction need to know if grad is enabled
+        torch.set_grad_enabled(False)
         global FWD_MODULE_STACK
         FWD_MODULE_STACK.append(sub_module)
 
@@ -548,8 +555,8 @@ class DeepSpeedZeRoOffload(object):
         if param_coordinator.is_record_trace():
             debuginfo(prj='ds')
             param_coordinator.record_module(sub_module)
-        param_coordinator.fetch_sub_module(sub_module, forward=True)
-
+        param_coordinator.fetch_sub_module(sub_module, forward=prev_grad_state)
+        torch.set_grad_enabled(prev_grad_state)
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__} after fetch", force=False)
 
     @torch.no_grad()

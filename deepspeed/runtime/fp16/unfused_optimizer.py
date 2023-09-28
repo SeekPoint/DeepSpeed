@@ -12,7 +12,7 @@ import torch
 from torch._utils import _flatten_dense_tensors
 
 from deepspeed.runtime import DeepSpeedOptimizer
-from deepspeed.runtime.utils import get_global_norm, CheckOverflow, get_weight_norm
+from deepspeed.runtime.utils import get_global_norm, CheckOverflow, get_weight_norm, required_torch_version
 from deepspeed.runtime.fp16.loss_scaler import INITIAL_LOSS_SCALE, SCALE_WINDOW, MIN_LOSS_SCALE
 from deepspeed.utils import logger
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT
@@ -102,10 +102,14 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         self.clip_grad = clip_grad
         self.norm_type = 2
 
+<<<<<<< HEAD
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if TORCH_MAJOR == 0 and TORCH_MINOR <= 4:
             debuginfo(prj='ds')
+=======
+        if required_torch_version(max_version=0.4):
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm
         else:
             debuginfo(prj='ds')

@@ -24,8 +24,12 @@ class LinearAllreduce(nn.Module):
     def forward(self, input):
         output = torch.matmul(input, self.weight.transpose(-1, -2))
         if self.mp_group is not None:
+<<<<<<< HEAD
             debuginfo(prj='ds')
             dist.all_reduce(output, group=self.mp_group)
+=======
+            dist.inference_all_reduce(output, group=self.mp_group)
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
         if self.bias is not None:
             debuginfo(prj='ds')
             output += self.bias
@@ -144,7 +148,6 @@ class RMSNormalize(nn.Module):
         debuginfo(prj='ds')
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.eps)
-        print(self.weight)
         if self.weight.dtype in [torch.float16, torch.bfloat16]:
             hidden_states = hidden_states.to(self.weight.dtype)
 

@@ -249,6 +249,7 @@ class OpBuilder(ABC):
         debuginfo(prj='ds')
         return []
 
+<<<<<<< HEAD
     def libraries_installed(self, libraries):
         debuginfo(prj='ds')
         valid = False
@@ -258,6 +259,8 @@ class OpBuilder(ABC):
             valid = valid or result.wait() == 0
         return valid
 
+=======
+>>>>>>> 388c84834fca87465aff8bb8f6d85be88fa82ba6
     def has_function(self, funcname, libraries, verbose=False):
         '''
         Test for existence of a function within a tuple of libraries.
@@ -499,7 +502,7 @@ class OpBuilder(ABC):
                 f"Unable to JIT load the {self.name} op due to it not being compatible due to hardware/software issue. {self.error_log}"
             )
         try:
-            import ninja  # noqa: F401
+            import ninja  # noqa: F401 # type: ignore
         except ImportError:
             raise RuntimeError(f"Unable to JIT load the {self.name} op due to ninja not being installed.")
 
@@ -782,6 +785,8 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
             if not self.is_rocm_pytorch():
                 debuginfo(prj='ds')
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.CUDA_HOME, "lib64")
+                if not os.path.exists(CUDA_LIB64):
+                    CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.CUDA_HOME, "lib")
             else:
                 debuginfo(prj='ds')
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.ROCM_HOME, "lib")
