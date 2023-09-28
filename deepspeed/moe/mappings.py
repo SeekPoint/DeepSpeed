@@ -23,9 +23,10 @@
 
 import torch
 import deepspeed
-
+from pydebug import debuginfo
 
 def _gather_tokens(input_, dim=0):
+    debuginfo(prj='ds')
     """Gather tensors and concatenate them along a dimension"""
     mpu = deepspeed.utils.groups.mpu
 
@@ -44,6 +45,7 @@ def _gather_tokens(input_, dim=0):
 
 
 def _drop_tokens(input_, dim=0):
+    debuginfo(prj='ds')
     """Divide a tensor among the tensor parallel ranks"""
     mpu = deepspeed.utils.groups.mpu
 
@@ -91,16 +93,20 @@ class _DropTokens(torch.autograd.Function):
 
 
 def gather_tokens(input_, dim=0):
+    debuginfo(prj='ds')
     mpu = deepspeed.utils.groups.mpu
     if mpu is None or mpu.get_tensor_model_parallel_world_size() == 1:
+        debuginfo(prj='ds')
         # no tensor parallelism for non-experts
         return input_
     return _GatherTokens.apply(input_, dim)
 
 
 def drop_tokens(input_, dim=0):
+    debuginfo(prj='ds')
     mpu = deepspeed.utils.groups.mpu
     if mpu is None or mpu.get_tensor_model_parallel_world_size() == 1:
+        debuginfo(prj='ds')
         # no tensor parallelism for non-experts
         return input_
     return _DropTokens.apply(input_, dim)

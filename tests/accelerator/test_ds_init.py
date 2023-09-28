@@ -8,7 +8,7 @@ import torch
 import deepspeed
 from deepspeed.accelerator import get_accelerator
 
-
+from pydebug import debuginfo
 class OneLayerNet(torch.nn.Module):
 
     def __init__(self, D_in, D_out):
@@ -16,6 +16,7 @@ class OneLayerNet(torch.nn.Module):
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
         """
+        debuginfo(prj='ds', info='OneLayerNet init')
         super(OneLayerNet, self).__init__()
         self.linear1 = torch.nn.Linear(D_in, D_out)
 

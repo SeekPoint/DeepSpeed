@@ -8,11 +8,12 @@ from .base import *
 from deepspeed import comm as dist
 import deepspeed.ops.transformer as transformer_inference
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 class BaseTransformerMoEContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        debuginfo(prj='ds', info='BaseTransformerMoEContainer init')
         # Call the init function of the parent class to initialize the tensors and configs from parent class
         super().__init__(**kwargs)
 
@@ -36,6 +37,7 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
         self._res_coef = None
 
     def create_ds_model_config(self):
+        debuginfo(prj='ds')
         self.set_hidden_heads(*self.policy.get_hidden_heads())
         assert self.num_attention_heads % self.mp_size == 0,\
                 "To run the model parallel across the GPUs, the attention_heads require to be divisible by the world_size!" +\
@@ -58,6 +60,7 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
         return self.ds_model_config
 
     def initialize_tensors(self):
+        debuginfo(prj='ds')
         # Set the tensors from policy (user module) to container (DS module)
         self.set_attention(*self.policy.attention())
         self.set_mlp(self.config.moe.type)
@@ -65,31 +68,38 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
 
     def set_mlp(self, config_moe_type):
         if config_moe_type == 'standard':
+            debuginfo(prj='ds')
             self._h4h_w, self._h4h_b, \
             self._4hh_w, self._4hh_b = self.policy.mlp()
         else:
+            debuginfo(prj='ds')
             self._h4h_w, self._h4h_b, self._4hh_w, \
             self._4hh_b, self._res_h4h_w, self._res_h4h_b, \
             self._res_4hh_w, self._res_4hh_b, \
             self._res_coef = self.policy.mlp(config_moe_type)
 
     def transpose(self):
+        debuginfo(prj='ds')
         self.transpose_attention()
         self.transpose_mlp()
 
         if self.config.moe.type == 'residual':
+            debuginfo(prj='ds')
             self.transpose_residual()
 
     def transpose_mlp(self):
+        debuginfo(prj='ds')
         self._h4h_w = [self.transpose_impl(moe_w1.data) for moe_w1 in self._h4h_w]
         self._4hh_w = [self.transpose_impl(moe_w1.data) for moe_w1 in self._4hh_w]
 
     def transpose_residual(self):
+        debuginfo(prj='ds')
         self._res_h4h_w.data = self.transpose_impl(self._res_h4h_w.data)
         self._res_4hh_w.data = self.transpose_impl(self._res_4hh_w.data)
         self._res_coef.data = self.transpose_impl(self._res_coef.data)
 
     def apply_tensor_parallelism(self, mp_replace):
+        debuginfo(prj='ds')
         # setup the new Attention module
         self.attention_qkv_mp(mp_replace)
         self.attention_o_mp(mp_replace)
@@ -101,6 +111,7 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
         self.mlp_mp()
 
     def mlp_mp(self):
+        debuginfo(prj='ds')
         gpu_index = dist.get_rank()
         for ep_index in range(self.local_ep_size):
             # mlp inter
@@ -116,6 +127,7 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
                 get_accelerator().current_device_name())
 
     def copy_data_to_new_module(self):
+        debuginfo(prj='ds')
         self.module.attn_nw.data = self.attn_nw.to(get_accelerator().current_device_name())
         self.module.attn_nb.data = self.attn_nb.to(get_accelerator().current_device_name())
 
@@ -123,6 +135,7 @@ class BaseTransformerMoEContainer(BaseTransformerContainer):
         self.module.norm_b.data.copy_(self.input_nb.to(get_accelerator().current_device_name()))
 
         if self.config.moe.type == 'residual':
+            debuginfo(prj='ds')
             self.module.res_mlp.inter_w.data = self._res_h4h_w.to(get_accelerator().current_device_name())
             self.module.res_mlp.inter_b.data = self._res_h4h_b.to(get_accelerator().current_device_name())
             self.module.res_mlp.output_w.data = self._res_4hh_w.to(get_accelerator().current_device_name())

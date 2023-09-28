@@ -8,7 +8,7 @@ from numpy import mean
 from deepspeed.utils.logging import log_dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-
+from pydebug import debuginfo
 try:
     import psutil
 
@@ -21,6 +21,8 @@ except ImportError:
 class CudaEventTimer(object):
 
     def __init__(self, start_event: get_accelerator().Event, end_event: get_accelerator().Event):
+        #debuginfo(prj='ds', info='CudaEventTimer init:', start_event, end_event)
+        #yk==CudaEventTimer init: <torch.cuda.Event 0x52c1b0c0> <torch.cuda.Event 0x629e64d0>
         self.start_event = start_event
         self.end_event = end_event
 
@@ -37,6 +39,7 @@ class SynchronizedWallClockTimer:
         """Timer."""
 
         def __init__(self, name):
+            debuginfo(prj='ds')
             self.name_ = name
             self.started_ = False
             self.event_timers = []
@@ -160,6 +163,7 @@ class ThroughputTimer:
         monitor_memory=False,
         logging_fn=None,
     ):
+        debuginfo(prj='ds')
         from deepspeed.utils import logger
         self.start_time = 0
         self.end_time = 0
@@ -254,7 +258,7 @@ def trim_mean(data, trim_percent):
     Returns:
         float: Trimmed mean.
     """
-    assert trim_percent >= 0.0 and trim_percent <= 1.0
+    assert 0.0 <= trim_percent <= 1.0
     n = len(data)
     # Account for edge case of empty list
     if len(data) == 0:

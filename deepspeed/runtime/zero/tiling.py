@@ -7,6 +7,7 @@ import torch
 import deepspeed
 from deepspeed.runtime.utils import partition_uniform as partition
 
+from pydebug import debuginfo
 
 def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=False):
     """Split a tensor along its last dimension. Adapted from Megatron-LM.
@@ -17,6 +18,7 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
         contiguous_split_chunks: If True, make each chunk contiguous
                                  in memory.
     """
+    debuginfo(prj='ds')
     # Get the size and dimension.
     last_dim = tensor.dim() - 1
 
@@ -24,6 +26,7 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
     tensor_list = torch.split(tensor, partitions, dim=last_dim)
     # Note: torch.split does not create contiguous tensors by default.
     if contiguous_split_chunks:
+        debuginfo(prj='ds')
         return tuple(chunk.contiguous() for chunk in tensor_list)
 
     return tensor_list
@@ -42,6 +45,7 @@ class TiledLinear(torch.nn.Module):
                  linear_cls=torch.nn.Linear,
                  init_linear=None,
                  **kwargs):
+        debuginfo(prj='ds')
         """A replacement for ``torch.nn.Linear`` that works with ZeRO-3 to reduce
         memory requirements via tiling.
 
@@ -77,7 +81,6 @@ class TiledLinear(torch.nn.Module):
             RuntimeError: ``in_splits`` must be within the range [1, in_features).
             RuntimeError: ``out_splits`` must be within the range of [1, out_features).
         """
-
         super().__init__()
 
         if (in_splits < 1) or (in_splits > in_features):
@@ -123,18 +126,22 @@ class TiledLinear(torch.nn.Module):
 
         # Optionally initialize with a known tensor
         if init_linear is not None:
+            debuginfo(prj='ds')
             self.copy_params_from(init_linear)
 
     def forward(self, input_):
         if self.in_splits > 1 and not self.input_is_already_split:
+            debuginfo(prj='ds')
             input_parts = partition(input_.shape[-1], self.in_splits)
             split_sizes = [input_parts[p + 1] - input_parts[p] for p in range(self.in_splits)]
             inputs = self._split_global_input(input_, split_sizes)
         elif self.in_splits > 1:
+            debuginfo(prj='ds')
             inputs = input_
             assert len(
                 inputs) == self.in_splits, f"Col splits {self.in_splits} does not match input splits {len(inputs)}"
         else:
+            debuginfo(prj='ds')
             # no splits
             inputs = [input_]
 
@@ -149,6 +156,7 @@ class TiledLinear(torch.nn.Module):
                                                             new_out=local_output)
 
         if self.combine_out_splits:
+            debuginfo(prj='ds')
             return self._combine_output_splits(outputs)
 
         return outputs
@@ -165,6 +173,7 @@ class TiledLinear(torch.nn.Module):
         Returns:
             List[Any]: A list of the chunks of ``input``.
         """
+        debuginfo(prj='ds')
         return split_tensor_along_last_dim(input, split_sizes)
 
     def _reduce_local_output(self, in_id, out_id, current_out, new_out):
@@ -186,10 +195,12 @@ class TiledLinear(torch.nn.Module):
         """
 
         if current_out is None:
+            debuginfo(prj='ds')
             #this clone is necessary to preserve auto grad
             #there is some issue with inplace update for outputs that are views
             return new_out.clone()
         else:
+            debuginfo(prj='ds')
             return current_out + new_out
 
     def _combine_output_splits(self, outputs):
@@ -201,6 +212,7 @@ class TiledLinear(torch.nn.Module):
         Returns:
             Any: The combined outputs.
         """
+        debuginfo(prj='ds')
         assert len(outputs) == self.out_splits
         return torch.cat(outputs, dim=-1)
 
@@ -232,10 +244,12 @@ class TiledLinear(torch.nn.Module):
         assert hasattr(other, 'weight')
         assert other.weight.size() == (self.out_features, self.in_features)
         if self.use_bias:
+            debuginfo(prj='ds')
             assert hasattr(other, 'bias')
             assert other.bias is not None
             assert other.bias.size() == (self.out_features, )
         else:
+            debuginfo(prj='ds')
             assert other.bias is None
 
         for row in range(self.out_splits):
@@ -264,8 +278,10 @@ class TiledLinearReturnBias(TiledLinear):
     def _reduce_local_output(self, in_id, out_id, current_out, new_out):
         """Reduces output tensors, but not the returned bias. """
         if current_out is not None:
+            debuginfo(prj='ds')
             old_tensor, old_bias = current_out
         else:
+            debuginfo(prj='ds')
             old_tensor, old_bias = None, None
 
         assert isinstance(new_out, tuple)
@@ -277,6 +293,7 @@ class TiledLinearReturnBias(TiledLinear):
         tensor = super()._reduce_local_output(in_id=in_id, out_id=out_id, current_out=old_tensor, new_out=tensor)
 
         if bias is None:
+            debuginfo(prj='ds')
             bias = old_bias
 
         return tensor, bias
@@ -289,8 +306,10 @@ class TiledLinearReturnBias(TiledLinear):
         # stack biases if applicable
         biases = [o[1] for o in outputs if o[1] is not None]
         if len(biases) > 0:
+            debuginfo(prj='ds')
             bias = super()._combine_output_splits(biases)
         else:
+            debuginfo(prj='ds')
             bias = None
 
         return tensor, bias

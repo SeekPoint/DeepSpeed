@@ -18,3 +18,5 @@ from .zero_checkpoint import ZeROCheckpoint
 from .universal_checkpoint import enable_universal_checkpoint
 
 from .constants import *
+from pydebug import debuginfo
+debuginfo(prj='ds')

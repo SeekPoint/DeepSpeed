@@ -5,7 +5,7 @@
 
 import json
 from .constants import *
-
+from pydebug import debuginfo
 
 class ElasticityError(Exception):
     """
@@ -49,14 +49,17 @@ class ElasticityConfig:
         self.enabled = param_dict.get(ENABLED, ENABLED_DEFAULT)
         if self.enabled:
             if MAX_ACCEPTABLE_BATCH_SIZE in param_dict:
+                debuginfo(prj='ds')
                 self.max_acceptable_batch_size = param_dict[MAX_ACCEPTABLE_BATCH_SIZE]
             else:
+                debuginfo(prj='ds')
                 raise ElasticityConfigError(f"Elasticity config missing {MAX_ACCEPTABLE_BATCH_SIZE}")
             if MICRO_BATCHES in param_dict:
                 self.micro_batches = param_dict[MICRO_BATCHES]
             else:
                 raise ElasticityConfigError(f"Elasticity config missing {MICRO_BATCHES}")
         else:
+            debuginfo(prj='ds')
             self.max_acceptable_batch_size = param_dict.get(MAX_ACCEPTABLE_BATCH_SIZE,
                                                             MAX_ACCEPTABLE_BATCH_SIZE_DEFAULT)
             self.micro_batches = param_dict.get(MICRO_BATCHES, MICRO_BATCHES_DEFAULT)

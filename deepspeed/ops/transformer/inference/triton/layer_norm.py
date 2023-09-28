@@ -24,6 +24,7 @@ def layer_norm_kernel(
     eps,
     BLOCK_SIZE: tl.constexpr,
 ):
+    debuginfo(prj='ds')
     # position of elements processed by this program
     row = tl.program_id(0)
     Out += row * stride
@@ -71,6 +72,7 @@ def layer_norm_residual_kernel(
     eps,
     BLOCK_SIZE: tl.constexpr,
 ):
+    debuginfo(prj='ds')
     # position of elements processed by this program
     row = tl.program_id(0)
     Out += row * stride
@@ -124,6 +126,7 @@ def layer_norm_residual_bias_kernel(
     eps,
     BLOCK_SIZE: tl.constexpr,
 ):
+    debuginfo(prj='ds')
     # position of elements processed by this program
     row = tl.program_id(0)
     Out += row * stride
@@ -165,6 +168,7 @@ def layer_norm_residual_bias_kernel(
 
 
 def layer_norm(a, weight, bias, eps):
+    debuginfo(prj='ds')
     assert a.is_contiguous()
     assert weight.is_contiguous()
     assert bias.is_contiguous()
@@ -218,6 +222,7 @@ def layer_norm_residual(a, input_bias, residual, weight, bias, eps):
     # heuristics for number of warps
     num_warps = min(max(BLOCK_SIZE // 256, 1), 8)
     if input_bias is None:
+        debuginfo(prj='ds')
         layer_norm_residual_kernel[(M, )](
             out,
             a_arg,
@@ -232,6 +237,7 @@ def layer_norm_residual(a, input_bias, residual, weight, bias, eps):
             num_warps=num_warps,
         )
     else:
+        debuginfo(prj='ds')
         layer_norm_residual_bias_kernel[(M, )](
             out,
             a_arg,

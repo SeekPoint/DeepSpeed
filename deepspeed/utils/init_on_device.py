@@ -7,7 +7,7 @@ import torch
 from typing import Callable
 from torch import Tensor
 from packaging import version as pkg_version
-
+from pydebug import debuginfo
 
 class OnDevice(object):
     """
@@ -31,6 +31,7 @@ class OnDevice(object):
     _orig_torch_full = torch.full
 
     def __init__(self, dtype, device="meta", enabled=True):
+        debuginfo(prj='ds', info='OnDevice init')
         self.dtype = dtype
         self.enabled = enabled
         self.device = device

@@ -10,7 +10,7 @@ https://github.com/openai/triton/blob/b244db06da24a87453a40ad35b085ee37dac3705/p
 import torch
 import triton
 import triton.language as tl
-
+from pydebug import debuginfo
 
 @triton.jit
 def _fwd_kernel(
@@ -43,6 +43,7 @@ def _fwd_kernel(
     BLOCK_DMODEL: tl.constexpr,
     BLOCK_N: tl.constexpr,
 ):
+    debuginfo(prj='ds')
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
     # initialize offsets
@@ -107,9 +108,11 @@ def _fwd_kernel(
 class triton_flash_attn(torch.nn.Module):
 
     def __init__(self, ):
+        debuginfo(prj='ds', info='triton_flash_attn init')
         super(triton_flash_attn, self).__init__()
 
     def forward(self, q, k, v, sm_scale, block_128=True):
+        debuginfo(prj='ds')
         BLOCK = 128 if block_128 else 64
         # shape constraints
         Lq, Lk, Lv = q.shape[-1], k.shape[-1], v.shape[-1]

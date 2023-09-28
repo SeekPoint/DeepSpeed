@@ -4,3 +4,6 @@
 # DeepSpeed Team
 
 from .quantizer import ds_quantizer
+from pydebug import debuginfo
+
+debuginfo(prj='ds', info='quantizer __init__')

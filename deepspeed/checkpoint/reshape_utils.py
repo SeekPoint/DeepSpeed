@@ -7,7 +7,7 @@ import os
 import torch
 from collections import OrderedDict
 from .constants import (ZERO_FILE_PREFIX, FP16_ZERO_FILE_PREFIX, BF16_ZERO_FILE_PREFIX)
-
+from pydebug import debuginfo
 
 def basic_folder_validation(dir):
     assert os.path.exists(dir), f'{dir} path does not exist'
@@ -16,6 +16,7 @@ def basic_folder_validation(dir):
 
 def get_files_with_prefix(all_files, prefix):
     file_list = []
+    debuginfo(prj='ds', info=f'file_path : {file_path}')
     for file_path in all_files:
         _, fname = os.path.split(file_path)
         if fname.startswith(prefix):
@@ -25,12 +26,14 @@ def get_files_with_prefix(all_files, prefix):
 
 
 def validate_files(file_list):
+    debuginfo(prj='ds', info=f'file : {file}')
     for file in file_list:
         if not os.path.isfile(file):
             print(f'Error: {file} is not existent')
 
 
 def get_files(dir):
+    debuginfo(prj='ds')
     file_list = []
     for root, _, files in os.walk(dir):
         for file in files:
@@ -39,6 +42,7 @@ def get_files(dir):
 
 
 def get_zero_files(dir):
+    debuginfo(prj='ds')
     file_list = get_files(dir)
     for prefix in [ZERO_FILE_PREFIX, FP16_ZERO_FILE_PREFIX, BF16_ZERO_FILE_PREFIX]:
         zero_files = get_files_with_prefix(file_list, prefix)
@@ -49,6 +53,7 @@ def get_zero_files(dir):
 
 
 def partition_data(data_list, num_partitions):
+    debuginfo(prj='ds')
     num_elems = len(data_list)
     assert num_elems % num_partitions == 0
     partition_size = num_elems // num_partitions
@@ -61,6 +66,7 @@ def _key_list_to_string(key_list):
 
 
 def merge_state_dict(dict_a, dict_b, key_list):
+    debuginfo(prj='ds')
     merged_dict = type(dict_a)({})
 
     for key, value in dict_b.items():
@@ -73,6 +79,7 @@ def merge_state_dict(dict_a, dict_b, key_list):
 
 
 def merge_state_list(list_a, list_b, key_list):
+    debuginfo(prj='ds')
     if len(list_a) != len(list_b):
         print(f'{_key_list_to_string(key_list)}')
         raise ValueError(f'Cannot merge lists of different lengths, a = {len(list_a)} b = {len(list_b)}')
@@ -81,6 +88,7 @@ def merge_state_list(list_a, list_b, key_list):
 
 
 def merge_state(state_a, state_b, key_list=[]):
+    debuginfo(prj='ds')
     if type(state_a) != type(state_b):
         key_list_string = _key_list_to_string(key_list)
         print(f'key_list = {key_list_string}')

@@ -4,20 +4,23 @@
 # DeepSpeed Team
 
 from .builder import CUDAOpBuilder, installed_cuda_version
-
+from pydebug import debuginfo
 
 class InferenceBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_TRANSFORMER_INFERENCE"
     NAME = "transformer_inference"
 
     def __init__(self, name=None):
+        debuginfo(prj='ds', info='InferenceBuilder init')
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
+        debuginfo(prj='ds')
         return f'deepspeed.ops.transformer.inference.{self.NAME}_op'
 
     def is_compatible(self, verbose=True):
+        debuginfo(prj='ds')
         try:
             import torch
         except ImportError:
@@ -39,6 +42,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return super().is_compatible(verbose) and cuda_okay
 
     def filter_ccs(self, ccs):
+        debuginfo(prj='ds')
         ccs_retained = []
         ccs_pruned = []
         for cc in ccs:
@@ -51,6 +55,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return ccs_retained
 
     def sources(self):
+        debuginfo(prj='ds')
         return [
             'csrc/transformer/inference/csrc/pt_binding.cpp',
             'csrc/transformer/inference/csrc/gelu.cu',
@@ -66,9 +71,12 @@ class InferenceBuilder(CUDAOpBuilder):
 
     def extra_ldflags(self):
         if not self.is_rocm_pytorch():
+            debuginfo(prj='ds')
             return ['-lcurand']
         else:
+            debuginfo(prj='ds')
             return []
 
     def include_paths(self):
+        debuginfo(prj='ds')
         return ['csrc/transformer/inference/includes', 'csrc/includes']

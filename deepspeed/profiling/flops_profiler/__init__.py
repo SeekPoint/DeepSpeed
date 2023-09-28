@@ -4,3 +4,6 @@
 # DeepSpeed Team
 
 from .profiler import *
+from pydebug import debuginfo
+
+debuginfo(prj='ds')

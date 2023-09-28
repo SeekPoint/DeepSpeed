@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 from deepspeed.utils import log_dist
 
+from pydebug import debuginfo
 
 class PartitionedParameterProfiler(object):
 
@@ -24,14 +25,17 @@ class PartitionedParameterProfiler(object):
             self.num_elem += numel
 
     def __init__(self, timers):
+        debuginfo(prj='ds', info='PartitionedParameterProfiler init')
         self.timers = timers
         self.event_counters = {}
 
     def reset_events(self):
+        debuginfo(prj='ds')
         for event_ctr in self.event_counters.values():
             event_ctr.reset()
 
     def start_event(self, name):
+        debuginfo(prj='ds')
         if self.timers is None:
             return
 
@@ -40,6 +44,7 @@ class PartitionedParameterProfiler(object):
         self.timers(name).start()
 
     def stop_event(self, name, num_elem):
+        debuginfo(prj='ds')
         if self.timers is None:
             return
         assert name in self.event_counters, f'unknown event {name}'
@@ -47,6 +52,7 @@ class PartitionedParameterProfiler(object):
         self.timers(name).stop()
 
     def _log_timers(self):
+        debuginfo(prj='ds')
         if self.timers is None:
             return
         self.timers.log(names=list(self.event_counters.keys()))

@@ -4,9 +4,10 @@
 # DeepSpeed Team
 
 import torch
-
+from pydebug import debuginfo
 
 def bsh_decoder_gather(reserved_length, hidden_states, mask):
+    debuginfo(prj='ds')
     # random-layer-token-drop
     rand_list = []
     part_hidden_states = []  #  batch, seq, hidden ## different from megatron
@@ -22,6 +23,7 @@ def bsh_decoder_gather(reserved_length, hidden_states, mask):
 
 
 def bsh_decoder_scatter(hidden_states, part_hidden_states, rand_list):
+    debuginfo(prj='ds')
     for k in range(hidden_states.size(0)):
         hidden_states[k, rand_list[k], :] = part_hidden_states[k, :, :]
     return hidden_states

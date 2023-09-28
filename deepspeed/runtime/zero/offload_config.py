@@ -7,7 +7,7 @@ from pydantic import Field, validator
 from enum import Enum
 from pathlib import Path
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel, pp_int
-
+from pydebug import debuginfo
 
 class OffloadDeviceEnum(str, Enum):
     """ Enum for valid offload devices """
@@ -90,5 +90,6 @@ class DeepSpeedZeroOffloadOptimizerConfig(DeepSpeedConfigModel):
 
     @validator("pipeline_read", "pipeline_write", always=True)
     def set_pipeline(cls, field_value, values):
+        debuginfo(prj='ds')
         values["pipeline"] = field_value or values.get("pipeline", False)
         return field_value

@@ -6,3 +6,5 @@
 from .adam import OnebitAdam
 from .lamb import OnebitLamb
 from .zoadam import ZeroOneAdam
+from pydebug import debuginfo
+debuginfo(prj='ds')

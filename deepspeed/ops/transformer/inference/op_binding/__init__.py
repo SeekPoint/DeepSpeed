@@ -11,3 +11,6 @@ from .softmax import SoftmaxOp
 from .mlp_gemm import MLPGemmOp
 from .gelu_gemm import GELUGemmOp
 from .residual_add import ResidualAddOp
+from pydebug import debuginfo
+
+debuginfo(prj='ds', info='op_binding __init__')

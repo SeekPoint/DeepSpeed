@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-
+from pydebug import debuginfo
 
 class OnebitAdam(torch.optim.Optimizer):
     """Implements the 1-bit Adam algorithm. Currently GPU-only.
@@ -57,6 +57,8 @@ class OnebitAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
+        debuginfo(prj='ds', info='OnebitAdam init')
+
         if amsgrad:
             raise RuntimeError('1-bit Adam does not support the AMSGrad variant.')
 
@@ -89,6 +91,7 @@ class OnebitAdam(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
+            debuginfo(prj='ds')
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
             assert (
@@ -100,6 +103,7 @@ class OnebitAdam(torch.optim.Optimizer):
             self.comm_backend_handle = NcclBackend(self.deepspeed.mpu)
 
         elif self.comm_backend_name == 'mpi':
+            debuginfo(prj='ds')
             from deepspeed.runtime.comm.mpi import MpiBackend
             self.comm_backend_handle = MpiBackend(cuda_aware)
 
@@ -121,8 +125,10 @@ class OnebitAdam(torch.optim.Optimizer):
             scale (float, optional): factor to divide gradient tensor values
                 by before applying to weights. (default: 1)
         """
+        debuginfo(prj='ds')
         loss = None
         if closure is not None:
+            debuginfo(prj='ds')
             loss = closure()
 
         gather_time = 0
@@ -130,17 +136,22 @@ class OnebitAdam(torch.optim.Optimizer):
         all_time = 0
 
         if self.adam_freeze_key is False:
+            debuginfo(prj='ds')
             v_diff_buffer = 0.0
 
         if grads is None:
+            debuginfo(prj='ds')
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
+            debuginfo(prj='ds')
             grads_group = [grads]
         elif type(grads[0]) != list:
+            debuginfo(prj='ds')
             grads_group = [grads]
         else:
+            debuginfo(prj='ds')
             grads_group = grads
 
         for group, grads_this_group in zip(self.param_groups, grads_group):
@@ -234,28 +245,33 @@ class OnebitAdam(torch.optim.Optimizer):
                         p.add_(-group['lr'] * update)
 
             if not self.initialize:
-                print('Pop out errors', flush=True)
+                debuginfo(prj='ds', info='Pop out errors', flush=True)
                 state.pop('worker_error')
                 state.pop('server_error')
 
         if not self.initialize:
+            debuginfo(prj='ds')
             self.adam_freeze_key = False
             self.initialize = True
             print(f"Finished the initialization step at rank {dist.get_rank()}")
             return loss
 
         if self.adam_freeze_key is False:
+            debuginfo(prj='ds')
             if state['step'] >= self.freeze_step:
-                print('OnebitAdam - starting compressed communication')
+                debuginfo(prj='ds', info='OnebitAdam - starting compressed communication')
                 self.adam_freeze_key = True
                 if self.using_pipeline:
+                    debuginfo(prj='ds')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
+                    debuginfo(prj='ds')
                     self.deepspeed.enable_backward_allreduce = False
 
         return loss
 
     def load_state_dict(self, state_dict):
+        debuginfo(prj='ds')
         """
         Overrides load_state_dict() to add special handling when loading checkpoints
         """
@@ -271,13 +287,16 @@ class OnebitAdam(torch.optim.Optimizer):
                 state_dict['param_groups'][i].pop('exp_avg_mask')
         super().load_state_dict(state_dict)
         if self.state[self.param_groups[0]['params'][0]]['step'] < self.freeze_step:
+            debuginfo(prj='ds')
             if dist.get_rank() == 0:
                 print("Checkpoint loaded and OnebitAdam warmup stage starts/continues.")
             if self.adam_freeze_key is True:
                 self.adam_freeze_key = False
                 if self.using_pipeline:
+                    debuginfo(prj='ds')
                     self.deepspeed.pipeline_enable_backward_allreduce = True
                 else:
+                    debuginfo(prj='ds')
                     self.deepspeed.enable_backward_allreduce = True
         else:
             if dist.get_rank() == 0:
@@ -285,8 +304,10 @@ class OnebitAdam(torch.optim.Optimizer):
             if self.adam_freeze_key is False:
                 self.adam_freeze_key = True
                 if self.using_pipeline:
+                    debuginfo(prj='ds')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
+                    debuginfo(prj='ds')
                     self.deepspeed.enable_backward_allreduce = False
         # We reset the compression errors when loading checkpoints for 3 reasons:
         # 1) The worker and server error at each GPU are distinct, so in current implementation

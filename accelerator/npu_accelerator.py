@@ -11,10 +11,12 @@ try:
 except ImportError:
     pass
 
+from pydebug import debuginfo
 
 class NPU_Accelerator(DeepSpeedAccelerator):
 
     def __init__(self):
+        debuginfo(prj='ds', info='NPU_Accelerator init')
         self._name = 'npu'
         self._communication_backend_name = 'hccl'
 
@@ -23,6 +25,7 @@ class NPU_Accelerator(DeepSpeedAccelerator):
 
     # Device APIs
     def device_name(self, device_index=None):
+        debuginfo(prj='ds')
         if device_index == None:
             return 'npu'
         return 'npu:{}'.format(device_index)
@@ -96,36 +99,46 @@ class NPU_Accelerator(DeepSpeedAccelerator):
         return torch.npu.empty_cache()
 
     def memory_allocated(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.memory_allocated(device_index)
 
     def max_memory_allocated(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.max_memory_allocated(device_index)
 
     def reset_max_memory_allocated(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.reset_max_memory_allocated(device_index)
 
     def memory_cached(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.memory_cached(device_index)
 
     def max_memory_cached(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.max_memory_cached(device_index)
 
     def reset_max_memory_cached(self, device_index=None):
+        debuginfo(prj='ds')
         return torch.npu.reset_max_memory_cached(device_index)
 
     def memory_stats(self, device_index=None):
+        debuginfo(prj='ds')
         if hasattr(torch.npu, 'memory_stats'):
             return torch.npu.memory_stats(device_index)
 
     def reset_peak_memory_stats(self, device_index=None):
+        debuginfo(prj='ds')
         if hasattr(torch.npu, 'reset_peak_memory_stats'):
             return torch.npu.reset_peak_memory_stats(device_index)
 
     def memory_reserved(self, device_index=None):
+        debuginfo(prj='ds')
         if hasattr(torch.npu, 'memory_reserved'):
             return torch.npu.memory_reserved(device_index)
 
     def max_memory_reserved(self, device_index=None):
+        debuginfo(prj='ds')
         if hasattr(torch.npu, 'max_memory_reserved'):
             return torch.npu.max_memory_reserved(device_index)
 
@@ -195,6 +208,7 @@ class NPU_Accelerator(DeepSpeedAccelerator):
 
     def on_accelerator(self, tensor):
         device_str = str(tensor.device)
+        debuginfo(prj='ds')
         if device_str.startswith('npu:'):
             return True
         else:
@@ -218,10 +232,12 @@ class NPU_Accelerator(DeepSpeedAccelerator):
         if self.class_dict != None:
             return
         else:
+            debuginfo(prj='ds')
             self.class_dict = {}
 
     # create an instance of op builder and return, name specified by class_name
     def create_op_builder(self, class_name):
+        debuginfo(prj='ds')
         self._lazy_init_class_dict()
         if class_name in self.class_dict:
             return self.class_dict[class_name]()
@@ -230,6 +246,7 @@ class NPU_Accelerator(DeepSpeedAccelerator):
 
     # return an op builder class, name specified by class_name
     def get_op_builder(self, class_name):
+        debuginfo(prj='ds')
         self._lazy_init_class_dict()
         if class_name in self.class_dict:
             return self.class_dict[class_name]
@@ -237,5 +254,6 @@ class NPU_Accelerator(DeepSpeedAccelerator):
             return None
 
     def build_extension(self):
+        debuginfo(prj='ds')
         from torch.utils.cpp_extension import BuildExtension
         return BuildExtension

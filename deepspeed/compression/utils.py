@@ -7,7 +7,7 @@ import torch
 from torch import autograd
 import math
 
-
+from pydebug import debuginfo
 class TopKBinarizer(autograd.Function):
     """
     Top-k Binarizer.
@@ -33,8 +33,10 @@ class TopKBinarizer(autograd.Function):
                 Binary matrix of the same size as `inputs` acting as a mask (1 - the associated weight is
                 retained, 0 - the associated weight is pruned).
         """
+        debuginfo(prj='ds')
         # Get the subnetwork by sorting the inputs and using the top threshold
         if sigmoid:
+            debuginfo(prj='ds')
             threshold = torch.sigmoid(threshold).item()
         ctx.sigmoid = sigmoid
         mask = inputs.clone()
@@ -54,8 +56,10 @@ class TopKBinarizer(autograd.Function):
     def backward(ctx, gradOutput):
         mask, = ctx.saved_tensors
         if ctx.sigmoid:
+            debuginfo(prj='ds')
             return gradOutput.clone(), ((gradOutput * mask).sum()).view(-1), None
         else:
+            debuginfo(prj='ds')
             return gradOutput.clone(), None, None
 
 
@@ -85,9 +89,11 @@ class SymQuantizer(torch.autograd.Function):
         q_range = 2**num_bits
         input_shape = input.shape
         if min_value is None:
+            debuginfo(prj='ds')
             input = input.reshape(num_groups, -1)
             max_input = torch.amax(torch.abs(input), dim=-1).view(num_groups, -1)
         else:
+            debuginfo(prj='ds')
             max_input = torch.max(min_value.abs(), max_value).view(-1)
 
         scale = 2 * max_input / q_range
@@ -97,6 +103,7 @@ class SymQuantizer(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        debuginfo(prj='ds')
         grad_input = grad_output.clone()
         return grad_input, None, None, None, None
 
@@ -122,6 +129,7 @@ class AsymQuantizer(torch.autograd.Function):
             quantized_input (`torch.FloatTensor`)
                 Quantized input
         """
+        debuginfo(prj='ds')
 
         assert (min_value is None and max_value is None) or (min_value is not None and max_value is not None
                                                              and num_groups == 1)
@@ -141,6 +149,7 @@ class AsymQuantizer(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        debuginfo(prj='ds')
         grad_input = grad_output.clone()
         return grad_input, None, None, None, None
 
@@ -166,6 +175,7 @@ class TernaryQuantizer(torch.autograd.Function):
             quantized_input (`torch.FloatTensor`)
                 Quantized input
         """
+        debuginfo(prj='ds')
 
         assert (min_value is None and max_value is None)
         input_flat = input.reshape(num_groups, -1)
@@ -182,6 +192,7 @@ class TernaryQuantizer(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        debuginfo(prj='ds')
         grad_input = grad_output.clone()
         return grad_input, None, None, None, None
 
@@ -207,7 +218,7 @@ class BinaryQuantizer(torch.autograd.Function):
             quantized_input (`torch.FloatTensor`)
                 Quantized input
         """
-
+        debuginfo(prj='ds')
         assert (min_value is None and max_value is None)
         input_flat = input.reshape(num_groups, -1)
         n = input_flat.shape[1]
@@ -218,5 +229,6 @@ class BinaryQuantizer(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        debuginfo(prj='ds')
         grad_input = grad_output.clone()
         return grad_input, None, None, None, None

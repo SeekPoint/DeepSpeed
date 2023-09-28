@@ -6,9 +6,11 @@
 import types
 from deepspeed.utils import get_full_hp_param, get_full_hp_grad, get_hp_fragment_mapping
 
+from pydebug import debuginfo
 
 def link_hp_params(lp_param_list, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                    param_group_index, partition_start, partition_size, partition_optimizer_state, dp_group):
+    debuginfo(prj='ds')
     local_lp_param_and_offset = _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group)
 
     for lp_param, lp_start in local_lp_param_and_offset:
@@ -18,6 +20,7 @@ def link_hp_params(lp_param_list, flat_hp_partition, gradient_dict, offload_grad
 
 
 def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group):
+    debuginfo(prj='ds')
     current_offset = 0
     param_and_offset_list = []
     partition_end = partition_start + partition_size
@@ -38,5 +41,5 @@ def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_gr
             # Indices for params in this partition/GPU
             index_in_param_group += 1
         current_offset += lp_param.numel()
-
+    debuginfo(prj='ds', info='param_and_offset_list :' + param_and_offset_list)
     return param_and_offset_list

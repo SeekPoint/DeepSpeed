@@ -14,12 +14,13 @@ from deepspeed.ops.op_builder import TransformerBuilder, StochasticTransformerBu
 # Cuda modules will be imported if needed
 transformer_cuda_module = None
 stochastic_transformer_cuda_module = None
-
+from pydebug import debuginfo
 
 class TransformerConfig():
 
     def __init__(self, batch_size, hidden_size, intermediate_size, heads, attn_dropout_ratio, hidden_dropout_ratio,
                  num_hidden_layers, initializer_range):
+        debuginfo(prj='ds', info='TransformerConfig init')
         self.layer_id = -1
         self.batch_size = batch_size
         self.hidden_size = hidden_size
@@ -107,6 +108,7 @@ class DeepSpeedTransformerConfig(TransformerConfig):
                  stochastic_mode=False,
                  return_tuple=False,
                  training=True):
+        debuginfo(prj='ds')
         super(DeepSpeedTransformerConfig,
               self).__init__(batch_size, hidden_size,
                              (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
@@ -128,6 +130,7 @@ class DeepSpeedTransformerConfig(TransformerConfig):
 
     @classmethod
     def from_dict(cls, json_object):
+        debuginfo(prj='ds')
         config = DeepSpeedTransformerConfig()
         for key, value in json_object.items():
             config.__dict__[key] = value
@@ -135,6 +138,7 @@ class DeepSpeedTransformerConfig(TransformerConfig):
 
     @classmethod
     def from_json_file(cls, json_file):
+        debuginfo(prj='ds')
         with open(json_file, "r", encoding='utf-16') as reader:
             text = reader.read()
         return cls.from_dict(json.loads(text))
@@ -145,12 +149,14 @@ class DeepSpeedTransformerFunction(Function):
     @staticmethod
     def forward(ctx, input, input_mask, self, grads, layer_id, attn_qkvw, attn_qkvb, attn_ow, attn_ob, attn_nw,
                 attn_nb, inter_w, inter_b, output_w, output_b, norm_w, norm_b, config):
+        debuginfo(prj='ds')
 
         cuda_module = stochastic_transformer_cuda_module if config.stochastic_mode else transformer_cuda_module
         forward_func = cuda_module.forward_fp16 if config.fp16 else cuda_module.forward_fp32
 
         inp_size = input.size()
         if inp_size[1] % 16 != 0:
+            debuginfo(prj='ds')
             input = torch.cat(
                 (input,
                  torch.randn(
@@ -169,6 +175,7 @@ class DeepSpeedTransformerFunction(Function):
 
         # For testing only.
         if grads is not None:
+            debuginfo(prj='ds')
             for i in [2]:
                 attn_qkvw.register_hook(lambda x, i=i, self=self: grads.append([
                     x[i * attn_ow.size(0):(i + 1) * attn_ow.size(0)], ("Q_W" if i == 0 else "K_W" if i == 1 else "V_W")
@@ -191,9 +198,11 @@ class DeepSpeedTransformerFunction(Function):
 
         if config.is_grad_enabled and config.training:
             if (config.pre_layer_norm and config.normalize_invertible):
+                debuginfo(prj='ds')
                 ctx.save_for_backward(input_mask, attn_qkvw, attn_qkvb, attn_ow, attn_ob, attn_nw, attn_nb, inter_w,
                                       inter_b, output_w, output_b, norm_w, norm_b)
             else:
+                debuginfo(prj='ds')
                 ctx.save_for_backward(output, input, input_mask, attn_qkvw, attn_qkvb, attn_ow, attn_ob, attn_nw,
                                       attn_nb, inter_w, inter_b, output_w, output_b, norm_w, norm_b)
 
@@ -204,10 +213,12 @@ class DeepSpeedTransformerFunction(Function):
             ctx.qkv_tf = qkv_tf
             ctx.soft_inp = soft_inp
             if not config.attn_dropout_checkpoint:
+                debuginfo(prj='ds')
                 ctx.ctx_bufB = ctx_bufB
 
             ctx.attn_o_inp = attn_o_inp
             if not config.normalize_invertible:
+                debuginfo(prj='ds')
                 ctx.add_res = add_res
 
             ctx.attn_layer_norm_mean = attn_layer_norm_mean
@@ -215,6 +226,7 @@ class DeepSpeedTransformerFunction(Function):
 
             ctx.ff1_inp = ff1_inp
             if not config.gelu_checkpoint:
+                debuginfo(prj='ds')
                 ctx.gelu_inp = gelu_inp
 
             ctx.ff2_inp = ff2_inp
@@ -228,8 +240,10 @@ class DeepSpeedTransformerFunction(Function):
             output = torch.narrow(output, 1, 0, inp_size[1])
 
         if config.return_tuple:
+            debuginfo(prj='ds')
             return (output, )  # outputs -> (output) : outputs[0] = output
         else:
+            debuginfo(prj='ds')
             return output
 
     @staticmethod
@@ -237,15 +251,18 @@ class DeepSpeedTransformerFunction(Function):
         bsz = grad_output.shape[0]
         grad_output_shape = grad_output.size()
         if grad_output_shape[1] % 16 != 0:
+            debuginfo(prj='ds')
             grad_output = torch.cat((grad_output, torch.zeros((bsz, (16 - (grad_output_shape[1] % 16)), \
                                         grad_output_shape[2]), device=grad_output.device, dtype=grad_output.dtype)), 1)
 
         assert ctx.config.training
 
         if (ctx.config.pre_layer_norm and ctx.config.normalize_invertible):
+            debuginfo(prj='ds')
             (input_mask, attn_qkvw, attn_qkvb, attn_ow, attn_ob, attn_nw, attn_nb, inter_w, inter_b, output_w,
              output_b, norm_w, norm_b) = ctx.saved_tensors
         else:
+            debuginfo(prj='ds')
             (output, input, input_mask, attn_qkvw, attn_qkvb, attn_ow, attn_ob, attn_nw, attn_nb, inter_w, inter_b,
              output_w, output_b, norm_w, norm_b) = ctx.saved_tensors
 
@@ -286,6 +303,7 @@ class DeepSpeedTransformerFunction(Function):
         ctx.layer_norm_var = None
 
         if grad_output_shape[1] % 16 != 0:
+            debuginfo(prj='ds')
             grad_input = torch.narrow(grad_input, 1, 0, grad_output_shape[1])
 
         return (grad_input, None, None, None, None, grad_attn_qkvw, grad_attn_qkvb, grad_attn_ow, grad_attn_ob,
@@ -318,9 +336,11 @@ class DeepSpeedTransformerLayer(nn.Module):
         print("DeepSpeed Transformer config is ", self.config.__dict__)
 
         if self.config.local_rank >= 0:
+            debuginfo(prj='ds')
             get_accelerator().set_device(self.config.local_rank)
 
         if initial_weights is None and initial_biases is None:
+            debuginfo(prj='ds')
             self.attn_qkvw = nn.Parameter(torch.Tensor(self.config.hidden_size * 3, self.config.hidden_size))
             self.attn_qkvb = nn.Parameter(torch.Tensor(self.config.hidden_size * 3))
             self.attn_ow = nn.Parameter(torch.Tensor(self.config.hidden_size, self.config.hidden_size))
@@ -335,6 +355,7 @@ class DeepSpeedTransformerLayer(nn.Module):
             self.norm_b = nn.Parameter(torch.Tensor(self.config.hidden_size))
             self.init_transformer_weights(self.config.adjust_init_range)
         else:
+            debuginfo(prj='ds')
             # For testing only.
             q = initial_weights[0].data
             k = initial_weights[1].data
@@ -360,8 +381,10 @@ class DeepSpeedTransformerLayer(nn.Module):
         # Load cuda modules if needed
         global transformer_cuda_module, stochastic_transformer_cuda_module
         if transformer_cuda_module is None and not self.config.stochastic_mode:
+            debuginfo(prj='ds')
             transformer_cuda_module = TransformerBuilder().load()
         if stochastic_transformer_cuda_module is None and self.config.stochastic_mode:
+            debuginfo(prj='ds')
             stochastic_transformer_cuda_module = StochasticTransformerBuilder().load()
 
         # create the layer in cuda kernels.
@@ -375,6 +398,7 @@ class DeepSpeedTransformerLayer(nn.Module):
                           self.config.normalize_invertible, self.config.gelu_checkpoint, self.config.stochastic_mode)
 
     def init_transformer_weights(self, adjust_init_range=False):
+        debuginfo(prj='ds')
         num_layers = self.config.num_hidden_layers
         output_std = self.config.initializer_range
         if adjust_init_range and self.config.local_rank == 0:
@@ -404,6 +428,7 @@ class DeepSpeedTransformerLayer(nn.Module):
                 past_key_value=None,
                 output_attentions=False,
                 grads=None):
+        debuginfo(prj='ds')
         self.config.is_grad_enabled = torch.is_grad_enabled()
         self.config.training = self.training
         return DeepSpeedTransformerFunction.apply(hidden_states, attention_mask, self, grads, self.config.layer_id,

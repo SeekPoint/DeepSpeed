@@ -6,11 +6,12 @@
 import torch
 from deepspeed.accelerator import get_accelerator
 from ..features.cuda_graph import CUDAGraph
-
+from pydebug import debuginfo
 
 class DSClipEncoder(CUDAGraph, torch.nn.Module):
 
     def __init__(self, enc, enable_cuda_graph=False):
+        debuginfo(prj='ds', info='DSClipEncoder init')
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         enc.text_model._build_causal_attention_mask = self._build_causal_attention_mask
         self.enc = enc
@@ -25,6 +26,7 @@ class DSClipEncoder(CUDAGraph, torch.nn.Module):
         self.config = self.enc.config
 
     def _build_causal_attention_mask(self, bsz, seq_len, dtype):
+        debuginfo(prj='ds')
         mask = torch.empty(bsz, seq_len, seq_len, dtype=dtype, device=get_accelerator().current_device_name())
         mask.fill_(torch.tensor(torch.finfo(dtype).min))
         mask.triu_(1)
@@ -32,6 +34,7 @@ class DSClipEncoder(CUDAGraph, torch.nn.Module):
         return mask
 
     def _graph_replay(self, *inputs, **kwargs):
+        debuginfo(prj='ds')
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_inputs[self.iter][i].copy_(inputs[i])
@@ -44,16 +47,20 @@ class DSClipEncoder(CUDAGraph, torch.nn.Module):
     def forward(self, *inputs, **kwargs):
         if self.enable_cuda_graph:
             if self.cuda_graph_created[self.iter]:
+                debuginfo(prj='ds')
                 outputs = self._graph_replay(*inputs, **kwargs)
             else:
+                debuginfo(prj='ds')
                 self._create_cuda_graph(*inputs, **kwargs)
                 outputs = self._graph_replay(*inputs, **kwargs)
             self.iter = (self.iter + 1) % 2
             return outputs
         else:
+            debuginfo(prj='ds')
             return self.enc(*inputs, **kwargs)
 
     def _create_cuda_graph(self, *inputs, **kwargs):
+        debuginfo(prj='ds')
         # warmup to create the workspace and cublas handle
         cuda_stream = torch.cuda.Stream()
         cuda_stream.wait_stream(torch.cuda.current_stream())
@@ -74,4 +81,5 @@ class DSClipEncoder(CUDAGraph, torch.nn.Module):
         self.cuda_graph_created[self.iter] = True
 
     def _forward(self, *inputs, **kwargs):
+        debuginfo(prj='ds')
         return self.enc(*inputs, **kwargs)

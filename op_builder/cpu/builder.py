@@ -11,10 +11,11 @@ try:
 except ImportError:
     from deepspeed.ops.op_builder.builder import OpBuilder
 
-
+from pydebug import debuginfo
 class CPUOpBuilder(OpBuilder):
 
     def builder(self):
+        debuginfo(prj='ds', info='CPUOpBuilder builder')
         from torch.utils.cpp_extension import CppExtension as ExtensionBuilder
 
         compile_args = {'cxx': self.strip_empty_entries(self.cxx_args())}
@@ -28,7 +29,9 @@ class CPUOpBuilder(OpBuilder):
         return cpp_ext
 
     def cxx_args(self):
+        debuginfo(prj='ds')
         return ['-O3', '-g', '-Wno-reorder']
 
     def libraries_args(self):
+        debuginfo(prj='ds')
         return []

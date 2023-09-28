@@ -15,16 +15,18 @@ from ..policy import maybe_copy
 from ..policy import maybe_copy_qkv
 
 from ..policy import maybe_get_lora
-
+from pydebug import debuginfo
 
 class DS_GPTJContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        debuginfo(prj='ds')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
 
     def create_module(self, config=None):
+        debuginfo(prj='ds')
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedGPTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
@@ -34,6 +36,7 @@ class DS_GPTJContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfo
         """
         Necessary to implement for `HybridEngineContainer`
         """
+        debuginfo(prj='ds')
         self.lora_params = [
             maybe_get_lora(p) for p in [
                 self.policy.client_module.mlp.fc_in, self.policy.client_module.mlp.fc_out,
@@ -43,6 +46,7 @@ class DS_GPTJContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfo
         ]
 
     def get_lora_matched_pair(self):
+        debuginfo(prj='ds')
         fc1_lora, fc2_lora, q_lora, k_lora, v_lora, out_lora = self.get_lora_params()
         ret = [(fc1_lora, self._h4h_w), (fc2_lora, self._4hh_w), (out_lora, self.dense_w), (q_lora, self.qw),
                (k_lora, self.kw), (v_lora, self.vw)]
@@ -52,6 +56,7 @@ class DS_GPTJContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfo
         """
         Necessary to implement for `HybridSplitQKVContainer`
         """
+        debuginfo(prj='ds')
         self.qw = self.policy.client_module.attn.q_proj.weight
         self.qb = None
         self.kw = self.policy.client_module.attn.k_proj.weight
@@ -60,6 +65,7 @@ class DS_GPTJContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfo
         self.vb = None
 
     def load_params(self, module, sd, weight_quantizer, mp_replace, prefix):
+        debuginfo(prj='ds')
         param_names = (
             'attn.q_proj.weight', \
             'attn.k_proj.weight', \
@@ -93,6 +99,7 @@ class HFGPTJLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
 
     def __init__(self, client_module, inference=True):
+        debuginfo(prj='ds')
         super().__init__(inference, scale_attention=True)
         self.client_module = client_module
         try:
@@ -102,12 +109,14 @@ class HFGPTJLayerPolicy(TransformerPolicy):
             HFGPTJLayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
+        debuginfo(prj='ds')
         return self.client_module.attn.embed_dim, \
                 self.client_module.attn.num_attention_heads, \
                 self.client_module.ln_1.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
+        debuginfo(prj='ds')
         qw = self.client_module.attn.q_proj.weight
         kw = self.client_module.attn.k_proj.weight
         vw = self.client_module.attn.v_proj.weight
@@ -120,12 +129,14 @@ class HFGPTJLayerPolicy(TransformerPolicy):
                None,
 
     def mlp(self, enable_training=False):
+        debuginfo(prj='ds')
         return self.client_module.mlp.fc_in.weight, \
                self.client_module.mlp.fc_in.bias, \
                self.client_module.mlp.fc_out.weight, \
                self.client_module.mlp.fc_out.bias
 
     def layernorm(self):
+        debuginfo(prj='ds')
         return None, \
                None, \
                self.client_module.ln_1.weight, \

@@ -6,6 +6,7 @@
 from torch import nn
 from deepspeed.ops.sparse_attention import SparseSelfAttention, FixedSparsityConfig
 
+from pydebug import debuginfo
 
 class BertSparseSelfAttention(nn.Module):
     """Implements Sparse Self Attention layer of Bert model based on https://github.com/microsoft/DeepSpeedExamples/blob/master/bing_bert/nvidia/modelingpreln.py#L373
@@ -28,7 +29,7 @@ class BertSparseSelfAttention(nn.Module):
             config: required: Bert model config
             sparsity_config: optional: this parameter determines sparsity pattern configuration; it is based on FixedSparsityConfig class.
         """
-
+        debuginfo(prj='ds', info='BertSparseSelfAttention init')
         super(BertSparseSelfAttention, self).__init__()
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError("The hidden size (%d) is not a multiple of the number of attention "
@@ -44,6 +45,7 @@ class BertSparseSelfAttention(nn.Module):
         self.sparse_self_attention = SparseSelfAttention(sparsity_config)
 
     def transpose_for_scores(self, x):
+        debuginfo(prj='ds')
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
@@ -58,6 +60,7 @@ class BertSparseSelfAttention(nn.Module):
         Return:
              context_layer: a dense tensor containing attention context
         """
+        debuginfo(prj='ds')
         mixed_query_layer = self.query(hidden_states)
         mixed_key_layer = self.key(hidden_states)
         mixed_value_layer = self.value(hidden_states)

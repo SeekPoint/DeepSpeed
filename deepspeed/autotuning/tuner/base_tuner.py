@@ -8,11 +8,12 @@ import sys
 from deepspeed.autotuning.constants import *
 from deepspeed.autotuning.utils import write_experiments
 from deepspeed.utils import logger
-
+from pydebug import debuginfo
 
 class BaseTuner:
 
     def __init__(self, exps, resource_manager, metric):
+        debuginfo(prj='ds', info='BaseTuner init')
         self.all_exps = exps
         self.rm = resource_manager
         self.best_iter = 0
@@ -22,6 +23,7 @@ class BaseTuner:
         logger.info(f"total number of exps =  {len(self.all_exps)}")
 
     def has_next(self):
+        debuginfo(prj='ds')
         """Whether there exists more configurations for evaluation"""
         if len(self.all_exps) > 0:
             return True
@@ -36,6 +38,7 @@ class BaseTuner:
         """"Update the tuner with what configurations have been evaluated and their performance results"""
 
     def tune(self, sample_size=1, n_trials=1000, early_stopping=None):
+        debuginfo(prj='ds')
         i = 0
         try:
             while i < n_trials and self.has_next():

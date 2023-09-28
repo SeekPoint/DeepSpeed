@@ -7,14 +7,16 @@ import random
 
 from .base_tuner import BaseTuner
 
-
+from pydebug import debuginfo
 class RandomTuner(BaseTuner):
     """Explore the search space in random order"""
 
     def __init__(self, exps: list, resource_manager, metric):
+        debuginfo(prj='ds', info='RandomTuner init')
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):
+        debuginfo(prj='ds')
         if sample_size > len(self.all_exps):
             sample_size = len(self.all_exps)
 
@@ -28,9 +30,11 @@ class GridSearchTuner(BaseTuner):
     """Explore the search space in sequential order"""
 
     def __init__(self, exps: list, resource_manager, metric):
+        debuginfo(prj='ds')
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):
+        debuginfo(prj='ds')
         if sample_size > len(self.all_exps):
             sample_size = len(self.all_exps)
 

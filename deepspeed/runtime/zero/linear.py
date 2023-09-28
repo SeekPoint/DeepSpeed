@@ -25,7 +25,7 @@ from torch.nn.modules.module import Module
 from deepspeed.runtime.utils import noop_decorator
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 def print_rank_0(message, debug=False, force=False):
     if dist.get_rank() == 0 and (debug or force):
@@ -51,11 +51,14 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
         ctx.save_for_backward(input, weight, bias)
 
         if input.dim() == 2 and bias is not None:
+            debuginfo(prj='ds')
             # fused op is marginally faster
             ret = torch.addmm(bias, input, weight.t())
         else:
+            debuginfo(prj='ds')
             output = input.matmul(weight.t())
             if bias is not None:
+                debuginfo(prj='ds')
                 output += bias
             ret = output
 
@@ -65,6 +68,7 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
     @staticmethod
     @autocast_custom_bwd
     def backward(ctx, grad_output):
+        debuginfo(prj='ds')
         # This is a pattern that is very convenient - at the top of backward
         # unpack saved_tensors and initialize all gradients w.r.t. inputs to
         # None. Thanks to the fact that additional trailing Nones are
@@ -80,31 +84,33 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
         # skip them. Returning gradients for inputs that don't require it is
         # not an error.
         if ctx.needs_input_grad[0]:
-            #print(f"Computing grad input weight {weight.shape} grad_output {grad_output.shape}")
+            print(f"Computing grad input weight {weight.shape} grad_output {grad_output.shape}")
             grad_input = grad_output.matmul(weight)
-            #print(f"Computed grad input {grad_input.shape}")
+            print(f"Computed grad input {grad_input.shape}")
         if ctx.needs_input_grad[1]:
-            #print("Computing grad weight")
+            print("Computing grad weight")
             dim = grad_output.dim()
             if dim > 2:
                 grad_weight = grad_output.reshape(-1,
                                                   grad_output.shape[-1]).t().matmul(input.reshape(-1, input.shape[-1]))
             else:
                 grad_weight = grad_output.t().matmul(input)
-            #print(f"Computed grad weight grad_weight {grad_weight.shape}")
+            print(f"Computed grad weight grad_weight {grad_weight.shape}")
         if bias is not None and ctx.needs_input_grad[2]:
-            #print("Computing grad bias")
+            print("Computing grad bias")
             grad_bias = grad_output.sum(0)
-            #print("Done computing grad bias")
-            #print("needs bias")
-        #print(f"backward shaped grad_input {grad_input.shape}, grad_weight {grad_weight.shape}, grad_bias {grad_bias.shape if grad_bias is not None else None}")
+            print("Done computing grad bias")
+            print("needs bias")
+        print(f"backward shaped grad_input {grad_input.shape}, grad_weight {grad_weight.shape}, grad_bias {grad_bias.shape if grad_bias is not None else None}")
         return grad_input, grad_weight, grad_bias
 
 
 def zero3_linear_wrap(input, weight, bias=None):
     if bias is None:
+        debuginfo(prj='ds')
         return LinearFunctionForZeroStage3.apply(input, weight)
     else:
+        debuginfo(prj='ds')
         return LinearFunctionForZeroStage3.apply(input, weight, bias)
 
 
@@ -149,6 +155,7 @@ class LinearModuleForZeroStage3(Module):
     weight: Tensor
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
+        debuginfo(prj='ds', info='LinearModuleForZeroStage3 init')
         super(LinearModuleForZeroStage3, self).__init__()
         print("Building ZeRO module")
         self.in_features = in_features
@@ -161,15 +168,19 @@ class LinearModuleForZeroStage3(Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
+        debuginfo(prj='ds')
         init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
+            debuginfo(prj='ds')
             fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input: Tensor) -> Tensor:
+        debuginfo(prj='ds')
         return LinearFunctionForZeroStage3.apply(input, self.weight, self.bias)
 
     def extra_repr(self) -> str:
+        debuginfo(prj='ds')
         return 'in_features={}, out_features={}, bias={}'.format(self.in_features, self.out_features, self.bias
                                                                  is not None)

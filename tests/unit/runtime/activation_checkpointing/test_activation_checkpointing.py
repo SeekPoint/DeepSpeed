@@ -13,7 +13,7 @@ from copy import deepcopy
 from unit.common import DistributedTest
 
 ckpt = deepspeed.checkpointing.checkpoint
-
+from pydebug import debuginfo
 
 def _compute(module, *inputs, do_checkpoint=False):
     if do_checkpoint:
@@ -147,10 +147,10 @@ class LinearNonTensorInput(torch.nn.Linear):
     def forward(self, x, non_tensor_input):
         return super().forward(x)
 
-
 class LinearNonTensorOutput(torch.nn.Linear):
 
     def __init__(self, non_tensor_output):
+        debuginfo(prj='ds', info='LinearNonTensorOutput init')
         super().__init__(HIDDEN_DIM, HIDDEN_DIM)
         self.non_tensor_output = non_tensor_output
 

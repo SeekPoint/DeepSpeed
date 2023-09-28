@@ -5,7 +5,7 @@
 
 from deepspeed.runtime.config_utils import get_scalar_param
 from deepspeed.runtime.swap_tensor.constants import *
-
+from pydebug import debuginfo
 AIO_DEFAULT_DICT = {
     AIO_BLOCK_SIZE: AIO_BLOCK_SIZE_DEFAULT,
     AIO_QUEUE_DEPTH: AIO_QUEUE_DEPTH_DEFAULT,
@@ -16,6 +16,7 @@ AIO_DEFAULT_DICT = {
 
 
 def get_aio_config(param_dict):
+    debuginfo(prj='ds')
     if AIO in param_dict.keys() and param_dict[AIO] is not None:
         aio_dict = param_dict[AIO]
         return {

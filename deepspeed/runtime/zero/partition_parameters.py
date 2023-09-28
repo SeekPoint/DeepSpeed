@@ -39,10 +39,12 @@ partitioned_param_data_shape = [0]
 zero_init_context = 0
 top_level_context = None
 
+from pydebug import debuginfo
 
 class NoGatherHandle:
 
     def __init__(self, param: Parameter) -> None:
+        debuginfo(prj='ds', info='NoGatherHandle init')
         if param.ds_status != ZeroParamStatus.INFLIGHT:
             raise RuntimeError(f"expected param {param.ds_summary()} to be available")
 
@@ -51,6 +53,7 @@ class NoGatherHandle:
         self.__param = param
 
     def wait(self) -> None:
+        debuginfo(prj='ds')
         get_accelerator().current_stream().synchronize()
         self.__param.ds_status = ZeroParamStatus.AVAILABLE
 
@@ -58,6 +61,7 @@ class NoGatherHandle:
 class NoGatherCoalescedHandle:
 
     def __init__(self, params: List[Parameter]) -> None:
+        debuginfo(prj='ds')
         self.__params = params
         self.__complete = False
 
@@ -69,6 +73,7 @@ class NoGatherCoalescedHandle:
 
     @instrument_w_nvtx
     def wait(self) -> None:
+        debuginfo(prj='ds')
         if self.__complete:
             return
 
@@ -81,10 +86,12 @@ class NoGatherCoalescedHandle:
 
 
 def _dist_allgather_fn(input_tensor: Tensor, output_tensor: Tensor, group=None):
+    debuginfo(prj='ds')
     return instrument_w_nvtx(dist.allgather_fn)(output_tensor, input_tensor, group=group, async_op=True)
 
 
 def print_rank_0(message, debug=False, force=False):
+    debuginfo(prj='ds')
     rank = dist.get_rank()
     if rank == 0 and (debug or force):
         print(message)
@@ -96,24 +103,30 @@ def print_rank_0(message, debug=False, force=False):
 
 
 def debug_rank0(msg: str) -> None:
+    debuginfo(prj='ds')
     if dist.get_rank() == 0:
         logger.debug(msg)
 
 
 def is_zero_param(parameter):
+    debuginfo(prj='ds')
     if not torch.is_tensor(parameter):
+        debuginfo(prj='ds')
         return False
     return hasattr(parameter, 'ds_id')
 
 
 def _init_external_params(module):
+    debuginfo(prj='ds')
     if not hasattr(module, '_external_params'):
         module._external_params = {}
 
         def external_parameters(self):
+            debuginfo(prj='ds')
             return self._external_params.items()
 
         def all_parameters(self):
+            debuginfo(prj='ds')
             return itertools.chain(self.named_parameters(self, recurse=False), external_parameters(self))
 
         module.ds_external_parameters = types.MethodType(external_parameters, module)
@@ -162,10 +175,12 @@ def register_external_parameter(module, parameter):
                     y = self.layer2(x, self.layer1.weight)
                     return y
     """
+    debuginfo(prj='ds')
     if not isinstance(parameter, torch.nn.Parameter):
         raise RuntimeError('Parameter is not a torch.nn.Parameter')
 
     if not hasattr(module, '_external_params'):
+        debuginfo(prj='ds')
         _init_external_params(module)
 
     key = id(parameter)
@@ -183,6 +198,7 @@ def unregister_external_parameter(module, parameter):
         RuntimeError: If ``parameter`` is not of type ``torch.nn.Parameter``.
         RuntimeError: If ``parameter`` is not a registered external parameter of ``module``.
     """
+    debuginfo(prj='ds')
     if not isinstance(parameter, torch.nn.Parameter):
         raise RuntimeError('Parameter is not a torch.nn.Parameter')
 
@@ -226,12 +242,16 @@ _orig_torch_eye = torch.eye
 
 
 def zero_wrapper_for_fp_tensor_constructor(fn: Callable, target_fp_dtype: torch.dtype) -> Callable:
+    debuginfo(prj='ds')
 
     def wrapped_fn(*args, **kwargs) -> Tensor:
+        debuginfo(prj='ds')
         if kwargs.get("device", None) is None:
+            debuginfo(prj='ds')
             kwargs['device'] = torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"]))
         tensor: Tensor = fn(*args, **kwargs)
         if tensor.is_floating_point():
+            debuginfo(prj='ds')
             tensor = tensor.to(target_fp_dtype)
 
         return tensor
@@ -242,9 +262,11 @@ def zero_wrapper_for_fp_tensor_constructor(fn: Callable, target_fp_dtype: torch.
 def get_new_tensor_fn_for_dtype(dtype: torch.dtype) -> Callable:
 
     def new_tensor(cls, *args) -> Tensor:
+        debuginfo(prj='ds')
         device = torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"]))
         tensor = _orig_torch_empty(0, device=device).new_empty(*args)
         if tensor.is_floating_point():
+            debuginfo(prj='ds')
             tensor = tensor.to(dtype)
 
         return tensor
@@ -254,9 +276,11 @@ def get_new_tensor_fn_for_dtype(dtype: torch.dtype) -> Callable:
 
 # https://stackoverflow.com/a/63851681/9201239
 def get_all_subclasses(cls):
+    debuginfo(prj='ds')
     subclass_list = []
 
     def recurse(cl):
+        debuginfo(prj='ds')
         for subclass in cl.__subclasses__():
             subclass_list.append(subclass)
             recurse(subclass)
@@ -268,6 +292,7 @@ def get_all_subclasses(cls):
 
 @instrument_w_nvtx
 def free_param(param: Parameter) -> None:
+    debuginfo(prj='ds')
     """Free underlying storage of a parameter."""
     assert not param.ds_active_sub_modules, param.ds_summary()
     if get_accelerator().on_accelerator(param.data):
@@ -289,6 +314,7 @@ empty_buffers = {}
 class InsertPostInitMethodToModuleSubClasses(object):
 
     def __init__(self, enabled=True, mem_efficient_linear=True, ds_config=None, dtype=None):
+        debuginfo(prj='ds')
         self.mem_efficient_linear = mem_efficient_linear
         self.enabled = enabled
         self._set_dtype(ds_config, dtype)
@@ -298,11 +324,14 @@ class InsertPostInitMethodToModuleSubClasses(object):
         self.wrapped_cls = set()
 
     def __enter__(self):
+        debuginfo(prj='ds')
         if not self.enabled:
+            debuginfo(prj='ds')
             return
 
         global zero_init_context
         if zero_init_context == 0:
+            debuginfo(prj='ds')
             self.patch_init_and_builtins()
             global top_level_context
             top_level_context = self
@@ -310,7 +339,9 @@ class InsertPostInitMethodToModuleSubClasses(object):
         zero_init_context += 1
 
     def __exit__(self, exc_type, exc_value, traceback):
+        debuginfo(prj='ds')
         if not self.enabled:
+            debuginfo(prj='ds')
             return
 
         global zero_init_context
@@ -318,6 +349,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
 
         # Exiting the top level context
         if zero_init_context == 0:
+            debuginfo(prj='ds')
             self.unpatch_init_and_builtins()
             global top_level_context
             top_level_context = None
@@ -327,6 +359,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
 
         # Now that we cleaned up the metaclass injection, raise the exception.
         if exc_type is not None:
+            debuginfo(prj='ds')
             return False
 
     # To be implemented by inheriting classes
@@ -339,17 +372,22 @@ class InsertPostInitMethodToModuleSubClasses(object):
                 raise RuntimeError("bfloat16 and fp16 cannot be enabled at once")
 
             if ds_config.bfloat16_enabled:
+                debuginfo(prj='ds')
                 self.dtype = torch.bfloat16
             elif ds_config.fp16_enabled:
+                debuginfo(prj='ds')
                 self.dtype = torch.half
             else:
+                debuginfo(prj='ds')
                 self.dtype = torch.float
         else:
+            debuginfo(prj='ds')
             self.dtype = dtype or torch.half
 
     def patch_init_and_builtins(self):
 
         def apply_with_gather(orig_module_apply_fn: Callable) -> Callable:
+            debuginfo(prj='ds')
             """many models make use of child modules like Linear or Embedding which
             perform their own weight initialization in their __init__ methods,
             but will then have more weight initialization in a parent module's __init__
@@ -365,11 +403,13 @@ class InsertPostInitMethodToModuleSubClasses(object):
             """
 
             def get_wrapped_fn_to_apply(fn_to_apply: Callable) -> Callable:
+                debuginfo(prj='ds')
                 if hasattr(fn_to_apply, "wrapped"):
                     return fn_to_apply
 
                 @functools.wraps(fn_to_apply)
                 def wrapped_fn_to_apply(module_to_apply_fn_to: Module) -> None:
+                    debuginfo(prj='ds')
                     """gathers parameters before calling apply function. afterwards
                     parameters are broadcasted to ensure consistency across all ranks
                     then re-partitioned.
@@ -411,9 +451,11 @@ class InsertPostInitMethodToModuleSubClasses(object):
             return wrapped_apply
 
         def partition_after(f):
+            debuginfo(prj='ds')
 
             @functools.wraps(f)
             def wrapper(module, *args, **kwargs):
+                debuginfo(prj='ds')
 
                 # important logic: We want to run post_init only after child's __init__ is
                 # completed, and do nothing after __init__ of any of its parents and grandparents in
@@ -427,6 +469,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
 
                 is_child_module = False
                 if not hasattr(module, "_ds_child_entered"):
+                    debuginfo(prj='ds')
                     # child's __init__ was called, since parents all see the same object they can now skip post_init
                     is_child_module = True
                     setattr(module, "_ds_child_entered", True)
@@ -434,6 +477,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
                 f(module, *args, **kwargs)
 
                 if is_child_module:
+                    debuginfo(prj='ds')
                     # child's __init__ is done, now we can run a single post_init on the child object
                     delattr(module, "_ds_child_entered")
 
@@ -445,10 +489,12 @@ class InsertPostInitMethodToModuleSubClasses(object):
             return wrapper
 
         def _enable_class(cls):
+            debuginfo(prj='ds')
             cls._old_init = cls.__init__
             cls.__init__ = partition_after(cls.__init__)
 
         def _init_subclass(cls, **kwargs):
+            debuginfo(prj='ds')
             cls._old_init = cls.__init__
             cls.__init__ = partition_after(cls.__init__)
 
@@ -477,10 +523,13 @@ class InsertPostInitMethodToModuleSubClasses(object):
         self.patched = True
 
     def unpatch_init_and_builtins(self):
+        debuginfo(prj='ds')
 
         if self.patched:
+            debuginfo(prj='ds')
 
             def _disable_class(cls):
+                debuginfo(prj='ds')
                 cls.__init__ = cls._old_init
 
             for subclass in get_all_subclasses(torch.nn.modules.module.Module):
@@ -495,6 +544,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
             self.patched = False
 
     def _add_tensor_creation_wrappers(self):
+        debuginfo(prj='ds')
         torch.Tensor.__new__ = get_new_tensor_fn_for_dtype(self.dtype)
         torch.empty = zero_wrapper_for_fp_tensor_constructor(_orig_torch_empty, self.dtype)
         torch.zeros = zero_wrapper_for_fp_tensor_constructor(_orig_torch_zeros, self.dtype)
@@ -504,6 +554,7 @@ class InsertPostInitMethodToModuleSubClasses(object):
         torch.eye = zero_wrapper_for_fp_tensor_constructor(_orig_torch_eye, self.dtype)
 
     def _remove_tensor_creation_wrappers(self):
+        debuginfo(prj='ds')
         torch.Tensor.__new__ = torch.Tensor.__old_new__
         torch.empty = _orig_torch_empty
         torch.zeros = _orig_torch_zeros
@@ -514,25 +565,30 @@ class InsertPostInitMethodToModuleSubClasses(object):
 
 
 def shutdown_init_context():
+    debuginfo(prj='ds')
     """
     This function is used to initialize deepspeed engine inside the context of Init.
     We need to remove the wrappers but keep the context.
     """
     if top_level_context:
+        debuginfo(prj='ds')
         top_level_context.unpatch_init_and_builtins()
 
 
 def restore_init_context():
+    debuginfo(prj='ds')
     """
     This function is used to restore the wrappers after deepspeed engine is initialized.
     """
     if top_level_context:
+        debuginfo(prj='ds')
         top_level_context.patch_init_and_builtins()
 
 
 class AllGatherHandle:
 
     def __init__(self, handle, param: Parameter, quantization=None) -> None:
+        debuginfo(prj='ds')
         if param.ds_status != ZeroParamStatus.INFLIGHT:
             raise RuntimeError(f"expected param {param.ds_summary()} to be available")
 
@@ -541,8 +597,10 @@ class AllGatherHandle:
         self.__quantization = quantization
 
     def wait(self) -> None:
+        debuginfo(prj='ds')
         instrument_w_nvtx(self.__handle.wait)()
         if self.__quantization:
+            debuginfo(prj='ds')
             instrument_w_nvtx(self.__quantization.quant_handle.wait)()
             self.__param.data = self.__quantization.backend.dequantize(
                 self.__quantization.quantized_param, self.__quantization.scale_buffer).to(self.__param.device)
@@ -561,6 +619,7 @@ class AllGatherCoalescedHandle:
         forward=False,
         quantization=None,
     ) -> None:
+        debuginfo(prj='ds')
         self.allgather_handle = allgather_handle
         self.params = params
         self.partitions = partitions
@@ -576,6 +635,7 @@ class AllGatherCoalescedHandle:
 
     @instrument_w_nvtx
     def wait(self) -> None:
+        debuginfo(prj='ds')
         if self.complete:
             return
 
@@ -619,6 +679,7 @@ class AllGatherCoalescedHandle:
 class QuantizationInfo:
     # a placeholder object to store all quant related vars used in handles
     def __init__(self) -> None:
+        debuginfo(prj='ds')
         self.quantized_param = None
         self.backend = None
         self.quant_handle = None
@@ -635,11 +696,13 @@ class CUDAQuantizer:
     def __init__(self):
         # 调用deepspeed.ops.op_builder.QuantizerBuilder().load()来加载一个量化器模块，
         # 赋值给self.quantizer_cuda_module。
+        debuginfo(prj='ds')
         self.quantizer_cuda_module = deepspeed.ops.op_builder.QuantizerBuilder().load()
 
     # 定义量化方法，接受一个参数param，以及可选的参数groups，
     # 如果没有提供groups，则通过计算和缓存来确定。
     def quantize(self, param, groups=None):
+        debuginfo(prj='ds')
         if groups is None:
             try:
                 # 尝试从缓存中获取param的元素数量对应的组大小。
@@ -673,10 +736,12 @@ class CUDAQuantizer:
 
     # 定义反量化方法，接受已经被量化的参数和一个比例因子。
     def dequantize(self, quantized_param, scale):
+        debuginfo(prj='ds')
         return self.quantizer_cuda_module.dequantize(quantized_param, scale, scale.numel(), 8,
                                                      self.quantizer_cuda_module.Symmetric)
 
 def _no_gather_coalesced(params: Iterable[Parameter]) -> AllGatherCoalescedHandle:
+    debuginfo(prj='ds')
     for param in params:
         if param.ds_status != ZeroParamStatus.NOT_AVAILABLE:
             raise RuntimeError(param.ds_summary())
@@ -711,6 +776,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                  mpu=None,
                  zero_param_parallel_group=None,
                  zero_quantized_weights=False):
+        debuginfo(prj='ds')
         """A context to enable massive model construction for training with
         ZeRO-3. Models are automatically partitioned (or, sharded) across the
         system and converted to half precision.
@@ -883,11 +949,13 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             logger.info(f"all_gather_into_tensor API is not available in torch {torch.__version__}")
 
     def _update_persist_config(self, ds_config):
+        debuginfo(prj='ds')
         Init.apply_param_persistence = True
         Init.param_persistence_threshold = ds_config.zero_config.param_persistence_threshold
         Init.model_persistence_threshold = ds_config.zero_config.model_persistence_threshold // self.num_partitions
 
     def _convert_to_zero_parameters(self, param_list):
+        debuginfo(prj='ds')
         for param in param_list:
             if is_zero_param(param):
                 continue
@@ -895,6 +963,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             param.partition()
 
     def _validate_remote_device(self, remote_device, ds_config):
+        debuginfo(prj='ds')
         if ds_config is not None:
             if remote_device in [None, OffloadDeviceEnum.cpu]:
                 if ds_config.zero_config.offload_param is not None:
@@ -910,6 +979,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                 f'"nvme_path" in DeepSpeed Config cannot be None if remote device is {OffloadDeviceEnum.nvme}'
 
     def _post_init_method(self, module):
+        debuginfo(prj='ds')
         #see_memory_usage(f"Before converting params in {module.__class__.__name__}", force=False)
         print_rank_0(f'Converting Params in {module.__class__.__name__}', force=False)
         see_memory_usage(f"Before converting and partitioning params in {module.__class__.__name__}", force=False)
@@ -961,10 +1031,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         # If this flag is true, then the parameters are replicated throughput training
         # And only partitioned before the step
         if Init.apply_param_persistence and param.ds_numel <= Init.param_persistence_threshold and Init.num_persisted_elements + param.ds_numel <= Init.model_persistence_threshold:
+            debuginfo(prj='ds')
             param.ds_persist = True
             Init.num_persisted_parameters += 1
             Init.num_persisted_elements += param.ds_numel
         else:
+            debuginfo(prj='ds')
             param.ds_persist = False
 
         param.is_external_param = False
@@ -989,8 +1061,10 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         Init.param_id += 1
 
         def all_gather(param_list=None, async_op=False, hierarchy=0):
+            debuginfo(prj='ds')
             cls = param
             if param_list is None:
+                debuginfo(prj='ds')
                 param_list = [cls]
             return self._all_gather(param_list, async_op=async_op, hierarchy=hierarchy)
 
@@ -998,15 +1072,18 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         def all_gather_coalesced(params: Iterable[Parameter],
                                  forward: bool,
                                  safe_mode: bool = False) -> AllGatherCoalescedHandle:
+            debuginfo(prj='ds')
 
             # fetches from nvme if the partition is not available and in nvme
             self._ensure_availability_of_partitioned_params(params)
 
             quant = self.quantized_weights
             if self.module is not None and self.module.training is False:
+                debuginfo(prj='ds')
                 quant = False
 
             if self.num_partitions == 1:
+                debuginfo(prj='ds')
                 return _no_gather_coalesced(params)
 
             for param in params:
@@ -1197,14 +1274,17 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                     )
 
         def partition(param_list=None, backward=False, hierarchy=0, has_been_updated=False):
+            debuginfo(prj='ds')
             cls = param
             print_rank_0(f"{'--'*hierarchy}----Partitioning param {debug_param2name_id_shape_device(cls)}",
                          force=False)
             if param_list is None:
                 param_list = [cls]
+                debuginfo(prj='ds')
             self._partition(param_list, has_been_updated=has_been_updated)
 
         def reduce_gradients_at_owner(param_list=None, hierarchy=0):
+            debuginfo(prj='ds')
             cls = param
             if param_list is None:
                 param_list = [cls]
@@ -1214,6 +1294,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             self._reduce_scatter_gradients(param_list)
 
         def partition_gradients(param_list=None, partition_buffers=None, hierarchy=0, accumulate=False):
+            debuginfo(prj='ds')
             cls = param
             print_rank_0(
                 f"{'--'*hierarchy}----Partitioning param gradient with id {debug_param2name_id_shape_device(cls)}")
@@ -1238,6 +1319,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             return param._orig_item()
 
         def ds_summary(slf: torch.Tensor, use_debug_name: bool = False) -> dict:
+            debuginfo(prj='ds')
             return {
                 "id": debug_param2name_id(slf) if use_debug_name else slf.ds_id,
                 "status": slf.ds_status.name,
@@ -1303,12 +1385,15 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                 assert param.ds_tensor.final_location == OffloadDeviceEnum.nvme and param.ds_status == ZeroParamStatus.NOT_AVAILABLE
                 swap_in_flight.append(param)
         if len(swap_in_list) > 0:
+            debuginfo(prj='ds')
             swap_in_list[0].nvme_swapper.swap_in(swap_in_list, async_op=False)
         elif len(swap_in_flight) > 0:
+            debuginfo(prj='ds')
             swap_in_flight[0].nvme_swapper.synchronize_reads()
 
     @instrument_w_nvtx
     def _all_gather(self, param_list, async_op=False, hierarchy=None):
+        debuginfo(prj='ds')
 
         # fetches from nvme if the partition is not available and in nvme
         self._ensure_availability_of_partitioned_params(param_list)
@@ -1325,9 +1410,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                     all_gather_list.append(param)
 
         if not async_op:
+            debuginfo(prj='ds')
             if len(param_list) == 1:
+                debuginfo(prj='ds')
                 ret_value = self._allgather_params(all_gather_list, hierarchy=hierarchy)
             else:
+                debuginfo(prj='ds')
                 ret_value = self._allgather_params_coalesced(all_gather_list, hierarchy)
 
             for param in all_gather_list:
@@ -1337,6 +1425,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         return handles
 
     def _partition(self, param_list, force=False, has_been_updated=False):
+        debuginfo(prj='ds')
         for param in param_list:
             print_rank_0(f"Before Partitioning Param {param.ds_id}", force=False)
             if self.zero_param_process_group is not None:
@@ -1350,6 +1439,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             #print_rank_0(f"After Partitioning Param {param.ds_id} {param.ds_tensor.size()} {param.ds_tensor}",force=False)
     @instrument_w_nvtx
     def _partition_param(self, param, buffer=None, has_been_updated=False):
+        debuginfo(prj='ds')
         assert param.ds_status is not ZeroParamStatus.INFLIGHT, f" {param} Cannot partition a param in flight"
         global reuse_buffers
         print_rank_0(f"Param id {param.ds_id} status is {param.ds_status}", force=False)
@@ -1461,6 +1551,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
     @instrument_w_nvtx
     def _partition_param_sec(self, param, buffer=None, has_been_updated=False):
+        debuginfo(prj='ds')
         assert param.ds_status is not ZeroParamStatus.INFLIGHT, f" {param} Cannot partition a param in flight"
         global reuse_buffers
         ##support for NVME secondary param offload
@@ -1523,7 +1614,6 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             )
 
     def _allgather_param(self, param, async_op=False, hierarchy=0):
-
         partition_size = param.ds_tensor.ds_numel
 
         tensor_size = partition_size * self.num_partitions
@@ -1554,11 +1644,13 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         #            param.data = replicated_tensor.data
         #            return None
         if self.use_all_gather_into_tensor:
+            debuginfo(prj='ds')
             handle = dist.all_gather_into_tensor(flat_tensor,
                                                  param.ds_tensor.to(get_accelerator().device_name()),
                                                  group=self.get_partition_dp_group(param),
                                                  async_op=async_op)
         else:
+            debuginfo(prj='ds')
             partitions = []
             for i in range(self.num_partitions):
                 partitions.append(flat_tensor.narrow(0, partition_size * i, partition_size))
@@ -1576,13 +1668,16 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         return handle
 
     def _allgather_params_coalesced(self, param_list, hierarchy=0):
+        debuginfo(prj='ds')
         """ blocking call
         avoid explicit memory copy in _allgather_params
         """
         if len(param_list) == 0:
+            debuginfo(prj='ds')
             return
 
         if self.num_partitions == 1:
+            debuginfo(prj='ds')
             handle = _no_gather_coalesced(param_list)
             handle.wait()
             return None
@@ -1641,7 +1736,9 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         return None
 
     def _allgather_params(self, param_list, hierarchy=0):
+        debuginfo(prj='ds')
         if len(param_list) == 0:
+            debuginfo(prj='ds')
             return
 
         partition_size = sum([param.ds_tensor.ds_numel for param in param_list])
@@ -1695,6 +1792,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         return None
 
     def _reduce_scatter_gradients(self, param_list):
+        debuginfo(prj='ds')
         #print_rank_0([param.grad for param in param_list])
         #assert any([param.grad is None for param in param_list]), "None gradients cannot be reduce scattered"
 
@@ -1716,12 +1814,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             start = self.get_partition_rank() * partition_size
             end = start + partition_size
             #print_rank_0("REduce scatter was executed for param {param.ds_id}")
-            if start < param.ds_numel and end > param.ds_numel:
+            if start < param.ds_numel < end:
                 elements = param.ds_numel - start
                 param.grad.view(-1).narrow(0, start, elements).copy_(reduced_partition.narrow(0, 0, elements))
 
     def _reduce_scatter_gradient(self, param):
-
+        debuginfo(prj='ds')
         partition_size = param.ds_tensor.ds_numel
         #output = torch.empty(partition_size, dtype=param.dtype, device=param.device)
 
@@ -1754,7 +1852,9 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         return handle, input_list[rank]
 
     def _partition_gradients(self, param_list, partition_buffers=None, accumulate=False):
+        debuginfo(prj='ds')
         if partition_buffers is None:
+            debuginfo(prj='ds')
             partition_buffers = [None] * len(param_list)
 
         for param, partition_buffer in zip(param_list, partition_buffers):
@@ -1772,9 +1872,11 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         partition_size = param.ds_tensor.ds_numel
 
         if partition_buffer is None:
+            debuginfo(prj='ds')
             assert not accumulate, "No buffer to accumulate to"
             partition_buffer = torch.zeros(partition_size, dtype=param.dtype, device=param.device)
         else:
+            debuginfo(prj='ds')
             assert partition_buffer.numel(
             ) >= partition_size, f"The partition buffer size {partition_buffer.numel()} should match the size of param.ds_tensor {partition_size}"
 
@@ -1786,6 +1888,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
         #print("before partition gradients")
         if start < param.ds_numel:
+            debuginfo(prj='ds')
             elements = min(param.ds_numel - start, partition_size)
 
             dest_tensor = dest_tensor_full_buffer.narrow(0, 0, elements)
@@ -1793,11 +1896,13 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
             # just copy the grad partition to the buffer
             if not accumulate:
+                debuginfo(prj='ds')
                 dest_tensor.copy_(src_tensor)
 
             # if source and destination are on same device,
             # add to the provided buffer
             elif src_tensor.device == dest_tensor.device:
+                debuginfo(prj='ds')
                 dest_tensor.add_(src_tensor)
 
             # if source and destination are on different device, copy first to src
@@ -1805,6 +1910,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             # when src is gpu and dest is cpu
             # adding directly to cpu is very slow
             else:
+                debuginfo(prj='ds')
                 acc_tensor = torch.empty(src_tensor.numel(), dtype=param.dtype, device=param.device)
 
                 acc_tensor.copy_(dest_tensor)
@@ -1823,19 +1929,23 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         see_memory_usage("After partitioning gradients", force=False)
 
     def get_partition_dp_group(self, param):
+        debuginfo(prj='ds')
         return param.ds_process_group
 
     def get_partition_rank(self):
         """subclass can overload to specify different relative rank in
         parameter partition group"""
+        debuginfo(prj='ds')
         return self.rank
 
     @property
     def num_partitions(self):
+        debuginfo(prj='ds')
         return self.dp_world_size
 
     def get_dp_process_group(self):
         """ Return the communication group with all data-parallel ranks """
+        debuginfo(prj='ds')
         return self.ds_process_group
 
 
@@ -1932,14 +2042,17 @@ class GatheredParameters:
             return
 
         if isinstance(params, Iterable) and not isinstance(params, torch.Tensor):
+            debuginfo(prj='ds')
             # deal with generators like model.parameters()
             # must convert to list to be able to iterate more than once if we get a generator
             params = list(params)
         else:
+            debuginfo(prj='ds')
             # single param
             params = [params]
         # enable if at least one is zero-param, otherwise a noop
         if not any(is_zero_param(p) for p in params):
+            debuginfo(prj='ds')
             self.enabled = False
             return
 
@@ -1951,9 +2064,11 @@ class GatheredParameters:
         if modifier_rank is not None:
             if self.params[0].ds_process_group == dist.get_world_group():
                 self.src_rank = modifier_rank
+                debuginfo(prj='ds')
             else:
                 # A group was specified; convert DP rank to global rank
                 self.src_rank = dist.get_global_rank(self.params[0].ds_process_group, modifier_rank)
+                debuginfo(prj='ds')
         self.fwd_module = fwd_module
         if self.fwd_module is not None:
             # is a no-op if already registered
@@ -1961,14 +2076,17 @@ class GatheredParameters:
                 register_external_parameter(self.fwd_module, p)
 
     def __enter__(self):
+        debuginfo(prj='ds')
         if not self.enabled:
             return
         self.params[0].all_gather(param_list=self.params)
 
     def __exit__(self, *exc):
         if not self.enabled:
+            debuginfo(prj='ds')
             return
         if self.src_rank is None:
+            debuginfo(prj='ds')
             self.params[0].partition(param_list=self.params, has_been_updated=False)
             return
 

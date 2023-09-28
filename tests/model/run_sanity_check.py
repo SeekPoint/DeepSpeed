@@ -15,7 +15,7 @@ sys.path.append('../DeepSpeedExamples/BingBertSquad')
 # Import the test cases here.
 import Megatron_GPT2
 import BingBertSquad
-
+from pydebug import debuginfo
 
 def pytest_hack(runner_result):
     '''This is an ugly hack to get the unittest suites to play nicely with
@@ -24,7 +24,7 @@ def pytest_hack(runner_result):
     Long-term, these model tests should be adapted to pytest.
     '''
     if not runner_result.wasSuccessful():
-        print('SUITE UNSUCCESSFUL:', file=sys.stderr)
+        debuginfo(prj='ds', info='SUITE UNSUCCESSFUL:', file=sys.stderr)
         for fails in runner_result.failures:
             print(fails, file=sys.stderr)
         assert runner_result.wasSuccessful()  # fail the test

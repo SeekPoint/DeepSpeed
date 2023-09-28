@@ -14,21 +14,24 @@ from ..policy import maybe_copy
 from packaging import version as pkg_version
 
 from ..policy import maybe_get_lora
-
+from pydebug import debuginfo
 
 class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
+        debuginfo(prj='ds')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
 
     def create_module(self, config=None):
+        debuginfo(prj='ds')
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedGPTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
 
         if self.megatron_v2:
+            debuginfo(prj='ds')
             self.module.config.rotate_half = True
             self.module.config.rotate_every_two = False
 
@@ -38,6 +41,7 @@ class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTran
         """
         Necessary to implement for `HybridEngineContainer`
         """
+        debuginfo(prj='ds')
         fc1_lora, fc2_lora, qkv_lora, out_lora = self.get_lora_params()
         ret = [(fc1_lora, self._h4h_w), (fc2_lora, self._4hh_w), (qkv_lora, self.qkvw), (out_lora, self.dense_w)]
         return ret
@@ -47,8 +51,10 @@ class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTran
         Necessary to implement for `HybridEngineContainer`
         """
         if GPTNEOXLayerPolicy.version == 0:
+            debuginfo(prj='ds')
             attention = self.policy.client_module.attention
         else:
+            debuginfo(prj='ds')
             attention = self.policy.client_module.self_attention
 
         self.lora_params = [
@@ -59,6 +65,7 @@ class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTran
         ]
 
     def load_params(self, module, sd, weight_quantizer, mp_replace, prefix):
+        debuginfo(prj='ds')
         param_names = (
             'attention.query_key_value.weight', \
             'attention.query_key_value.bias', \
@@ -97,24 +104,31 @@ class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTran
 class GPTNEOXLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
     version = 0
+    debuginfo(prj='ds')
 
     def __init__(self, client_module, inference=True, megatron_v2=True, split_qkv=False):
+        debuginfo(prj='ds')
         super().__init__(inference, megatron_v2=megatron_v2, split_qkv=split_qkv)
         self.client_module = client_module
         if GPTNEOXLayerPolicy._orig_layer_class is None:
             if pkg_version.parse(torch.__version__) <= pkg_version.parse("1.2"):
+                debuginfo(prj='ds')
                 GPTNEOXLayerPolicy._orig_layer_class = None
             else:
                 try:
                     from transformers import GPTNeoXLayer
                     GPTNEOXLayerPolicy._orig_layer_class = GPTNeoXLayer
+                    debuginfo(prj='ds')
                 except ImportError:
+                    debuginfo(prj='ds')
                     GPTNEOXLayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
         if GPTNEOXLayerPolicy.version == 0:
+            debuginfo(prj='ds')
             attention = self.client_module.attention
         else:
+            debuginfo(prj='ds')
             attention = self.client_module.self_attention
 
         return self.client_module.attention.hidden_size, \
@@ -124,8 +138,10 @@ class GPTNEOXLayerPolicy(TransformerPolicy):
 
     def attention(self, enable_training=False):
         if GPTNEOXLayerPolicy.version == 0:
+            debuginfo(prj='ds')
             attention = self.client_module.attention
         else:
+            debuginfo(prj='ds')
             attention = self.client_module.self_attention
 
         return attention.query_key_value.weight, \
@@ -134,12 +150,14 @@ class GPTNEOXLayerPolicy(TransformerPolicy):
                attention.dense.bias
 
     def mlp(self, enable_training=False):
+        debuginfo(prj='ds')
         return self.client_module.mlp.dense_h_to_4h.weight, \
                self.client_module.mlp.dense_h_to_4h.bias, \
                self.client_module.mlp.dense_4h_to_h.weight, \
                self.client_module.mlp.dense_4h_to_h.bias
 
     def layernorm(self):
+        debuginfo(prj='ds')
         return self.client_module.post_attention_layernorm.weight, \
                self.client_module.post_attention_layernorm.bias, \
                self.client_module.input_layernorm.weight, \

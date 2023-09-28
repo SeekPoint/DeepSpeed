@@ -19,6 +19,10 @@ from distutils.errors import CompileError, LinkError
 from abc import ABC, abstractmethod
 from typing import List
 
+from pydebug import debuginfo
+
+debuginfo(prj='ds', info='builder.py exec')
+
 YELLOW = '\033[93m'
 END = '\033[0m'
 WARNING = f"{YELLOW} [WARNING] {END}"
@@ -36,6 +40,7 @@ else:
 
 
 def installed_cuda_version(name=""):
+    debuginfo(prj='ds')
     import torch.utils.cpp_extension
     cuda_home = torch.utils.cpp_extension.CUDA_HOME
     assert cuda_home is not None, "CUDA_HOME does not exist, unable to compile CUDA op(s)"
@@ -50,14 +55,17 @@ def installed_cuda_version(name=""):
 
 
 def get_default_compute_capabilities():
+    debuginfo(prj='ds')
     compute_caps = DEFAULT_COMPUTE_CAPABILITIES
     import torch.utils.cpp_extension
     if torch.utils.cpp_extension.CUDA_HOME is not None and installed_cuda_version()[0] >= 11:
         if installed_cuda_version()[0] == 11 and installed_cuda_version()[1] == 0:
+            debuginfo(prj='ds')
             # Special treatment of CUDA 11.0 because compute_86 is not supported.
             compute_caps += ";8.0"
         else:
             compute_caps += ";8.0;8.6"
+            debuginfo(prj='ds')
     return compute_caps
 
 
@@ -75,6 +83,7 @@ cuda_minor_mismatch_ok = {
 
 
 def assert_no_cuda_mismatch(name=""):
+    debuginfo(prj='ds')
     cuda_major, cuda_minor = installed_cuda_version(name)
     sys_cuda_version = f'{cuda_major}.{cuda_minor}'
     torch_cuda_version = ".".join(torch.version.cuda.split('.')[:2])
@@ -104,6 +113,7 @@ class OpBuilder(ABC):
     _is_rocm_pytorch = None
 
     def __init__(self, name):
+        debuginfo(prj='ds', info=' %s OpBuilder init' % name)
         self.name = name
         self.jit_mode = False
         self.build_for_cpu = False
@@ -130,6 +140,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def validate_torch_version(torch_info):
+        debuginfo(prj='ds')
         install_torch_version = torch_info['version']
         current_torch_version = ".".join(torch.__version__.split('.')[:2])
         if install_torch_version != current_torch_version:
@@ -142,6 +153,7 @@ class OpBuilder(ABC):
     @staticmethod
     def validate_torch_op_version(torch_info):
         if not OpBuilder.is_rocm_pytorch():
+            debuginfo(prj='ds')
             current_cuda_version = ".".join(torch.version.cuda.split('.')[:2])
             install_cuda_version = torch_info['cuda_version']
             if install_cuda_version != current_cuda_version:
@@ -151,6 +163,7 @@ class OpBuilder(ABC):
                                    f"Install CUDA version={install_cuda_version}, "
                                    f"Runtime CUDA version={current_cuda_version}")
         else:
+            debuginfo(prj='ds')
             current_hip_version = ".".join(torch.version.hip.split('.')[:2])
             install_hip_version = torch_info['hip_version']
             if install_hip_version != current_hip_version:
@@ -163,6 +176,7 @@ class OpBuilder(ABC):
     @staticmethod
     def is_rocm_pytorch():
         if OpBuilder._is_rocm_pytorch is not None:
+            debuginfo(prj='ds')
             return OpBuilder._is_rocm_pytorch
 
         _is_rocm_pytorch = False
@@ -181,6 +195,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def installed_rocm_version():
+        debuginfo(prj='ds')
         if OpBuilder._rocm_version:
             return OpBuilder._rocm_version
 
@@ -206,30 +221,36 @@ class OpBuilder(ABC):
         '''
         Returns list of include paths, relative to root of deepspeed package (i.e., DeepSpeed/deepspeed)
         '''
+        debuginfo(prj='ds')
         return []
 
     def nvcc_args(self):
         '''
         Returns optional list of compiler flags to forward to nvcc when building CUDA sources
         '''
+        debuginfo(prj='ds')
         return []
 
     def cxx_args(self):
         '''
         Returns optional list of compiler flags to forward to the build
         '''
+        debuginfo(prj='ds')
         return []
 
     def is_compatible(self, verbose=True):
         '''
         Check if all non-python dependencies are satisfied to build this op
         '''
+        debuginfo(prj='ds')
         return True
 
     def extra_ldflags(self):
+        debuginfo(prj='ds')
         return []
 
     def libraries_installed(self, libraries):
+        debuginfo(prj='ds')
         valid = False
         check_cmd = 'dpkg -l'
         for lib in libraries:
@@ -246,6 +267,7 @@ class OpBuilder(ABC):
         and then distutils is used to compile that program and link it with the specified libraries.
         Returns True if both the compile and link are successful, False otherwise.
         '''
+        debuginfo(prj='ds')
         tempdir = None  # we create a temporary directory to hold various files
         filestderr = None  # handle to open file to which we redirect stderr
         oldstderr = None  # file descriptor for stderr
@@ -308,6 +330,7 @@ class OpBuilder(ABC):
             return False
 
         finally:
+            debuginfo(prj='ds')
             # Restore stderr file descriptor and close the stderr redirect file.
             if oldstderr is not None:
                 os.dup2(oldstderr, sys.stderr.fileno())
@@ -322,9 +345,11 @@ class OpBuilder(ABC):
         '''
         Drop any empty strings from the list of compile and link flags
         '''
+        debuginfo(prj='ds')
         return [x for x in args if len(x) > 0]
 
     def cpu_arch(self):
+        debuginfo(prj='ds')
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -347,6 +372,7 @@ class OpBuilder(ABC):
         return '-march=native'
 
     def is_cuda_enable(self):
+        debuginfo(prj='ds')
         try:
             assert_no_cuda_mismatch(self.name)
             return '-D__ENABLE_CUDA__'
@@ -372,17 +398,23 @@ class OpBuilder(ABC):
         if 'genuineintel' in result or 'authenticamd' in result:
             cpu_info['arch'] = 'X86_64'
             if 'avx512' in result:
+                debuginfo(prj='ds')
                 cpu_info['flags'] += 'avx512,'
             elif 'avx512f' in result:
+                debuginfo(prj='ds')
                 cpu_info['flags'] += 'avx512f,'
             if 'avx2' in result:
+                debuginfo(prj='ds')
                 cpu_info['flags'] += 'avx2'
         elif 'ppc64le' in result:
+            debuginfo(prj='ds')
             cpu_info['arch'] = "PPC_"
 
+        debuginfo(prj='ds', info=str(cpu_info))
         return cpu_info
 
     def simd_width(self):
+        debuginfo(prj='ds')
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -408,8 +440,10 @@ class OpBuilder(ABC):
 
     def command_exists(self, cmd):
         if '|' in cmd:
+            debuginfo(prj='ds')
             cmds = cmd.split("|")
         else:
+            debuginfo(prj='ds')
             cmds = [cmd]
         valid = False
         for cmd in cmds:
@@ -428,11 +462,14 @@ class OpBuilder(ABC):
 
     def deepspeed_src_path(self, code_path):
         if os.path.isabs(code_path):
+            debuginfo(prj='ds')
             return code_path
         else:
+            debuginfo(prj='ds')
             return os.path.join(Path(__file__).parent.parent.absolute(), code_path)
 
     def builder(self):
+        debuginfo(prj='ds')
         from torch.utils.cpp_extension import CppExtension
         return CppExtension(name=self.absolute_name(),
                             sources=self.strip_empty_entries(self.sources()),
@@ -443,6 +480,7 @@ class OpBuilder(ABC):
     def load(self, verbose=True):
         from deepspeed.git_version_info import installed_ops, torch_info
         if installed_ops.get(self.name, False):
+            debuginfo(prj='ds')
             # Ensure the op we're about to load was compiled with the same
             # torch/cuda versions we are currently using at runtime.
             self.validate_torch_version(torch_info)
@@ -451,9 +489,11 @@ class OpBuilder(ABC):
 
             return importlib.import_module(self.absolute_name())
         else:
+            debuginfo(prj='ds')
             return self.jit_load(verbose)
 
     def jit_load(self, verbose=True):
+        debuginfo(prj='ds')
         if not self.is_compatible(verbose):
             raise RuntimeError(
                 f"Unable to JIT load the {self.name} op due to it not being compatible due to hardware/software issue. {self.error_log}"
@@ -535,6 +575,7 @@ class CUDAOpBuilder(OpBuilder):
         """
         ccs = []
         if self.jit_mode:
+            debuginfo(prj='ds')
             # Compile for underlying architectures since we know those at runtime
             for i in range(torch.cuda.device_count()):
                 CC_MAJOR, CC_MINOR = torch.cuda.get_device_capability(i)
@@ -546,6 +587,7 @@ class CUDAOpBuilder(OpBuilder):
         else:
             # Cross-compile mode, compile for various architectures
             # env override takes priority
+            debuginfo(prj='ds')
             cross_compile_archs_env = os.environ.get('TORCH_CUDA_ARCH_LIST', None)
             if cross_compile_archs_env is not None:
                 if cross_compile_archs is not None:
@@ -574,9 +616,11 @@ class CUDAOpBuilder(OpBuilder):
             if int(cc[0]) <= 7:
                 self.enable_bf16 = False
 
+        debuginfo(prj='ds', info=str(args))
         return args
 
     def filter_ccs(self, ccs: List[str]):
+        debuginfo(prj='ds')
         """
         Prune any compute capabilities that are not compatible with the builder. Should log
         which CCs have been pruned.
@@ -588,18 +632,23 @@ class CUDAOpBuilder(OpBuilder):
         version_ge_1_1 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 0):
             version_ge_1_1 = ['-DVERSION_GE_1_1']
+            debuginfo(prj='ds')
         version_ge_1_3 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 2):
             version_ge_1_3 = ['-DVERSION_GE_1_3']
+            debuginfo(prj='ds')
         version_ge_1_5 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 4):
             version_ge_1_5 = ['-DVERSION_GE_1_5']
+            debuginfo(prj='ds')
         return version_ge_1_1 + version_ge_1_3 + version_ge_1_5
 
     def is_compatible(self, verbose=True):
+        debuginfo(prj='ds')
         return super().is_compatible(verbose)
 
     def builder(self):
+        debuginfo(prj='ds', info='CUDAOpBuilder builder')
         try:
             if not self.is_rocm_pytorch():
                 assert_no_cuda_mismatch(self.name)
@@ -608,8 +657,10 @@ class CUDAOpBuilder(OpBuilder):
             self.build_for_cpu = True
 
         if self.build_for_cpu:
+            debuginfo(prj='ds')
             from torch.utils.cpp_extension import CppExtension as ExtensionBuilder
         else:
+            debuginfo(prj='ds')
             from torch.utils.cpp_extension import CUDAExtension as ExtensionBuilder
 
         compile_args = {'cxx': self.strip_empty_entries(self.cxx_args())} if self.build_for_cpu else \
@@ -617,6 +668,7 @@ class CUDAOpBuilder(OpBuilder):
                            'nvcc': self.strip_empty_entries(self.nvcc_args())}
 
         if not self.build_for_cpu and self.enable_bf16:
+            debuginfo(prj='ds')
             compile_args['cxx'].append("-DBF16_AVAILABLE")
 
         cuda_ext = ExtensionBuilder(name=self.absolute_name(),
@@ -625,8 +677,11 @@ class CUDAOpBuilder(OpBuilder):
                                     libraries=self.strip_empty_entries(self.libraries_args()),
                                     extra_compile_args=compile_args,
                                     extra_link_args=self.strip_empty_entries(self.extra_ldflags()))
+        
+        debuginfo(prj='ds', info = ' cuda_ext:'+ str(cuda_ext)) 
 
         if self.is_rocm_pytorch():
+            debuginfo(prj='ds')
             # hip converts paths to absolute, this converts back to relative
             sources = cuda_ext.sources
             curr_file = Path(__file__).parent.parent  # ds root
@@ -637,9 +692,11 @@ class CUDAOpBuilder(OpBuilder):
                 else:
                     sources[i] = str(src)
             cuda_ext.sources = sources
+        debuginfo(prj='ds', info = ' cuda_ext:'+ str(cuda_ext))
         return cuda_ext
 
     def hipify_extension(self):
+        debuginfo(prj='ds')
         if self.is_rocm_pytorch():
             from torch.utils.hipify import hipify_python
             hipify_python.hipify(
@@ -655,15 +712,19 @@ class CUDAOpBuilder(OpBuilder):
 
     def cxx_args(self):
         if sys.platform == "win32":
+            debuginfo(prj='ds')
             return ['-O2']
         else:
+            debuginfo(prj='ds')
             return ['-O3', '-std=c++17', '-g', '-Wno-reorder']
 
     def nvcc_args(self):
         if self.build_for_cpu:
+            debuginfo(prj='ds')
             return []
         args = ['-O3']
         if self.is_rocm_pytorch():
+            debuginfo(prj='ds')
             ROCM_MAJOR, ROCM_MINOR = self.installed_rocm_version()
             args += [
                 '-std=c++17', '-U__HIP_NO_HALF_OPERATORS__', '-U__HIP_NO_HALF_CONVERSIONS__',
@@ -672,6 +733,7 @@ class CUDAOpBuilder(OpBuilder):
                 '-DROCM_VERSION_MINOR=%s' % ROCM_MINOR
             ]
         else:
+            debuginfo(prj='ds')
             cuda_major, _ = installed_cuda_version()
             args += [
                 '-allow-unsupported-compiler' if sys.platform == "win32" else '', '--use_fast_math',
@@ -679,17 +741,24 @@ class CUDAOpBuilder(OpBuilder):
                 '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__'
             ]
             if os.environ.get('DS_DEBUG_CUDA_BUILD', '0') == '1':
+                debuginfo(prj='ds')
                 args.append('--ptxas-options=-v')
             args += self.compute_capability_args()
+
+        debuginfo(prj='ds', info=' args: ' + str(args))
+
         return args
 
     def libraries_args(self):
         if self.build_for_cpu:
+            debuginfo(prj='ds')
             return []
 
         if sys.platform == "win32":
+            debuginfo(prj='ds')
             return ['cublas', 'curand']
         else:
+            debuginfo(prj='ds')
             return []
 
 
@@ -697,9 +766,11 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
 
     def extra_ldflags(self):
         if self.build_for_cpu:
+            debuginfo(prj='ds')
             return ['-fopenmp']
 
         if not self.is_rocm_pytorch():
+            debuginfo(prj='ds')
             return ['-lcurand']
 
         return []
@@ -709,8 +780,10 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
         args = []
         if not self.build_for_cpu:
             if not self.is_rocm_pytorch():
+                debuginfo(prj='ds')
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.CUDA_HOME, "lib64")
             else:
+                debuginfo(prj='ds')
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.ROCM_HOME, "lib")
 
             args += super().cxx_args()
@@ -730,5 +803,7 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
             SIMD_WIDTH,
             CUDA_ENABLE,
         ]
+
+        debuginfo(prj='ds', info=' args: ' + str(args))
 
         return args

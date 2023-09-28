@@ -9,7 +9,7 @@ import pkgutil
 import importlib
 
 from .builder import get_default_compute_capabilities, OpBuilder
-
+from pydebug import debuginfo
 # Do not remove, required for abstract accelerator to detect if we have a deepspeed or 3p op_builder
 __deepspeed__ = True
 
@@ -24,18 +24,23 @@ __op_builders__ = []
 
 this_module = sys.modules[__name__]
 
+debuginfo(prj='ds', info='1-op_builder __init__')
+
 
 def builder_closure(member_name):
     if op_builder_dir == "op_builder":
+        debuginfo
         # during installation time cannot get builder due to torch not installed,
         # return closure instead
         def _builder():
+            debuginfo
             from deepspeed.accelerator import get_accelerator
             builder = get_accelerator().create_op_builder(member_name)
             return builder
 
         return _builder
     else:
+        debuginfo(prj='ds')
         # during runtime, return op builder class directly
         from deepspeed.accelerator import get_accelerator
         builder = get_accelerator().get_op_builder(member_name)
@@ -44,6 +49,7 @@ def builder_closure(member_name):
 
 # reflect builder names and add builder closure, such as 'TransformerBuilder()' creates op builder wrt current accelerator
 for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(this_module.__file__)]):
+    debuginfo(prj='ds', info='1-module_name:' + module_name)
     if module_name != 'all_ops' and module_name != 'builder':
         module = importlib.import_module(f".{module_name}", package=op_builder_dir)
         for member_name in module.__dir__():

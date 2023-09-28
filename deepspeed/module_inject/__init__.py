@@ -8,3 +8,5 @@ from .module_quantize import quantize_transformer_layer
 from .replace_policy import HFBertLayerPolicy
 from .layers import LinearAllreduce, LinearLayer, EmbeddingLayer, Normalize
 from .policy import DSPolicy
+from pydebug import debuginfo
+debuginfo(prj='ds')

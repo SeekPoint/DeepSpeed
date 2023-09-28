@@ -21,7 +21,7 @@ from .scheduler import ResourceManager
 from .tuner import GridSearchTuner, RandomTuner, ModelBasedTuner
 from .utils import *
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 try:
     from tabulate import tabulate
 except ImportError:
@@ -45,6 +45,7 @@ class Autotuner:
     """
 
     def __init__(self, args, active_resources):
+        debuginfo(prj='ds', info='Autotuner init')
         self.args = args
         self.selected_exp_dir = None
 
@@ -111,6 +112,7 @@ class Autotuner:
         best_space_records = self.get_best_space_records()
         tab = []
         if best_space_records:
+            debuginfo(prj='ds')
             for key, val in best_space_records.items():
                 if not val:
                     continue
@@ -139,6 +141,7 @@ class Autotuner:
                 os.fsync(fd)
 
         if GLOBAL_TUNING_SPACE in best_space_records:
+            debuginfo(prj='ds')
             best_exp, best_metric_val, total_num_exps = best_space_records[GLOBAL_TUNING_SPACE]
             if best_exp:
                 logger.info(
@@ -164,6 +167,7 @@ class Autotuner:
         Returns:
             [dict]: DeepSpeed configuration dictionary
         """
+        debuginfo(prj='ds')
         user_config_file = None
         if "--deepspeed_config" in user_args:
             idx = user_args.index("--deepspeed_config")
@@ -197,6 +201,7 @@ class Autotuner:
         Returns:
             [ResourceManager]: A resource manager that schedules and runs autotuning experiments.
         """
+        debuginfo(prj='ds')
         logger.info(f"active_resources = {active_resources}")
 
         hosts = []
@@ -223,6 +228,7 @@ class Autotuner:
         Returns:
             num_nodes, num_gpus: the number of gpus and number of nodes used in the autotuning experiments
         """
+        debuginfo(prj='ds')
         if args.num_nodes > 0:
             num_nodes = args.num_nodes
         else:
@@ -249,11 +255,14 @@ class Autotuner:
 
     def max_train_micro_batch_size_per_gpu(self):
         if self.max_train_batch_size(
-        ) and self.max_train_batch_size() > 0:  # if the user specifies a max_train_batch_size
+        ) and self.max_train_batch_size() > 0:  
+            debuginfo(prj='ds')
+            # if the user specifies a max_train_batch_size
             max_train_micro_batch_size = self.max_train_batch_size() * self.mp_size() // (
                 self.exp_num_gpus * self.exp_num_nodes)  # gradient accumulation steps >=1
             return min(self.autotuning_config.max_train_micro_batch_size_per_gpu, max_train_micro_batch_size)
         else:
+            debuginfo(prj='ds')
             return self.autotuning_config.max_train_micro_batch_size_per_gpu
 
     def min_train_micro_batch_size_per_gpu(self):
@@ -273,9 +282,11 @@ class Autotuner:
 
     def get_activation_memory_per_gpu(self):
         if self.model_info and "activation_mem_per_gpu" in self.model_info:
+            debuginfo(prj='ds')
             return self.model_info["activation_mem_per_gpu"]
 
     def get_instantiation_memory_required_per_gpu(self, zero_stage):
+        debuginfo(prj='ds')
         num_params = self.get_model_num_params()
         total_gpus = self.exp_num_nodes * self.exp_num_gpus
         fp16_enabled = self.fp16_enabled()
@@ -328,21 +339,25 @@ class Autotuner:
         stage = config_zero.get(ZERO_OPTIMIZATION_STAGE, ZERO_OPTIMIZATION_STAGE_DEFAULT)
         template_config = {}
         if stage == 0:
+            debuginfo(prj='ds')
             template_path = DEFAULT_TEMPLATE_PATH_ZERO_0
             template_config = hjson.load(open(template_path, 'r'))
             prefix = "z0_"
 
         elif stage == 1:
+            debuginfo(prj='ds')
             template_path = DEFAULT_TEMPLATE_PATH_ZERO_1
             template_config = hjson.load(open(template_path, 'r'))
             prefix = "z1_"
 
         elif stage == 2:
+            debuginfo(prj='ds')
             template_path = DEFAULT_TEMPLATE_PATH_ZERO_2
             template_config = hjson.load(open(template_path, 'r'))
             prefix = "z2_"
 
         elif stage == 3:
+            debuginfo(prj='ds')
             template_path = DEFAULT_TEMPLATE_PATH_ZERO_3
             template_config = hjson.load(open(template_path, 'r'))
             model_info = self.model_info
@@ -353,6 +368,7 @@ class Autotuner:
                 template_config[ZERO_OPTIMIZATION]['stage3_param_persistence_threshold'] = 10 * hs
             prefix = "z3_"
         else:
+            debuginfo(prj='ds')
             return exps
 
         # replace the corresponding parameter values if the user specifies them in the DeepSpeed configuration file
@@ -404,7 +420,9 @@ class Autotuner:
     def tune(self):
         """ Tunes Zero stages, micro batch size per GPU, and other Zero configurations. Performance metrics of different tuning spaces are recorded in self.records.
         """
+        debuginfo(prj='ds')
         if has_mlflow:
+            debuginfo(prj='ds')
             self.mlflow_parent_id = os.environ['MLFLOW_RUN_ID']
             mlflow.start_run(run_id=self.mlflow_parent_id)
 
@@ -521,6 +539,7 @@ class Autotuner:
             mlflow.end_run()
 
     def tune_space(self, tuning_space, prev_max_mbs=0, prev_best_mbs=0, prev_best_metric_val=0):
+        debuginfo(prj='ds')
         config_zero = tuning_space.get(ZERO_OPTIMIZATION, {})
         stage = config_zero.get(ZERO_OPTIMIZATION_STAGE, None)
         tuning_space_name = TUNING_MICRO_BATCH_SIZE_PREFIX + str(stage)
@@ -542,6 +561,7 @@ class Autotuner:
 
         if TRAIN_MICRO_BATCH_SIZE_PER_GPU in self.user_config and isinstance(
                 self.user_config[TRAIN_MICRO_BATCH_SIZE_PER_GPU], list):
+            debuginfo(prj='ds')
             # user-specified micro batch size per gpu is a list which overwrites the default tuning behavior
             tuning_micro_batch_sizes = [
                 s for s in self.user_config[TRAIN_MICRO_BATCH_SIZE_PER_GPU] if isinstance(s, int)
@@ -552,6 +572,7 @@ class Autotuner:
             max_train_batch_size_per_gpu = max_micro_batch_size * gas
             tuning_micro_batch_sizes_overwritten = True
         else:
+            debuginfo(prj='ds')
             # auto-detects the list of micro batch sizes to tune
             min_micro_batch_size, max_micro_batch_size = self.get_min_max_micro_batch_size(
                 stage, prev_max_mbs, calculated_max_micro_batch_size)
@@ -609,10 +630,13 @@ class Autotuner:
 
         logger.info(f'Tuner type is {self.autotuning_config.tuner_type}')
         if self.autotuning_config.tuner_type == AUTOTUNING_TUNER_MODELBASED:
+            debuginfo(prj='ds')
             t = ModelBasedTuner(exps, self.rm, self.metric(), tuning_space)
         elif self.autotuning_config.tuner_type == AUTOTUNING_TUNER_RANDOM:
+            debuginfo(prj='ds')
             t = RandomTuner(exps, self.rm, self.metric())
         else:
+            debuginfo(prj='ds')
             t = GridSearchTuner(exps, self.rm, self.metric())
 
         sample_size = len(self.rm.nodes) * self.rm.num_gpus_per_node // (self.exp_num_gpus * self.exp_num_nodes)
@@ -628,9 +652,11 @@ class Autotuner:
         full_best_metric_val = full_best_record[1] if full_best_record else -1
 
         if full_best_metric_val > fast_best_metric_val:
+            debuginfo(prj='ds')
             best_metric_val = full_best_metric_val
             best_mbs = full_best_record[0][DS_CONFIG][TRAIN_MICRO_BATCH_SIZE_PER_GPU] if full_best_record else -1
         else:
+            debuginfo(prj='ds')
             best_metric_val = fast_best_metric_val
             best_mbs = fast_best_mbs
 
@@ -639,7 +665,11 @@ class Autotuner:
 
     def get_plateau_mbs(self, tuning_space_name):
         if tuning_space_name not in self.records:
+            debuginfo(prj='ds')
             return 0
+        
+        debuginfo(prj='ds')
+
         space_records = self.records[tuning_space_name]
         sorted_space_records = sorted(space_records, key=lambda x: x[0][DS_CONFIG][TRAIN_MICRO_BATCH_SIZE_PER_GPU])
         prev_metric_val = None
@@ -658,6 +688,7 @@ class Autotuner:
 
     def get_model_num_params(self):
         if self.model_info and "num_params" in self.model_info:
+            debuginfo(prj='ds')
             return self.model_info["num_params"]
 
     def model_info_profile_run(self):
@@ -669,6 +700,7 @@ class Autotuner:
         logger.info("Starting model info profile run.")
         model_info = self.autotuning_config.model_info
         if model_info and MODEL_INFO_NUM_PARAMS in model_info:
+            debuginfo(prj='ds')
             return model_info
 
         ds_config = copy.deepcopy(self.user_config)
@@ -706,12 +738,16 @@ class Autotuner:
 
     def update_records(self, space_name, exp, metric_val, num_exps):
         if space_name not in self.records:
+            debuginfo(prj='ds')
             self.records[space_name] = [(exp, metric_val, num_exps)]
         else:
+            debuginfo(prj='ds')
             self.records[space_name].append((exp, metric_val, num_exps))
 
     def get_best_space_record(self, space_name):
+        debuginfo(prj='ds')
         if space_name not in self.records:
+            debuginfo(prj='ds')
             return None
         space_records = self.records[space_name]
         best_space_record = None
@@ -725,6 +761,7 @@ class Autotuner:
         return best_space_record
 
     def get_best_space_records(self):
+        debuginfo(prj='ds')
         best_space_records = {}
         global_best_record = None
         for space_name, space_records in self.records.items():
@@ -739,6 +776,7 @@ class Autotuner:
 
     def run_tuning_micro_batch_sizes(self, tuning_micro_batch_sizes, max_train_batch_size_per_gpu,
                                      min_micro_batch_size, stage, tuning_micro_batch_sizes_overwritten):
+        debuginfo(prj='ds')
         assert tuning_micro_batch_sizes, "the tuning micro batch size list is empty"
         tuning_micro_batch_sizes.sort()
         max_micro_batch_size = tuning_micro_batch_sizes[-1]
@@ -861,11 +899,14 @@ class Autotuner:
 
         # search for the min micro batch size
         if min_micro_batch_size < 1:
+            debuginfo(prj='ds')
             if TRAIN_MICRO_BATCH_SIZE_PER_GPU in self.user_config and isinstance(
                     self.user_config[TRAIN_MICRO_BATCH_SIZE_PER_GPU], int):
+                debuginfo(prj='ds')
                 # user specifies train_micro_batch_size_per_gpu as an int
                 mbs = int(self.user_config[TRAIN_MICRO_BATCH_SIZE_PER_GPU])
             else:
+                debuginfo(prj='ds')
                 # user does not specify train_micro_batch_size_per_gpu or sets it to "auto" when using Hugging Face
                 val = self.get_val_from_user_args(TRAIN_MICRO_BATCH_SIZE_PER_GPU)
                 if val:
@@ -880,10 +921,12 @@ class Autotuner:
             exp_name = tuning_space_name + "_gas" + str(gas) + "_tmbspg" + str(mbs)
             exp, metric_val = self.run_ds_config(ds_config, exp_name)
             if metric_val:
+                debuginfo(prj='ds')
                 self.update_records(tuning_space_name, exp, metric_val, 1)
                 used_micro_batch_sizes.append(mbs)
                 min_micro_batch_size = mbs
             else:
+                debuginfo(prj='ds')
                 self.update_records(tuning_space_name, exp, 0, 1)
                 logger.info(f"User-specified micro batch size per GPU {mbs} does not run")
                 if self.min_train_micro_batch_size_per_gpu() == mbs:
@@ -903,6 +946,7 @@ class Autotuner:
                 min_micro_batch_size = mbs
                 used_micro_batch_sizes.append(mbs)
         else:
+            debuginfo(prj='ds')
             ds_config[TRAIN_MICRO_BATCH_SIZE_PER_GPU] = min_micro_batch_size
             ds_config[GRADIENT_ACCUMULATION_STEPS] = gas
             ds_config[TRAIN_BATCH_SIZE] = min_micro_batch_size * gas * \
@@ -939,11 +983,13 @@ class Autotuner:
 
         space_records = self.records[tuning_space_name] if tuning_space_name in self.records else []
         if space_records:
+            debuginfo(prj='ds')
             prev_idx = min(range(len(space_records)),
                            key=lambda i: abs(space_records[i][0][DS_CONFIG][TRAIN_MICRO_BATCH_SIZE_PER_GPU] -
                                              min_micro_batch_size))
             prev_metric_val = space_records[prev_idx][1]
         else:
+            debuginfo(prj='ds')
             prev_metric_val = None
 
         low = min_micro_batch_size
@@ -979,6 +1025,7 @@ class Autotuner:
         return min_micro_batch_size, max_micro_batch_size
 
     def get_gas_from_user_config(self):
+        debuginfo(prj='ds')
         gas = 1
         if GRADIENT_ACCUMULATION_STEPS in self.user_config:
             gas_in_config = self.user_config[GRADIENT_ACCUMULATION_STEPS]
@@ -995,6 +1042,7 @@ class Autotuner:
         return gas
 
     def get_val_from_user_args(self, ds_name):
+        debuginfo(prj='ds')
         arg_mappings = self.autotuning_config.arg_mappings
         user_args = self.args.user_args
         if arg_mappings and ds_name in arg_mappings:
@@ -1026,9 +1074,11 @@ class Autotuner:
         # GRAD_ACC_STEPS=$(( ${TARGET_GLOBAL_BATCH_SIZE} / (${BATCH_SIZE} * ${DP_SIZE}) ))
         if self.max_train_batch_size(
         ) and self.max_train_batch_size() > 0:  # if the user specifies a max_train_batch_size
+            debuginfo(prj='ds')
             max_train_batch_size_per_gpu = self.max_train_batch_size() * self.mp_size() // (self.exp_num_gpus *
                                                                                             self.exp_num_nodes)
         else:
+            debuginfo(prj='ds')
             gas = self.get_gas_from_user_config()
             max_train_batch_size_per_gpu = max_micro_batch_size * gas // self.mp_size()
         logger.info(f"max_train_batch_size_per_gpu = {max_train_batch_size_per_gpu}")
@@ -1050,6 +1100,7 @@ class Autotuner:
         return ls, max_train_batch_size_per_gpu
 
     def run_ds_config(self, ds_config, exp_name):
+        debuginfo(prj='ds')
         exp_config = {}
         exp_config['name'] = exp_name
         exp_config[DS_CONFIG] = ds_config
@@ -1070,6 +1121,7 @@ class Autotuner:
         return exp, metric_val
 
     def write_optimal_config(self):
+        debuginfo(prj='ds')
         best_space_records = self.get_best_space_records()
         if GLOBAL_TUNING_SPACE not in best_space_records:
             return
@@ -1102,9 +1154,11 @@ class Autotuner:
             "ds_config_optimal.json" describing the optimal DeepSpeed configuration as well the command used to launch training "cmd_optimal.txt" are saved to self.results_dir.
         """
         if self.optimal_cmd:
+            debuginfo(prj='ds')
             result = subprocess.Popen(self.optimal_cmd)
             result.wait()
 
             logger.info(f"Done running with the optimal DeepSpeed configuration using {self.optimal_cmd}")
         else:
+            debuginfo(prj='ds')
             logger.info(f"No optimal DeepSpeed configuration found by autotuning.")

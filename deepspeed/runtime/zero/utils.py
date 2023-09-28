@@ -15,6 +15,7 @@ from deepspeed.ops.adam import FusedAdam
 from deepspeed.utils.nvtx import instrument_w_nvtx
 from deepspeed.accelerator import get_accelerator
 
+from pydebug import debuginfo
 
 def _initialize_parameter_parallel_groups(parameter_parallel_size=None):
     data_parallel_size = int(dist.get_world_size())
@@ -29,6 +30,7 @@ def _initialize_parameter_parallel_groups(parameter_parallel_size=None):
         group = dist.new_group(ranks)
         if rank in ranks:
             my_group = group
+    debuginfo(prj='ds', info='my_group:' + str(my_group))
     return my_group
 
 
@@ -42,6 +44,7 @@ ZERO_SUPPORTED_OPTIMIZERS = [
 
 # Add apex FusedAdam to supported list if apex is installed
 try:
+    debuginfo(prj='ds')
     import apex
     if hasattr(apex, 'optimizers') and hasattr(apex.optimizers, 'FusedAdam'):
         ZERO_SUPPORTED_OPTIMIZERS.append(apex.optimizers.FusedAdam)
@@ -50,6 +53,7 @@ except ImportError:
 
 
 def is_zero_supported_optimizer(optimizer):
+    debuginfo(prj='ds')
     if dist.get_rank() == 0:
         logger.info(f'Checking ZeRO support for optimizer={optimizer.__class__.__name__} type={type(optimizer)}')
     return type(optimizer) in ZERO_SUPPORTED_OPTIMIZERS
@@ -67,6 +71,8 @@ def get_lst_from_rank0(lst: List[int]) -> None:
         device=torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"])),
         requires_grad=False,
     )
+    debuginfo(prj='ds')
+
     dist.broadcast(lst_tensor, src=0, async_op=False)
 
     return list(lst_tensor.cpu().numpy())
@@ -74,6 +80,7 @@ def get_lst_from_rank0(lst: List[int]) -> None:
 
 @instrument_w_nvtx
 def assert_ints_same_as_other_ranks(ints: List[int]) -> None:
+    debuginfo(prj='ds')
     """
     NOTE: creates both communication and synchronization overhead so should be
     used sparingly

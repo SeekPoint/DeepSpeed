@@ -9,7 +9,8 @@ fcntl = None
 # for debug purposes map module and param objects to their fully qualified names
 module_names = {}
 param_names = {}
-
+from pydebug import debuginfo
+debuginfo(prj='ds')
 
 def debug_extract_module_and_param_names(model):
     # extract the fully qualified names as soon as the model is acquired

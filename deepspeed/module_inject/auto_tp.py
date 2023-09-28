@@ -8,17 +8,19 @@ import re
 
 from torch import nn
 from .replace_policy import replace_policies
-
+from pydebug import debuginfo
 
 class AutoTP():
 
     def in_module_list(module, module_list):
+        debuginfo(prj='ds')
         for item in module_list:
             if type(item).__name__ == type(module).__name__:
                 return True
         return False
 
     def get_module_list(model):
+        debuginfo(prj='ds')
         mlist = []
         for child in model.children():
             if isinstance(child, nn.ModuleList):
@@ -29,9 +31,11 @@ class AutoTP():
                         mlist = mlist + [module]
             else:
                 mlist = mlist + AutoTP.get_module_list(child)
+        print("mlist :", mlist)
         return mlist
 
     def supported(model):
+        debuginfo(prj='ds')
         unsupported = ['codegen', 'deberta', 'flaubert', 'fsmt', 'gpt2', 'led', 'longformer', 'xlm', 'xlnet']
         model = str(model)
         key = re.search(r": (.*?)Model", model)
@@ -45,6 +49,7 @@ class AutoTP():
         return True
 
     def get_layers(parent, module):
+        debuginfo(prj='ds')
         layer_list = []
         for key, submodule in module._modules.items():
             if isinstance(submodule, nn.Linear):
@@ -53,9 +58,11 @@ class AutoTP():
                 layer_list = layer_list + ["ln"]
             else:
                 layer_list = layer_list + AutoTP.get_layers(key, submodule)
+        print("layer_list :", layer_list)
         return layer_list
 
     def update_policy_list(policy_list, new_module, new_gems):
+        debuginfo(prj='ds')
         if len(policy_list):
             for i, policy in enumerate(policy_list):
                 # if module already exists in policy, combine gems and remove duplicates
@@ -64,9 +71,11 @@ class AutoTP():
                     policy_list[i] = tuple([type(new_module), new_gems])
                     return policy_list
         policy_list.append(tuple([type(new_module), new_gems]))
+        print("update_policy_list policy_list :", policy_list)
         return policy_list
 
     def kernel_supported(module_list):
+        debuginfo(prj='ds')
         policy = []
         for plcy in replace_policies:
             # instantiate a throw-away policy in order to populate the _orig_layer_class
@@ -82,6 +91,7 @@ class AutoTP():
         return False
 
     def tp_parser(model):
+        debuginfo(prj='ds')
         policy_list = []
         module_list = []
         layer_list = []
@@ -121,4 +131,5 @@ class AutoTP():
                 gem_list = []
         assert len(policy_list), "AutoTP not supported for model. Please use kernel injection since container policy for model exists." \
         if AutoTP.kernel_supported(module_list) else "Not able to determine model policy automatically. Please provide policy."
+        print("policy_list :", policy_list)
         return policy_list

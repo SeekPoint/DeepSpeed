@@ -7,7 +7,7 @@ import torch
 import triton
 import triton.language as tl
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 @triton.jit
 def residual_add_bias_kernel(
@@ -43,12 +43,16 @@ def residual_add_bias_kernel(
 
     if mlp_after_attn:
         if pre_attn_norm:
+            debuginfo(prj='ds')
             output = tl_hidden_state + (tl_residual + tl_final_bias + tl_attn_output + tl_attn_bias) / mp_size
         else:
+            debuginfo(prj='ds')
             output = tl_hidden_state + tl_residual + tl_final_bias
     else:
+        debuginfo(prj='ds')
         output = tl_hidden_state + tl_attn_output + (tl_residual + tl_final_bias) / mp_size
         if add_attn_bias:
+            debuginfo(prj='ds')
             output += tl_attn_bias / mp_size
 
     tl.store(output_ptr + offsets, output, mask=mask)
@@ -57,6 +61,7 @@ def residual_add_bias_kernel(
 def residual_add_bias(hidden_state: torch.Tensor, residual: torch.Tensor, attn_output: torch.Tensor,
                       attn_bias: torch.Tensor, final_bias: torch.Tensor, mp_size: int, mlp_after_attn: bool,
                       add_attn_bias: bool, pre_attn_norm: bool):
+    debuginfo(prj='ds')
     # check that all tensors are on the same device
     assert get_accelerator().on_accelerator(hidden_state) \
         and get_accelerator().on_accelerator(residual) \

@@ -5,11 +5,12 @@
 
 import torch
 import copy
-
+from pydebug import debuginfo
 
 class Experts(torch.nn.Module):
 
     def __init__(self, expert, num_local_experts=1, expert_group_name=None):
+        debuginfo(prj='ds', info='Experts init')
         super(Experts, self).__init__()
 
         self.deepspeed_experts = torch.nn.ModuleList([copy.deepcopy(expert) for i in range(num_local_experts)])
@@ -23,6 +24,7 @@ class Experts(torch.nn.Module):
                 param.group_name = expert_group_name
 
     def forward(self, inputs):
+        debuginfo(prj='ds')
         chunks = inputs.chunk(self.num_local_experts, dim=1)
         expert_outputs = []
         for chunk, expert in zip(chunks, self.deepspeed_experts):

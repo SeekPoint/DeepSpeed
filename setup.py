@@ -24,7 +24,10 @@ import subprocess
 from setuptools import setup, find_packages
 from setuptools.command import egg_info
 import time
-
+from pydebug import debuginfo
+#why pip install -e . cannot see it, 
+# but python setup.py install and python setup.py clean can see it!
+debuginfo(prj='ds', info='start setup.py')  
 torch_available = True
 try:
     import torch
@@ -85,6 +88,8 @@ if torch_available and torch.cuda.is_available():
             cupy = f"cupy-cuda{cuda_major_ver}{cuda_minor_ver}"
         else:
             cupy = f"cupy-cuda{cuda_major_ver}x"
+    
+    debuginfo(prj='ds', info='cupy:' + str(cupy))
 
     if cupy:
         extras_require['1bit'].append(cupy)
@@ -103,6 +108,7 @@ cmdclass = {}
 if torch_available:
     from accelerator import get_accelerator
     cmdclass['build_ext'] = get_accelerator().build_extension().with_options(use_ninja=False)
+    print("yk==cmdclass['build_ext']:", cmdclass['build_ext'])
 
 if torch_available:
     TORCH_MAJOR = torch.__version__.split('.')[0]
@@ -272,6 +278,8 @@ print(f'ext_modules={ext_modules}')
 thisdir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(thisdir, 'README.md'), encoding='utf-8') as fin:
     readme_text = fin.read()
+
+debuginfo(prj='ds', info='extras_require:' + str(extras_require))
 
 start_time = time.time()
 

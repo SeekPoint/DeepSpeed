@@ -7,7 +7,7 @@ from .compress import get_module_name
 from .constants import *
 from .helper import recursive_getattr
 from deepspeed.utils import logger
-
+from pydebug import debuginfo
 
 class compression_scheduler():
     '''
@@ -15,6 +15,7 @@ class compression_scheduler():
     '''
 
     def __init__(self, model, compression_config):
+        debuginfo(prj='ds', info='compression_scheduler init')
         self.model = model
         self.compression_config = compression_config
         self.make_init()
@@ -31,6 +32,7 @@ class compression_scheduler():
         }
 
     def make_init(self):
+        debuginfo(prj='ds')
         self.different_compression_methods = {}
         for method, method_content in self.compression_config.items():
             if LAYER_REDUCTION in method:
@@ -63,10 +65,13 @@ class compression_scheduler():
         # check weight quantization
         wq = self.different_compression_methods[WEIGHT_QUANTIZATION]
         if not wq[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = wq[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in wq[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -81,10 +86,13 @@ class compression_scheduler():
         # check activation quantization
         aq = self.different_compression_methods[ACTIVATION_QUANTIZATION]
         if not aq[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = aq[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in aq[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -97,12 +105,14 @@ class compression_scheduler():
         # check sparse pruning
         sp = self.different_compression_methods[SPARSE_PRUNING]
         if not sp[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = sp[SHARED_PARAMETERS]
-            if self.training_steps >= shared_parameters[
-                    TECHNIQUE_SCHEDULE_OFFSET] and self.training_steps <= shared_parameters[
-                        TECHNIQUE_SCHEDULE_OFFSET_END]:
+            if shared_parameters[TECHNIQUE_SCHEDULE_OFFSET] <= self.training_steps <= shared_parameters[
+                    TECHNIQUE_SCHEDULE_OFFSET_END]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in sp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -115,10 +125,13 @@ class compression_scheduler():
         # check head pruning
         hp = self.different_compression_methods[HEAD_PRUNING]
         if not hp[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = hp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in hp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -131,10 +144,13 @@ class compression_scheduler():
         # check row pruning
         rp = self.different_compression_methods[ROW_PRUNING]
         if not rp[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = rp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in rp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -147,10 +163,13 @@ class compression_scheduler():
         # check channel pruning
         cp = self.different_compression_methods[CHANNEL_PRUNING]
         if not cp[TECHNIQUE_ENABLED]:
+            debuginfo(prj='ds')
             return
         else:
+            debuginfo(prj='ds')
             shared_parameters = cp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
+                debuginfo(prj='ds')
                 for group_name, module_name_list, method_parameters in cp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -160,6 +179,7 @@ class compression_scheduler():
                     self.verbose[CHANNEL_PRUNING] = True
 
     def check_all_modules(self):
+        debuginfo(prj='ds')
         # check all different compression methods we have
         self.check_weight_quantization()
         self.check_activation_quantization()
@@ -169,6 +189,8 @@ class compression_scheduler():
         self.check_channel_pruning()
 
     def step(self, step_zero_check=False):
+        debuginfo(prj='ds')
         if not step_zero_check:
+            debuginfo(prj='ds')
             self.training_steps += 1
         self.check_all_modules()

@@ -27,7 +27,7 @@ from deepspeed.utils import logger
 from deepspeed.runtime.utils import copy_to_device, move_to_device, see_memory_usage, bwc_tensor_model_parallel_rank
 from deepspeed.utils.timer import SynchronizedWallClockTimer as Timers
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 # DeepSpeed Checkpointing Enabled or Disabled
 deepspeed_checkpointing_enabled = False
 
@@ -64,6 +64,7 @@ cuda_device = None
 
 def detach_variable(inputs, device=None):
     if isinstance(inputs, tuple):
+        debuginfo(prj='ds')
         out = []
         for inp in inputs:
             if not isinstance(inp, torch.Tensor):
@@ -95,11 +96,13 @@ def _set_cuda_rng_state(new_state, device=-1):
     major performance issues for +4 GPU cases.
     """
     if hasattr(_C, '_cuda_setRNGState') and callable(_C._cuda_setRNGState):
+        debuginfo(prj='ds')
         # older PyTorch
         def cb():
             with get_accelerator().device(device):
                 _C._cuda_setRNGState(new_state)
     else:
+        debuginfo(prj='ds')
         # newer PyTorch
         if device == -1:
             device = torch.device(get_accelerator().device_name())
@@ -128,27 +131,32 @@ class CudaRNGStatesTracker:
     """
 
     def __init__(self):
+        debuginfo(prj='ds', info='CudaRNGStatesTracker init')
         # Map from a string name to the cuda rng state.
         self.states_ = {}
         # Seeds are just for book keeping and ensure no seed is set twice.
         self.seeds_ = set()
 
     def reset(self):
+        debuginfo(prj='ds')
         """Set to the initial state (no tracker)."""
         self.states_ = {}
         self.seeds_ = set()
 
     def get_states(self):
+        debuginfo(prj='ds')
         """Get rng states. Copy the dictionary so we have direct
         pointers to the states, not just a pointer to the dictionary."""
         return copy.copy(self.states_)
 
     def set_states(self, states):
+        debuginfo(prj='ds')
         """Set the rng states. For efficiency purposes, we do not check
         the size of seed for compatibility."""
         self.states_ = states
 
     def add(self, name, seed):
+        debuginfo(prj='ds')
         """Track the rng state."""
         # Check seed is not already used.
         if seed in self.seeds_:
@@ -167,6 +175,7 @@ class CudaRNGStatesTracker:
 
     @contextlib.contextmanager
     def fork(self, name=_MODEL_PARALLEL_RNG_TRACKER_NAME):
+        debuginfo(prj='ds')
         """Fork the cuda rng state, perform operations, and exit with
         the original state."""
         # Check if we have added the state
@@ -191,6 +200,7 @@ _CUDA_RNG_STATE_TRACKER = CudaRNGStatesTracker()
 
 
 def get_cuda_rng_tracker():
+    debuginfo(prj='ds')
     """Get cuda rng tracker."""
     return _CUDA_RNG_STATE_TRACKER
 
@@ -212,6 +222,7 @@ def model_parallel_cuda_manual_seed(seed):
                               groups. This is used for example for dropout in
                               model parallel regions.
     """
+    debuginfo(prj='ds')
     global mpu
 
     tp_rank = bwc_tensor_model_parallel_rank(mpu)
@@ -237,6 +248,7 @@ def model_parallel_cuda_manual_seed(seed):
 
 
 def get_partition_start(item):
+    debuginfo(prj='ds')
     global mp_rank, mp_size, mp_group
     size = item.numel()
     partition_size = size / mp_size
@@ -245,6 +257,7 @@ def get_partition_start(item):
 
 
 def get_partition_size(item):
+    debuginfo(prj='ds')
     global mp_rank, mp_size, mp_group
     size = item.numel()
     assert size % mp_size == 0, "Doesn't handle if partition activation if item is not divisible by mp size"
@@ -253,6 +266,7 @@ def get_partition_size(item):
 
 
 def gather_partitioned_activations(tensors, device=None):
+    debuginfo(prj='ds')
     global mp_rank, mp_size, mp_group
     assert len(tensors) % 2 == 0, f'Expected even count of tensors, instead got {len(tensors)}'
     inputs = []
@@ -305,10 +319,12 @@ def extract_tensors(all_objects):
         tuple: Containing tensors, non-tensors, and bools of whether each position in original list/tuple was a tensor.
 
     """
+    debuginfo(prj='ds')
     tensor_objects = [v for v in all_objects if torch.is_tensor(v)]
     non_tensor_objects = [v for v in all_objects if not torch.is_tensor(v)]
     tensor_flags = [torch.is_tensor(v) for v in all_objects]
     if type(all_objects) is tuple:
+        debuginfo(prj='ds')
         return tuple(tensor_objects), tuple(non_tensor_objects), tuple(tensor_flags)
     return tensor_objects, non_tensor_objects, tensor_flags
 
@@ -333,6 +349,7 @@ def merge_tensors(tensor_objects, non_tensor_objects, tensor_flags):
 
     # remove the flags that are assigned to the size of the flattened tensors
     if PARTITION_ACTIVATIONS:
+        debuginfo(prj='ds')
         real_tensor_flags = []
         previous_flag = False
         for flag in tensor_flags:
@@ -342,6 +359,7 @@ def merge_tensors(tensor_objects, non_tensor_objects, tensor_flags):
             previous_flag = flag
             real_tensor_flags.append(flag)
     else:
+        debuginfo(prj='ds')
         real_tensor_flags = tensor_flags
 
     for is_tensor in real_tensor_flags:
@@ -359,11 +377,13 @@ def is_activation_to_checkpoint(item):
     """
         Is an activation to be checkpointed
     """
+    debuginfo(prj='ds')
     global mp_size
     return torch.is_tensor(item) and item.is_floating_point() and item.numel() >= mp_size
 
 
 def partition_activations(args, cpu_checkpoint, contiguous_checkpoint):
+    debuginfo(prj='ds')
     global contiguous_data_buffers, data_offsets
 
     inputs = []
@@ -419,6 +439,7 @@ def partition_activations(args, cpu_checkpoint, contiguous_checkpoint):
 
 
 def get_partitioned_activations_for_backward(args, inputs, contiguous_checkpoint):
+    debuginfo(prj='ds')
     global contiguous_size_buffers, size_offsets
 
     new_args = []
@@ -459,6 +480,7 @@ def get_partitioned_activations_for_backward(args, inputs, contiguous_checkpoint
 
 
 def get_cpu_activations_for_backward(args, inputs):
+    debuginfo(prj='ds')
     new_args = []
     for i, (arg, inp) in enumerate(zip(args, inputs)):
         if not is_activation_to_checkpoint(arg):
@@ -484,21 +506,26 @@ class CheckpointFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, run_function, all_outputs, *args):
+        debuginfo(prj='ds')
         global mpu, timers, SYNCHRONIZE, PROFILE_TIME
 
         def save_args_for_backward(*all_args):
+            debuginfo(prj='ds')
             tensor_args, non_tensor_args, tensor_flags = extract_tensors(all_objects=all_args)
             ctx.deepspeed_saved_tensors = tensor_args
             ctx.non_tensor_args = non_tensor_args
             ctx.tensor_flags = tensor_flags
 
         if SYNCHRONIZE:
+            debuginfo(prj='ds')
             get_accelerator().synchronize()
 
         if timers is None and PROFILE_TIME:
+            debuginfo(prj='ds')
             timers = Timers()
 
         if PROFILE_TIME:
+            debuginfo(prj='ds')
             timers('forward').start()
 
         ctx.run_function = run_function
@@ -507,16 +534,20 @@ class CheckpointFunction(torch.autograd.Function):
         global contiguous_data_buffers, contiguous_size_buffers
         global data_offsets, size_offsets
         if mp_rank is None:
+            debuginfo(prj='ds')
             if mpu is not None:
                 if hasattr(mpu, 'get_tensor_model_parallel_rank'):
+                    debuginfo(prj='ds')
                     mp_rank = mpu.get_tensor_model_parallel_rank()
                     mp_size = mpu.get_tensor_model_parallel_world_size()
                     mp_group = mpu.get_tensor_model_parallel_group()
                 else:
+                    debuginfo(prj='ds')
                     mp_rank = mpu.get_model_parallel_rank()
                     mp_size = mpu.get_model_parallel_world_size()
                     mp_group = mpu.get_model_parallel_group()
             else:
+                debuginfo(prj='ds')
                 mp_rank = 0
                 mp_size = 1
                 mp_group = None
@@ -537,8 +568,10 @@ class CheckpointFunction(torch.autograd.Function):
             transport_stream = get_accelerator().Stream(device=cuda_device)
 
         if PARTITION_ACTIVATIONS:
+            debuginfo(prj='ds')
             inputs = partition_activations(args, CPU_CHECKPOINT, CONTIGUOUS_CHECKPOINTING)
         elif CPU_CHECKPOINT:
+            debuginfo(prj='ds')
             inputs = copy_to_device(args, device=torch.device('cpu'), criterion_func=is_activation_to_checkpoint)
 
         # just in case something funky is happening such as reuse of inputs
@@ -558,49 +591,62 @@ class CheckpointFunction(torch.autograd.Function):
         del inputs_cuda
 
         if PARTITION_ACTIVATIONS:
+            debuginfo(prj='ds')
             new_args = get_partitioned_activations_for_backward(args, inputs, CONTIGUOUS_CHECKPOINTING)
             assert len(new_args) % 2 == 0, f'save_for_backward called with odd number of args, {len(new_args)}'
             save_args_for_backward(*new_args)
         elif CPU_CHECKPOINT:
+            debuginfo(prj='ds')
             new_args = get_cpu_activations_for_backward(args, inputs)
             save_args_for_backward(*new_args)
         else:
+            debuginfo(prj='ds')
             save_args_for_backward(*args)
 
         if PROFILE_TIME:
+            debuginfo(prj='ds')
             timers('forward').stop()
             timers.log(['forward'])
         if SYNCHRONIZE:
+            debuginfo(prj='ds')
             get_accelerator().synchronize()
 
         # Tensors returned from forward() may not be differentiable.
         if torch.is_tensor(outputs):
+            debuginfo(prj='ds')
             non_grad_outputs = [outputs] if not outputs.is_floating_point() else []
         else:
+            debuginfo(prj='ds')
             non_grad_outputs = [o for o in outputs if torch.is_tensor(o) and not o.is_floating_point()]
         ctx.mark_non_differentiable(*non_grad_outputs)
 
         if torch.is_tensor(outputs):
+            debuginfo(prj='ds')
             all_outputs += [outputs]
             return outputs
         else:
+            debuginfo(prj='ds')
             all_outputs += outputs
             outputs, _, _ = extract_tensors(all_objects=outputs)
             return tuple(outputs)
 
     @staticmethod
     def backward(ctx, *grads):
+        debuginfo(prj='ds')
         global timers
         see_memory_usage("In backward", force=False)
         # removing pointers to the contiguous buffer memory
         # so that they can be garbage collected once the checkpoints
         # have been used
         if SYNCHRONIZE:
+            debuginfo(prj='ds')
             get_accelerator().synchronize()
         if PROFILE_TIME:
+            debuginfo(prj='ds')
             timers('backward').start()
 
         if CONTIGUOUS_CHECKPOINTING:
+            debuginfo(prj='ds')
             global data_offsets, size_offsets
             global contiguous_data_buffers, contiguous_size_buffers
 
@@ -622,14 +668,17 @@ class CheckpointFunction(torch.autograd.Function):
         global cuda_device, transport_stream, PARTITION_ACTIVATIONS
 
         if PARTITION_ACTIVATIONS:
+            debuginfo(prj='ds')
             # with get_accelerator().stream(transport_stream):
             inputs = gather_partitioned_activations(ctx.deepspeed_saved_tensors,
                                                     device=cuda_device if CPU_CHECKPOINT else None)
             detached_inputs = detach_variable(inputs)
         elif CPU_CHECKPOINT:
+            debuginfo(prj='ds')
             inputs = move_to_device(ctx.deepspeed_saved_tensors, cuda_device, is_activation_to_checkpoint)
             detached_inputs = detach_variable(inputs)
         else:
+            debuginfo(prj='ds')
             inputs = ctx.deepspeed_saved_tensors
             detached_inputs = detach_variable(inputs)
 
@@ -664,6 +713,7 @@ class CheckpointFunction(torch.autograd.Function):
         get_cuda_rng_tracker().set_states(bwd_cuda_rng_state_tracker)
 
         if isinstance(outputs, torch.Tensor):
+            debuginfo(prj='ds')
             outputs = (outputs, )
 
         # Filter out non tensor outputs
@@ -691,9 +741,11 @@ class CheckpointFunction(torch.autograd.Function):
         see_memory_usage("After backward checkpointing code after backward", force=False)
 
         if PROFILE_TIME:
+            debuginfo(prj='ds')
             timers('backward').stop()
             timers.log(['backward'])
         if SYNCHRONIZE:
+            debuginfo(prj='ds')
             get_accelerator().synchronize()
         ret_list = [None, None]  # first None for ctx
         for inp in detached_inputs:
@@ -712,8 +764,10 @@ def checkpoint(function, *args):
     all_outputs = []
     CheckpointFunction.apply(function, all_outputs, *args)
     if len(all_outputs) == 1:
+        debuginfo(prj='ds')
         return all_outputs[0]
     else:
+        debuginfo(prj='ds')
         return tuple(all_outputs)
 
 
@@ -725,6 +779,7 @@ def partition_activations_in_checkpoint(partition_activation):
 
 
 def set_num_layers(nlayers):
+    debuginfo(prj='ds')
     global num_layers
     num_layers = nlayers
 
@@ -740,6 +795,7 @@ def reset():
     Return:
         None
     """
+    debuginfo(prj='ds')
     if CONTIGUOUS_CHECKPOINTING:
         global data_offsets, size_offsets
         global contiguous_data_buffers, contiguous_size_buffers
@@ -756,6 +812,7 @@ def reset():
 
 
 def _configure_using_config_file(config, mpu=None):
+    debuginfo(prj='ds')
     global num_layers, PARTITION_ACTIVATIONS, CONTIGUOUS_CHECKPOINTING, \
         CPU_CHECKPOINT, SYNCHRONIZE, PROFILE_TIME
 
@@ -771,6 +828,7 @@ def _configure_using_config_file(config, mpu=None):
 
 
 def _configure_defaults():
+    debuginfo(prj='ds')
 
     global mpu, num_layers, deepspeed_checkpointing_enabled
 
@@ -831,6 +889,7 @@ def configure(
     Returns:
         None
     """
+    debuginfo(prj='ds')
     global mpu, num_layers, deepspeed_checkpointing_enabled
 
     global PARTITION_ACTIVATIONS, CONTIGUOUS_CHECKPOINTING, \

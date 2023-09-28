@@ -6,11 +6,12 @@
 import torch
 from ..module_inject.replace_policy import HFBertLayerPolicy, replace_policies
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 class WeightQuantization(object):
 
     def __init__(self, mlp_extra_grouping=True, mp_size=1):
+        debuginfo(prj='ds', info='WeightQuantization init')
         self.dense_scales = []
         self.qkv_scales = []
         self.mlp4hh_scales = []
@@ -19,6 +20,7 @@ class WeightQuantization(object):
         self.mp_size = mp_size
 
     def quantize_data(self, data, quantize_bits, groups, key=None):
+        debuginfo(prj='ds')
         data_groups = torch.split(data.float().view(-1), data.numel() // groups)
         max_d = [max(g.max(), g.min().abs()) for g in data_groups]
         data_scale = [float(1 << quantize_bits) / (2 * mx + 1e-5) for mx in max_d]
@@ -32,15 +34,18 @@ class WeightQuantization(object):
         return data_int, data_scale
 
     def is_mlp(self, data, merge_count=1):
+        debuginfo(prj='ds')
         return ((self.mp_size *data.shape[0] * merge_count) / data.shape[1] == 4 or \
                 (self.mp_size *data.shape[1] * merge_count) / data.shape[0] == 4)
 
     def is_qkv(self, data):
+        debuginfo(prj='ds')
         return ((self.mp_size * data.shape[0]) / data.shape[1] == 3 or \
                 (self.mp_size * data.shape[1]) / data.shape[0] == 3)
 
     def Quantize(self, value_list, quantize_bits, groups, key, merge_dim=0):
         if self.mlp_extra_grouping and self.is_mlp(value_list[0], merge_count=len(value_list)):
+            debuginfo(prj='ds')
             groups *= 2
         q_scale = []
         index = 0
@@ -52,16 +57,21 @@ class WeightQuantization(object):
         q_scale = (1 /
                    torch.cat(q_scale, dim=merge_dim).to(get_accelerator().current_device_name()).view(-1).unsqueeze(0))
         if "mlp.dense_4h_to_h.weight" in key:
+            debuginfo(prj='ds')
             self.mlp4hh_scales.append(q_scale)
         elif "mlp.dense_h_to_4h.weight" in key:
+            debuginfo(prj='ds')
             self.mlph4h_scales.append(q_scale)
         elif "attention.query_key_value.weight" in key:
+            debuginfo(prj='ds')
             self.qkv_scales.append(q_scale)
         else:
+            debuginfo(prj='ds')
             self.dense_scales.append(q_scale)
         return value_list
 
     def merge_layer_scales(self, layer_scales):
+        debuginfo(prj='ds')
         max_dim = max([s.shape[-1] for s in layer_scales])
         layer_scales = [
             torch.cat((s, torch.zeros((1, max_dim - s.shape[-1]), device=get_accelerator().current_device_name())),
@@ -70,6 +80,7 @@ class WeightQuantization(object):
         return torch.cat(layer_scales).unsqueeze(0)
 
     def merge_scales(self):
+        debuginfo(prj='ds')
         all_scales = []
         for dense_scale, qkv_scale, m4hh_scale, mh4h_scale in \
             zip(self.dense_scales, self.qkv_scales, self.mlp4hh_scales, self.mlph4h_scales):
@@ -77,6 +88,7 @@ class WeightQuantization(object):
         return torch.cat(all_scales)
 
     def merge_scales_split(self, split_count):
+        debuginfo(prj='ds')
         all_scales = [[] for _ in range(split_count)]
         for dense_scale, qkv_scale, m4hh_scale, mh4h_scale in \
             zip(self.dense_scales, self.qkv_scales, self.mlp4hh_scales, self.mlph4h_scales):
@@ -96,6 +108,7 @@ class WeightQuantization(object):
         return all_scales
 
     def sd_quantize_megatron(self, sd, quantize_bits, groups):
+        debuginfo(prj='ds')
         keys = sd.keys()
         for key in keys:
             value_list = [sd[key]]
@@ -108,9 +121,11 @@ class WeightQuantization(object):
         return sd, all_scales
 
     def model_quantize(self, model, quantize_policy, quantize_bits, groups):
+        debuginfo(prj='ds')
         all_scales = []
 
         def quantize_fn(layer, policy_cls):
+            debuginfo(prj='ds')
             policy = policy_cls(layer)
 
             _, qkvw, _, dense_w, _, _ = policy.attention()
@@ -131,6 +146,7 @@ class WeightQuantization(object):
             return layer
 
         def _quantize_module(model, policies):
+            debuginfo(prj='ds')
             for name, child in model.named_children():
                 if child.__class__ in policies:
                     quantize_fn, replace_policy = policies[child.__class__]
@@ -142,9 +158,11 @@ class WeightQuantization(object):
 
         policy = {}
         if quantize_policy is not None:
+            debuginfo(prj='ds')
             for layer_name, replace_policy in quantize_policy.items():
                 policy.update({layer_name: (quantize_fn, replace_policy)})
         else:
+            debuginfo(prj='ds')
             for plcy in replace_policies:
                 policy.update({plcy._orig_layer_class: (quantize_fn, plcy)})
 

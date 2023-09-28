@@ -8,7 +8,7 @@ Support different forms of monitoring such as wandb and tensorboard
 
 from abc import ABC, abstractmethod
 import deepspeed.comm as dist
-
+from pydebug import debuginfo
 
 class Monitor(ABC):
 
@@ -29,6 +29,7 @@ from .csv_monitor import csvMonitor
 class MonitorMaster(Monitor):
 
     def __init__(self, monitor_config):
+        debuginfo(prj='ds', info='MonitorMaster init')
         super().__init__(monitor_config)
         self.tb_monitor = None
         self.wandb_monitor = None
@@ -37,17 +38,24 @@ class MonitorMaster(Monitor):
 
         if dist.get_rank() == 0:
             if monitor_config.tensorboard.enabled:
+                debuginfo(prj='ds')
                 self.tb_monitor = TensorBoardMonitor(monitor_config.tensorboard)
             if monitor_config.wandb.enabled:
+                debuginfo(prj='ds')
                 self.wandb_monitor = WandbMonitor(monitor_config.wandb)
             if monitor_config.csv_monitor.enabled:
+                debuginfo(prj='ds')
                 self.csv_monitor = csvMonitor(monitor_config.csv_monitor)
 
     def write_events(self, event_list):
+        debuginfo(prj='ds')
         if dist.get_rank() == 0:
             if self.tb_monitor is not None:
+                debuginfo(prj='ds')
                 self.tb_monitor.write_events(event_list)
             if self.wandb_monitor is not None:
+                debuginfo(prj='ds')
                 self.wandb_monitor.write_events(event_list)
             if self.csv_monitor is not None:
+                debuginfo(prj='ds')
                 self.csv_monitor.write_events(event_list)

@@ -18,7 +18,7 @@ from deepspeed.utils import logger
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-
+from pydebug import debuginfo
 
 class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
     """
@@ -37,6 +37,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                  mpu=None,
                  clip_grad=0.0,
                  fused_lamb_legacy=False):
+        debuginfo(prj='ds', info='FP16_UnfusedOptimizer init')
 
         self.fused_lamb_legacy = fused_lamb_legacy
         self._global_grad_norm = 0.
@@ -78,14 +79,17 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
             self.last_overflow_iter = -1
             self.scale_factor = 2.0
             if dynamic_loss_args is None:
+                debuginfo(prj='ds')
                 self.cur_scale = 1.0 * 2**16
                 self.scale_window = 1000
                 self.min_loss_scale = 0.25
             else:
+                debuginfo(prj='ds')
                 self.cur_scale = dynamic_loss_args[INITIAL_LOSS_SCALE]
                 self.scale_window = dynamic_loss_args[SCALE_WINDOW]
                 self.min_loss_scale = dynamic_loss_args[MIN_LOSS_SCALE]
         else:
+            debuginfo(prj='ds')
             self.dynamic_loss_scale = False
             self.cur_iter = 0
             self.cur_scale = static_loss_scale
@@ -101,8 +105,10 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if TORCH_MAJOR == 0 and TORCH_MINOR <= 4:
+            debuginfo(prj='ds')
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm
         else:
+            debuginfo(prj='ds')
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm_
 
         self.mpu = mpu
@@ -113,6 +119,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         self.initialize_optimizer_states()
 
     def zero_grad(self, set_to_none=False):
+        debuginfo(prj='ds')
         """
         Zero FP16 parameter grads.
         """
@@ -128,6 +135,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                         p.grad.zero_()
 
     def step_fused_lamb(self, closure=None):
+        debuginfo(prj='ds')
         """
         Not supporting closure.
         """
@@ -178,21 +186,25 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         return self.overflow
 
     def set_lr(self, lr):
+        debuginfo(prj='ds')
         """Set the learning rate."""
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = lr
 
     def get_lr(self):
+        debuginfo(prj='ds')
         """Return the current learning rate."""
         return self.optimizer.param_groups[0]["lr"]
 
     def override_loss_scale(self, loss_scale):
+        debuginfo(prj='ds')
         if loss_scale != self.external_loss_scale:
             logger.info(f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
         self.custom_loss_scaler = True
         self.external_loss_scale = loss_scale
 
     def step(self, closure=None):
+        debuginfo(prj='ds')
         """
         Not supporting closure.
         """
@@ -242,12 +254,15 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         return self.overflow
 
     def unscale_and_clip_grads(self, total_norm, apply_scale=True):
+        debuginfo(prj='ds')
         # compute combined scale factor for this group
         combined_scale = self.cur_scale
         if self.clip_grad > 0.:
+            debuginfo(prj='ds')
             # norm is in fact norm*scale
             clip = ((total_norm / self.cur_scale) + 1e-6) / self.clip_grad
             if clip > 1:
+                debuginfo(prj='ds')
                 combined_scale = clip * self.cur_scale
 
         if apply_scale:
@@ -267,9 +282,11 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
         if self.custom_loss_scaler:
+            debuginfo(prj='ds')
             scaled_loss = self.external_loss_scale * loss
             scaled_loss.backward()
         else:
+            debuginfo(prj='ds')
             scaled_loss = (loss.float()) * self.cur_scale
             scaled_loss.backward(create_graph=create_graph, retain_graph=retain_graph)
 
@@ -277,12 +294,14 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         if self.dynamic_loss_scale:
             prev_scale = self.cur_scale
             if skip:
+                debuginfo(prj='ds')
                 self.cur_scale = max(self.cur_scale / self.scale_factor, self.min_loss_scale)
                 self.last_overflow_iter = self.cur_iter
                 if self.verbose:
                     logger.info("Grad overflow on iteration: %s", self.cur_iter)
                     logger.info(f"Reducing dynamic loss scale from {prev_scale} to {self.cur_scale}")
             else:
+                debuginfo(prj='ds')
                 # Ensure self.scale_window updates since last overflow
                 stable_interval = (self.cur_iter - self.last_overflow_iter) - 1
                 if (stable_interval > 0) and (stable_interval % self.scale_window == 0):
@@ -291,6 +310,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                         logger.info(f"No Grad overflow for {self.scale_window} iterations")
                         logger.info(f"Increasing dynamic loss scale from {prev_scale} to {self.cur_scale}")
         else:
+            debuginfo(prj='ds')
             if skip:
                 logger.info("Grad overflow on iteration %s", self.cur_iter)
                 logger.info("Using static loss scale of %s", self.cur_scale)
@@ -299,9 +319,11 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
 
     # Promote state so it can be retrieved or set via "fp16_optimizer_instance.state"
     def _get_state(self):
+        debuginfo(prj='ds')
         return self.optimizer.state
 
     def _set_state(self, value):
+        debuginfo(prj='ds')
         self.optimizer.state = value
 
     state = property(_get_state, _set_state)
@@ -309,9 +331,11 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
     # Promote param_groups so it can be retrieved or set via "fp16_optimizer_instance.param_groups"
     # (for example, to adjust the learning rate)
     def _get_param_groups(self):
+        debuginfo(prj='ds')
         return self.optimizer.param_groups
 
     def _set_param_groups(self, value):
+        debuginfo(prj='ds')
         self.optimizer.param_groups = value
 
     param_groups = property(_get_param_groups, _set_param_groups)
@@ -319,11 +343,14 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
     # Promote loss scale so it can be retrieved or set via "fp16_optimizer_instance.loss_scale"
     def _get_loss_scale(self):
         if self.custom_loss_scaler:
+            debuginfo(prj='ds')
             return self.external_loss_scale
         else:
+            debuginfo(prj='ds')
             return self.cur_scale
 
     def _set_loss_scale(self, value):
+        debuginfo(prj='ds')
         self.loss_scaler.cur_scale = value
 
     loss_scale = property(_get_loss_scale, _set_loss_scale)
@@ -339,11 +366,13 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
             checkpoint['optimizer'] = optimizer.state_dict()
             torch.save(checkpoint, "saved.pth")
         """
+        debuginfo(prj='ds')
         state_dict = {}
         state_dict['dynamic_loss_scale'] = self.dynamic_loss_scale
         state_dict['cur_scale'] = self.cur_scale
         state_dict['cur_iter'] = self.cur_iter
         if state_dict['dynamic_loss_scale']:
+            debuginfo(prj='ds')
             state_dict['last_overflow_iter'] = self.last_overflow_iter
             state_dict['scale_factor'] = self.scale_factor
             state_dict['scale_window'] = self.scale_window
@@ -373,16 +402,19 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
             model.load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
         """
+        debuginfo(prj='ds')
         # I think it should actually be ok to reload the optimizer before the model.
         self.dynamic_loss_scale = state_dict['dynamic_loss_scale']
         self.cur_scale = state_dict['cur_scale']
         self.cur_iter = state_dict['cur_iter']
         if state_dict['dynamic_loss_scale']:
+            debuginfo(prj='ds')
             self.last_overflow_iter = state_dict['last_overflow_iter']
             self.scale_factor = state_dict['scale_factor']
             self.scale_window = state_dict['scale_window']
 
         if load_optimizer_states:
+            debuginfo(prj='ds')
             self.optimizer.load_state_dict(state_dict[OPTIMIZER_STATE_DICT])
         # At this point, the optimizer's references to the model's fp32 parameters are up to date.
         # The optimizer's hyperparameters and internal buffers are also up to date.
@@ -406,6 +438,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
         return repr(self.optimizer)
 
     def initialize_optimizer_states(self):
+        debuginfo(prj='ds')
         for i, group in enumerate(self.fp16_groups):
             for param in group:
                 param.grad = torch.zeros(param.size(),

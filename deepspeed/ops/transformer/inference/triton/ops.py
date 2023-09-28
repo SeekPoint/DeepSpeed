@@ -7,7 +7,7 @@ import deepspeed
 from deepspeed.ops.op_builder import InferenceBuilder
 import deepspeed.ops.transformer.inference.triton.matmul_ext as matmul_ext
 from deepspeed.ops.transformer.inference.triton.layer_norm import layer_norm, layer_norm_residual
-
+from pydebug import debuginfo
 inference_module = None
 
 
@@ -28,6 +28,7 @@ def fused_gemm_gelu(input,
                     async_op,
                     transposed_mode,
                     use_triton_ln=True):
+    debuginfo(prj='ds')
     assert not transposed_mode
 
     # activation
@@ -70,23 +71,30 @@ def mlp_gemm_func(input,
                   mlp_act_func_type,
                   transposed_mode,
                   use_triton_ln=True):
+    
     assert not transposed_mode
 
     # residual add and layerNorm after attention
     if use_triton_ln:
+        debuginfo(prj='ds')
         mlp_input = layer_norm_residual(input, input_bias, residual, gamma, beta, epsilon)
     else:
+        debuginfo(prj='ds')
         global inference_module
         if inference_module is None:
+            debuginfo(prj='ds')
             inference_module = InferenceBuilder().load()
         mlp_input = inference_module._layer_norm_residual(input, input_bias, residual, gamma, beta, epsilon)
 
     # activation
     if deepspeed.utils.types.ActivationFuncType(mlp_act_func_type) == deepspeed.utils.types.ActivationFuncType.GELU:
+        debuginfo(prj='ds')
         activation = "gelu"
     elif deepspeed.utils.types.ActivationFuncType(mlp_act_func_type) == deepspeed.utils.types.ActivationFuncType.ReLU:
+        debuginfo(prj='ds')
         activation = "relu"
     else:
+        debuginfo(prj='ds')
         activation = ""
 
     # intermediate fc in FF
@@ -119,10 +127,13 @@ def qkv_gemm_func(
     assert not transposed_mode
     # residual add and layerNorm after attention
     if use_triton_ln:
+        debuginfo(prj='ds')
         qkv_input = layer_norm(input, gamma, beta, epsilon)
     else:
+        debuginfo(prj='ds')
         global inference_module
         if inference_module is None:
+            debuginfo(prj='ds')
             inference_module = InferenceBuilder().load()
         qkv_input = inference_module.layer_norm(input, gamma, beta, epsilon)
 

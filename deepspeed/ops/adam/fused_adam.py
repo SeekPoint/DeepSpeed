@@ -14,7 +14,7 @@ multi_tensor_applier = MultiTensorApply(2048 * 32)
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import FusedAdamBuilder
 
-
+from pydebug import debuginfo
 class FusedAdam(torch.optim.Optimizer):
     """Implements Adam algorithm.
 
@@ -83,6 +83,7 @@ class FusedAdam(torch.optim.Optimizer):
                  weight_decay=0.,
                  amsgrad=False,
                  set_grad_none=True):
+        debuginfo(prj='ds', info='FusedAdam init')
 
         if amsgrad:
             raise RuntimeError('FusedAdam does not support the AMSGrad variant.')
@@ -98,10 +99,12 @@ class FusedAdam(torch.optim.Optimizer):
 
     def zero_grad(self):
         if self.set_grad_none:
+            debuginfo(prj='ds')
             for group in self.param_groups:
                 for p in group['params']:
                     p.grad = None
         else:
+            debuginfo(prj='ds')
             super(FusedAdam, self).zero_grad()
 
     def step(self, closure=None, grads=None, output_params=None, scale=None, grad_norms=None, grad_scaler=None):
@@ -113,6 +116,7 @@ class FusedAdam(torch.optim.Optimizer):
 
         The remaining arguments are deprecated, and are only retained (for the moment) for error-checking purposes.
         """
+        debuginfo(prj='ds')
         if any(p is not None for p in [grads, output_params, scale, grad_norms]):
             raise RuntimeError(
                 'FusedAdam has been updated.  Simply initialize it identically to torch.optim.Adam, and call step() with no arguments.'

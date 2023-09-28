@@ -10,7 +10,7 @@ from deepspeed.profiling.flops_profiler import get_model_profile
 from unit.simple_model import SimpleModel, random_dataloader
 from unit.common import DistributedTest
 from unit.util import required_minimum_torch_version
-
+from pydebug import debuginfo
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=3),
                                 reason='requires Pytorch version 1.3 or above')
 
@@ -25,6 +25,7 @@ TOLERANCE = 0.05
 class LeNet5(torch.nn.Module):
 
     def __init__(self, n_classes):
+        debuginfo(prj='ds', info='LeNet5 init')
         super(LeNet5, self).__init__()
 
         self.feature_extractor = torch.nn.Sequential(

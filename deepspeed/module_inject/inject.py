@@ -6,13 +6,12 @@
 import copy
 import torch
 from deepspeed.ops.transformer import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
-
+from pydebug import debuginfo
 
 def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, seed, preln, fp16=True):
+    debuginfo(prj='ds')
     for name, child in model.named_children():
         if isinstance(child, layer_obj):
-            print('REPLACING BertLayer')
-
             cuda_config = DeepSpeedTransformerConfig(batch_size=micro_batch_size,
                                                      max_seq_length=max_seq_length,
                                                      hidden_size=config.hidden_size,
@@ -67,11 +66,12 @@ def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, se
 
         else:
             module_inject(layer_obj, child, config, micro_batch_size, max_seq_length, seed, preln, fp16)
-
+    print("model :", model)
     return model
 
 
 def test_hi():
+    debuginfo(prj='ds')
     from turing.nvidia_modelingpreln import BertConfig as BertConfigPreLN
     from turing.nvidia_modelingpreln import BertForQuestionAnswering as BertForQuestionAnsweringPreLN
     from turing.nvidia_modelingpreln import BertLayer

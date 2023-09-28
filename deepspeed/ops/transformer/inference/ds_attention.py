@@ -12,6 +12,7 @@ from .op_binding import LinearOp, VectorMatMulOp, SoftmaxContextOp, QKVGemmOp, S
 
 minus_inf = -10000.0
 
+from pydebug import debuginfo
 
 class DeepSpeedSelfAttention(nn.Module):
     num_layers = 0
@@ -26,6 +27,7 @@ class DeepSpeedSelfAttention(nn.Module):
         DeepSpeedSelfAttention.num_layers = DeepSpeedSelfAttention.num_layers + 1
         device = get_accelerator().current_device_name()  #if config.bigscience_bloom else 'cpu'
         if self.config.set_empty_params:
+            debuginfo(prj='ds')
             self.attn_qw = None
             self.attn_qb = None
             self.attn_kw = None
@@ -37,6 +39,7 @@ class DeepSpeedSelfAttention(nn.Module):
             self.attn_ow = None
             self.attn_ob = None
         else:
+            debuginfo(prj='ds')
             qkv_size_per_partition = (self.config.hidden_size // self.config.mp_size) * 3
             self.attn_qkvw = nn.Parameter(torch.empty(self.config.hidden_size,
                                                       qkv_size_per_partition,
@@ -68,9 +71,11 @@ class DeepSpeedSelfAttention(nn.Module):
 
         self.norm_factor = math.sqrt(self.config.hidden_size // self.config.heads)
         if not config.use_mup:
+            debuginfo(prj='ds')
             self.norm_factor = math.sqrt(self.norm_factor)
 
         if self.config.scale_attn_by_inverse_layer_idx is True:
+            debuginfo(prj='ds')
             self.norm_factor *= math.sqrt(self.config.layer_id + 1)
             # https://github.com/huggingface/transformers/blob/v4.24.0/src/transformers/models/gpt2/modeling_gpt2.py#L191
 
@@ -79,6 +84,7 @@ class DeepSpeedSelfAttention(nn.Module):
         self.linear_func = LinearOp(config)
         self.vector_matmul_func = VectorMatMulOp(config)
         if len(DeepSpeedSelfAttention._qkv_buffers) == 0:
+            debuginfo(prj='ds')
             DeepSpeedSelfAttention._qkv_buffers = [
                 torch.empty(self.hidden_size_per_partition * 3,
                             self.config.hidden_size,
@@ -88,12 +94,15 @@ class DeepSpeedSelfAttention(nn.Module):
             ]
 
     def compute_attention(self, qkv_out, input_mask, layer_past, alibi):
+        debuginfo(prj='ds')
         if isinstance(qkv_out, list) or isinstance(qkv_out, tuple):
+            debuginfo(prj='ds')
             qkv_out = qkv_out[0]
 
         no_masking = input_mask is None
 
         if no_masking:
+            debuginfo(prj='ds')
             input_mask = torch.empty(1)
 
         attn_key_value = self.score_context_func(
@@ -111,11 +120,13 @@ class DeepSpeedSelfAttention(nn.Module):
         return context_layer, key_layer, value_layer
 
     def _merge_qkv(self):
+        debuginfo(prj='ds')
         qvkw = DeepSpeedSelfAttention._qkv_buffers[0]
         qvkw[:self.hidden_size_per_partition, :] = self.attn_qw  # type: ignore
         qvkw[self.hidden_size_per_partition:2 * self.hidden_size_per_partition, :] = self.attn_kw  # type: ignore
         qvkw[2 * self.hidden_size_per_partition:, :] = self.attn_vw  # type: ignore
         if self.attn_qb is not None:
+            debuginfo(prj='ds')
             qvkb = DeepSpeedSelfAttention._qkv_buffers[1]
             qvkb[:self.hidden_size_per_partition] = self.attn_qb
             qvkb[self.hidden_size_per_partition:2 * self.hidden_size_per_partition] = self.attn_kb  # type: ignore
@@ -135,12 +146,15 @@ class DeepSpeedSelfAttention(nn.Module):
                 norm_b=None,
                 alibi=None):
         if self.attn_qkvw is None:
+            debuginfo(prj='ds')
             self._attn_qkvw, self._attn_qkvb = self._merge_qkv()
         else:
+            debuginfo(prj='ds')
             self._attn_qkvw = self.attn_qkvw
             self._attn_qkvb = self.attn_qkvb
 
         if not self.config.pre_layer_norm:
+            debuginfo(prj='ds')
             qkv_out = self.linear_func(input=input,
                                        weight=self._attn_qkvw,
                                        bias=self._attn_qkvb,
@@ -149,6 +163,7 @@ class DeepSpeedSelfAttention(nn.Module):
                                        num_heads=self.num_attention_heads_per_partition,
                                        num_layers=DeepSpeedSelfAttention.num_layers)
         else:
+            debuginfo(prj='ds')
             qkv_out = self.qkv_func(input=input,
                                     weight=self._attn_qkvw,
                                     bias=self._attn_qkvb,
@@ -163,6 +178,7 @@ class DeepSpeedSelfAttention(nn.Module):
         inp_norm = qkv_out[-1]
 
         if self.config.mlp_after_attn and self.mp_group is not None and dist.get_world_size(group=self.mp_group) > 1:
+            debuginfo(prj='ds')
             dist.all_reduce(output, group=self.mp_group)
 
         return (output, key_layer, value_layer, context_layer, inp_norm)
@@ -171,6 +187,7 @@ class DeepSpeedSelfAttention(nn.Module):
 class BloomSelfAttention(DeepSpeedSelfAttention):
 
     def __init__(self, *args, **kwargs):
+        debuginfo(prj='ds')
         super(BloomSelfAttention, self).__init__(*args, **kwargs)
         self.softmax_func = SoftmaxOp(self.config)
 
@@ -178,12 +195,14 @@ class BloomSelfAttention(DeepSpeedSelfAttention):
     # Reference: https://github.com/huggingface/transformers/blob/main/src/transformers/models/bloom/modeling_bloom.py
 
     def _transpose_for_context(self, x):
+        debuginfo(prj='ds')
         x = x.permute(0, 2, 1, 3).contiguous()
         new_x_layer_shape = x.size()[:-2] + \
                                     (self.hidden_size_per_partition,)
         return x.view(*new_x_layer_shape).contiguous()
 
     def _split_tensor_along_last_dim(self, tensor, num_partitions, contiguous_split_chunks=True):
+        debuginfo(prj='ds')
         """Split a tensor along its last dimension.
 
         Args:
@@ -204,17 +223,21 @@ class BloomSelfAttention(DeepSpeedSelfAttention):
         tensor_list = torch.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
         if contiguous_split_chunks:
+            debuginfo(prj='ds')
             return tuple(chunk.contiguous() for chunk in tensor_list)
 
         return tensor_list
 
     def compute_attention(self, qkv_out, input_mask, layer_past, alibi):
+        debuginfo(prj='ds')
         if isinstance(qkv_out, list) or isinstance(qkv_out, tuple):
+            debuginfo(prj='ds')
             qkv_out = qkv_out[0]
 
         no_masking = input_mask is None
 
         if no_masking:
+            debuginfo(prj='ds')
             input_mask = torch.empty(1)
 
         mixed_x_layer = qkv_out
@@ -234,6 +257,7 @@ class BloomSelfAttention(DeepSpeedSelfAttention):
                                                       -1).transpose(-1, -2)
         value_layer = value_layer.transpose(1, 2).reshape(output_size[0] * output_size[1], output_size[3], -1)
         if layer_past is not None:
+            debuginfo(prj='ds')
             past_key, past_value = layer_past
             # concatenate along seq_length dimension -> [batch_size, qk_length, num_heads, head_dim]
             key_layer = torch.cat((past_key.type_as(key_layer), key_layer), dim=-1)

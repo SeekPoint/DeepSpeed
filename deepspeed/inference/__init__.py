@@ -4,3 +4,5 @@
 # DeepSpeed Team
 
 from .engine import InferenceEngine
+from pydebug import debuginfo
+debuginfo(prj='ds')
