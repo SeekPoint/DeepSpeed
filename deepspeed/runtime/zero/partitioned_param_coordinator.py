@@ -265,6 +265,11 @@ class PartitionedParameterCoordinator:
     Fetching, prefetching, and releasing parameters
     """
 
+    '''
+    前后向之前都是要进入 param_coordinator.fetch_sub_module(sub_module, forward=True) ，
+    通过入参 forward=True 区分前向还是后向，接下跟踪进去看看
+    '''
+
     @instrument_w_nvtx
     @torch.no_grad()
     def fetch_sub_module(self, current_submodule: Module, forward: bool) -> None:
@@ -283,12 +288,18 @@ class PartitionedParameterCoordinator:
                     "inflight": [p.ds_id for p in self.__inflight_param_registry],
                 }))
 
+        # 只有当前层（module）的直属参数，不会递归到下层
         params_to_fetch = frozenset(iter_params(current_submodule))
+
+        # 统计一下需要聚合的参数数量
         fetch_numel = sum(
             [p.partition_numel() for p in params_to_fetch if p.ds_status == ZeroParamStatus.NOT_AVAILABLE])
         if fetch_numel > 0:
+            # 判断前向还是后向
             debuginfo(prj='ds')
             event_name = __class__.FORWARD_FETCH_SUBMIT if forward else __class__.BACKWARD_FETCH_SUBMIT
+
+            # 这一行只是打日志
             self._dump_param_ids(event_name, current_submodule.id,
                                  [p.ds_id for p in params_to_fetch if p.ds_status == ZeroParamStatus.NOT_AVAILABLE])
             self.__profiler.start_event(event_name)
@@ -297,9 +308,13 @@ class PartitionedParameterCoordinator:
             if logger.isEnabledFor(logging.DEBUG):
                 for param in params_to_fetch:
                     debug_rank0(f"-fetch: {param.ds_summary()}")
+
+            # 启动参数聚合，真正的参数还原逻辑，接下来继续跟踪进去
             self.__all_gather_params(params_to_fetch, forward)
             self.__profiler.stop_event(event_name, fetch_numel)
 
+        # 注意，参数聚合是一个异步操作，并不会立刻完成。
+        # 以下就是等待完成
         wait_numel = 0
         wait_event_name = __class__.FORWARD_FETCH_WAIT if forward else __class__.BACKWARD_FETCH_WAIT
         self.__profiler.start_event(wait_event_name)
@@ -310,20 +325,36 @@ class PartitionedParameterCoordinator:
                 debug_rank0(f"-wait: {param.ds_summary()}")
             if param in self.__inflight_param_registry:
                 wait_numel += param.partition_numel()
+                # 有关stream的详细介绍 https://zhuanlan.zhihu.com/p/369367933
                 with get_accelerator().stream(self.__allgather_stream):
+                    # 这里主要是通过event来确保 __allgather_stream 中的操作依次完成
+                    # 没完成就会在这空转，等待完成。
+                    # query() 判断此event之前的所有操作是否完成
                     while self.__ongoing_fetch_events and self.__ongoing_fetch_events[0].query():
                         self.__ongoing_fetch_events.popleft()
                     if len(self.__ongoing_fetch_events) > self.__max_ongoing_fetch_events:
                         self.__ongoing_fetch_events.popleft().synchronize()
 
+                    # 等待 当前参数 param 完成 allgather 聚合，
+                    # todo 这里有点奇怪 self.__inflight_param_registry.pop(param) 得到的handler 包含了全部参数
+                    #   这里 wait 会一次性 wait 全部参数？
+                    # handler 有两种：
+                    #  1. AllGatherHandle  仅处理一个参数
+                    #  2. AllGatherCoalescedHandle  批处理多个参数
                     self.__inflight_param_registry.pop(param).wait()
 
+                    # 如果底层计算引擎不是同步的，是异步的，这里特指cuda
+                    # 创建一个 event
                     event = get_accelerator().Event()
                     event.record()
                     self.__ongoing_fetch_events.append(event)
 
+            # 判断参数是否完成聚合，并达到可用状态
             assert param.ds_status == ZeroParamStatus.AVAILABLE, param.ds_summary()
+
+        # 等待 __allgather_stream 通道完成
         get_accelerator().current_stream().wait_stream(self.__allgather_stream)
+
         self.__profiler.stop_event(wait_event_name, wait_numel)
 
         # kick off parameter prefetches for upcoming modules
@@ -399,6 +430,10 @@ class PartitionedParameterCoordinator:
 
         self.__step_id += 1
 
+    '''
+    6.2.1. release_param
+    看到最终调用 param.partition(backward=backward) 对参数有重新进行了一遍分割流程。 这又回到了 节 4.3.2 。
+    '''
     @instrument_w_nvtx
     @torch.no_grad()
     def release_sub_module(self, submodule: Module, backward: bool) -> None:
@@ -430,28 +465,48 @@ class PartitionedParameterCoordinator:
             if param.ds_status != ZeroParamStatus.NOT_AVAILABLE:
                 raise RuntimeError(f"{param.ds_summary()} expected to be released")
 
+    '''
+    6.1.1. __all_gather_params
+    根据参数是否启动了量化，分别进行处理，
+    '''
     @instrument_w_nvtx
     def __all_gather_params(self, params: Set[Parameter], forward: bool) -> None:
         debuginfo(prj='ds')
         """for each partitioned parameter, kick off an async allgather and store
         the work handle for the in flight parameters."""
+        # 需要聚合的参数集合
         partitioned_params = []
         all_gather_numel = 0
         for param in params:
+            # 状态为不可用的参数才需要
             if param.ds_status == ZeroParamStatus.NOT_AVAILABLE:
                 partitioned_params.append(param)
                 all_gather_numel += param.ds_numel
 
         if partitioned_params:
             debuginfo(prj='ds')
+            # partitioned_params
             self.__n_available_params += all_gather_numel
+
+            # 使用 __allgather_stream 通道，
+            # GPU是可以并行计算的，可以简单理解为：
+            #   1. 同一个stream内的操作是串行的
+            #   2. 不同stream 内的操作是并行的
+            # 这里 allgather 的操作全部在 allgather stream 上执行
             with get_accelerator().stream(self.__allgather_stream):
+                # 前向还是后向
                 event_name = __class__.FORWARD_ALL_GATHER if forward else __class__.BACKWARD_ALL_GATHER
+
+                # 启动性能检测器
                 self.__profiler.start_event(event_name)
+
+                # 调用 parameter 的方法 all_gather_coalesced 进行参数聚合
+                # 注意这个方法可以接收一个参数列表批量进行。这代码写的很随性。
                 handle = partitioned_params[0].all_gather_coalesced(partitioned_params, forward)
                 self.__profiler.stop_event(event_name, all_gather_numel)
 
             for param in partitioned_params:
+                #  ZeroParamStatus.INFLIGHT 表示参数正在同步聚合中，
                 assert param.ds_status == ZeroParamStatus.INFLIGHT, param.ds_summary()
                 self.__inflight_param_registry[param] = handle
 

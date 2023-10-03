@@ -319,16 +319,21 @@ class DeepSpeedEngine(Module):
             debuginfo(prj='ds')
             model_parameters = list(model_parameters)
 
+        # 优化器的初始化
+        # 注意，这三种情况是互斥的。
         if has_optimizer:
             debuginfo(prj='ds')
+            # 入参传入了 optimizer 或者配置文件中指定了 optimizer
             self._configure_optimizer(optimizer, model_parameters)
             self._configure_lr_scheduler(lr_scheduler)
             self._report_progress(0)
         elif self.zero_optimization():
+            # 启用 zero 优化，即 zero_optimization_stage > 0
             debuginfo(prj='ds')
             # no optim selected but zero is enabled
             self.optimizer = self._configure_zero_optimizer(optimizer=None)
         elif self.bfloat16_enabled():
+            # bf16 模式
             debuginfo(prj='ds')
             self.optimizer = self._configure_bf16_optimizer(optimizer=None)
 
@@ -1263,10 +1268,24 @@ class DeepSpeedEngine(Module):
 
         return None
 
+    '''
+    2.1.1. 基础优化器
+    如果入参传入了 optimizer 或者配置文件指定了 optimizer， 
+    则进入方法 self._configure_optimizer(optimizer, model_parameters) 。 
+    这个方法是先根据入参或者配置文件创建基础优化器，然后再调用高级优化器。
+    
+    这个方法核心就两件事：
+
+        1.根据入参或者配置文件，创建一个原始的基本优化器
+        
+        2.根据配置，把基本优化器二次封装高级优化器，可以是 ZeRO 优化、自动混合精度、FP16半精度、BFLOAT16半精度其中之一。`
+    '''
     # Configure optimizer
     def _configure_optimizer(self, client_optimizer, model_parameters):
         debuginfo(prj='ds')
+        # 首先根据入参或者配置文件创建和初始化基本的优化器
         if client_optimizer is not None:
+            # 入参传入了优化器，
             if isinstance(client_optimizer, tuple(self._supported_optims())):
                 client_optimizer.param_groups[:] = [
                     pg for pg in client_optimizer.param_groups if len(pg["params"]) != 0
@@ -1284,19 +1303,25 @@ class DeepSpeedEngine(Module):
                     msg = f'You are using ZeRO-Offload with a client provided optimizer ({type(basic_optimizer)}) which in most cases will yield poor performance. Please either use deepspeed.ops.adam.DeepSpeedCPUAdam or set an optimizer in your ds-config (https://www.deepspeed.ai/docs/config-json/#optimizer-parameters). If you really want to use a custom optimizer w. ZeRO-Offload and understand the performance impacts you can also set <"zero_force_ds_cpu_optimizer": false> in your configuration file.'
                     raise ZeRORuntimeException(msg)
         else:
+            # 根据配置文件的信息创建基础优化器
             basic_optimizer = self._configure_basic_optimizer(model_parameters)
             log_dist(f"Using DeepSpeed Optimizer param name {self.optimizer_name()} as basic optimizer", ranks=[0])
 
         self._check_for_duplicates(basic_optimizer)
 
+        # 原始的优化器，可以是来自 torch.optim 的优化器，也可以是 deepspeed 改版的 cpu 实现版本
         self.basic_optimizer = basic_optimizer
         log_dist("DeepSpeed Basic Optimizer = {}".format(basic_optimizer.__class__.__name__), ranks=[0])
 
+        # optimizer_wrapper：str in ["fp16","bf16","zero_optimization","amp"]
         optimizer_wrapper = self._do_optimizer_sanity_check(basic_optimizer)
 
+        # "fp16","bf16","zero_optimization","amp" 这几个是互斥的，只能选择一个
         if optimizer_wrapper == ZERO_OPTIMIZATION:
+            # 启用 ZeRO 优化，意味着 stage>0
             self.optimizer = self._configure_zero_optimizer(basic_optimizer)
         elif optimizer_wrapper == AMP:
+            # 启用自动混合精度
             amp_params = self.amp_params()
             log_dist(f"Initializing AMP with these params: {amp_params}", ranks=[0])
             model, self.optimizer = amp.initialize(self.module, basic_optimizer, **amp_params)
@@ -1304,10 +1329,13 @@ class DeepSpeedEngine(Module):
             self._broadcast_model()
             # TODO: maybe need to broadcast experts differently?
         elif optimizer_wrapper == FP16:
+            # 启用 FP16 半精度优化器
             self.optimizer = self._configure_fp16_optimizer(basic_optimizer)
         elif optimizer_wrapper == BFLOAT16:
+            # 启用 BFP16 半精度优化器
             self.optimizer = self._configure_bf16_optimizer(basic_optimizer)
         else:
+            # 啥都不启用
             self.optimizer = basic_optimizer
 
         log_dist("DeepSpeed Final Optimizer = {}".format(self.optimizer_name()), ranks=[0])
@@ -1504,32 +1532,55 @@ class DeepSpeedEngine(Module):
 
         return optimizer
 
+    '''
+    2.1.2. 创建 ZeRO 优化器
+    创建 ZeRO 优化器，核心实现在方法 _configure_zero_optimizer 中， 
+    这个方法接收一个基础优化器，然后根据不同的等级选取对应的 ZeRO 优化器。
+    
+        stage 1，已经废弃。
+        
+        stage 2，对应实现 DeepSpeedZeroOptimizer，
+        
+        stage 3，对应实现 DeepSpeedZeroOptimizer_Stage3 ，最终还是会跳到 DeepSpeedZeRoOffload， 
+                有关 stage3 优化器的跟踪请跳转到 节 4。
+    '''
     def _configure_zero_optimizer(self, optimizer):
         debuginfo(prj='ds')
+        # ZeRO 开启等级
         zero_stage = self.zero_optimization_stage()
         mics_shard_size = self.mics_shard_size()
 
+        # model_dtype 模型参数的数据类型
+        # grad_accum_dtype 梯度累积的数据类型 : [“fp32”  “fp16”  “bf16”]
         model_dtype, grad_accum_dtype = self.get_data_types()
         timers = self.timers if self.wall_clock_breakdown() else None
-
+        # 如果没有基础分类器，创建一个假的
         if optimizer is None:
             debuginfo(prj='ds')
             optimizer = DummyOptim(list(self.module.parameters()))
 
-        if self.zero_legacy_stage1():
+        if self.zero_legacy_stage1():  # stage1 已经废弃了，至少从 stage2 起步
             raise Exception(
                 "The deprecated version of ZeRO Stage 1 is not supported in deepspeed >= 0.5.9. Please downgrade to a version less than 0.5.9 if you need to use this deprecated version of ZeRO."
             )
 
-        if zero_stage <= ZeroStageEnum.gradients:
+        if zero_stage <= ZeroStageEnum.gradients:  # stage <=2
+            # 配置项 默认为 False
+            # 尝试将梯度缩减与逆向计算相重叠
             overlap_comm = self.zero_overlap_comm()
+            # 配置项 默认为 True
+            # 在生成梯度时将其复制到连续的缓冲区中。避免了后向传递过程中的内存碎片。
             contiguous_gradients = self.zero_contiguous_gradients()
+            # 配置项 默认为 False
+            # 针对 CPU 卸载的第 1 和第 2 阶段优化，通过细粒度梯度分区，将梯度复制到 CPU 内存的过程并行化。
+            # 性能优势随着梯度累积步骤（优化器步骤之间的复制次数增加）或 GPU 数量（并行性增加）的增加而增加。
             round_robin_gradients = self.zero_round_robin_gradients()
             assert not isinstance(optimizer, DummyOptim), "zero stage {} requires an optimizer".format(zero_stage)
 
             log_dist(f'Creating {model_dtype} ZeRO stage {zero_stage} optimizer', ranks=[0])
             # Overlap and contiguous grads are meaningless in stage 1 and are ignored
-            if zero_stage == ZeroStageEnum.optimizer_states:
+            if zero_stage == ZeroStageEnum.optimizer_states:  # stage==1
+                # stage 1 不支持这些特性，需要关闭
                 overlap_comm = False
                 round_robin_gradients = False
                 # Non-MoE requires contiguous grads to be disabled w. stage 1
@@ -1538,7 +1589,8 @@ class DeepSpeedEngine(Module):
 
             if isinstance(self.module, PipelineModule):
                 if overlap_comm:
-                    logger.warning("Pipeline parallelism does not support overlapped communication, will be disabled.")
+                    logger.warning(
+                        "Pipeline parallelism does not support overlapped communication, will be disabled.")
                     overlap_comm = False
             optimizer = DeepSpeedZeroOptimizer(
                 optimizer,
@@ -1569,7 +1621,7 @@ class DeepSpeedEngine(Module):
                 communication_data_type=self.communication_data_type,
                 elastic_checkpoint=self.zero_elastic_checkpoint())
 
-        elif zero_stage == ZeroStageEnum.weights:
+        elif zero_stage == ZeroStageEnum.weights:  # stage ==3
             assert not self.has_moe_layers, "MoE not supported with Stage 3"
             if isinstance(optimizer, DummyOptim):
                 log_dist("Creating ZeRO Offload", ranks=[0])
@@ -1593,12 +1645,13 @@ class DeepSpeedEngine(Module):
             else:
                 log_dist(
                     f'Creating fp16 ZeRO stage {zero_stage} optimizer,'
-                    f' MiCS is enabled {mics_shard_size>0},'
+                    f' MiCS is enabled {mics_shard_size > 0},'
                     f' Hierarchical params gather {self._config.mics_hierarchial_params_gather}',
                     ranks=[0])
                 if mics_shard_size > 0:
                     return self._return_mics_optimizer(optimizer, timers)
 
+                # stage 3 的优化器
                 log_dist(f'Creating {model_dtype} ZeRO stage {zero_stage} optimizer', ranks=[0])
                 from deepspeed.runtime.zero.stage3 import DeepSpeedZeroOptimizer_Stage3
                 optimizer = DeepSpeedZeroOptimizer_Stage3(

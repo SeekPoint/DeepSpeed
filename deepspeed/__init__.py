@@ -64,7 +64,27 @@ __git_branch__ = git_branch
 # Set to torch's distributed package or deepspeed.comm based inside DeepSpeedEngine init
 dist = None
 
+# 2. deepspeed - 总入口
+# deepspeed 总的入口在 deepspeed.__init__::initialize :
+'''
+这个入口只是一个代理，根据不同情况选择三种模式之一
 
+    流水线引擎（PipelineEngine），这个模式先不管他，后续有机会再分析，
+    
+    混合引擎（DeepSpeedHybridEngine），可以同时进行训练和推理，为了应对 RLHF 训练定制的。
+    
+    一般模式（DeepSpeedEngine），这个是最基本的模式，分布式训练引擎，也是我们本次重点分析的模式。
+
+DeepSpeedEngine 的实现在 deepspeed.runtime.engine 中，
+ 它本身是 torch.nn.Module 的子类，也就是说它是对输入模型的一个封装。 
+DeepSpeedEngine 的 __init__ 方法中进行了大量的初始化操作， 
+其中最重要的就是对优化器（Optimizer）的初始化， ZeRO 的核心特性的实现都在优化器（Optimizer）中。
+
+** DeepSpeedHybridEngine **
+
+混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式， 
+同时轻松应用DeepSpeed推理引擎进行生成/评估模式， 为第三阶段的RLHF训练提供了一个明显更快的训练系统。
+'''
 def initialize(args=None,
                model: torch.nn.Module = None,
                optimizer: Optional[Union[Optimizer, DeepSpeedOptimizerCallable]] = None,
@@ -135,6 +155,9 @@ def initialize(args=None,
 
     global dist
     from deepspeed import comm as dist
+    # 底层分布式通信引擎支持多种选择，有 ['cuda', 'cpu', 'xpu', 'npu', 'mps'] 几种选择
+    # 当然大部分情况我们都选择 cuda
+    # 可以通过环境变量 DS_ACCELERATOR 指定
     dist_backend = get_accelerator().communication_backend_name()
     dist.init_distributed(dist_backend=dist_backend, dist_init_required=dist_init_required)
 
@@ -153,13 +176,18 @@ def initialize(args=None,
 
     # Check that we have only one config passed
     if hasattr(args, "deepspeed_config") and args.deepspeed_config is not None:
-        assert config is None, "Not sure how to proceed, we were given deepspeed configs in the deepspeed arguments and deepspeed.initialize() function call"
+        assert config is None, "Not sure how to proceed, " \
+                               "we were given deepspeed configs in the deepspeed arguments and deepspeed.initialize() function call"
         config = args.deepspeed_config
     assert config is not None, "DeepSpeed requires --deepspeed_config to specify configuration file"
 
     if not isinstance(model, PipelineModule):
+        # 首先，不是流水线模块
         config_class = DeepSpeedConfig(config, mpu)
         if config_class.hybrid_engine.enabled:
+            # 混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式，
+            # 同时轻松应用DeepSpeed推理引擎进行生成/评估模式，
+            # 为第三阶段的RLHF训练提供了一个明显更快的训练系统
             engine = DeepSpeedHybridEngine(args=args,
                                            model=model,
                                            optimizer=optimizer,
@@ -172,6 +200,7 @@ def initialize(args=None,
                                            config=config,
                                            config_class=config_class)
         else:
+            # 一般情况下是这里，也是我们重点要梳理的
             engine = DeepSpeedEngine(args=args,
                                      model=model,
                                      optimizer=optimizer,
@@ -187,6 +216,7 @@ def initialize(args=None,
         assert mpu is None, "mpu must be None with pipeline parallelism"
         mpu = model.mpu()
         config_class = DeepSpeedConfig(config, mpu)
+        # 如果是流水线模式，就用 PipelineEngine
         engine = PipelineEngine(args=args,
                                 model=model,
                                 optimizer=optimizer,

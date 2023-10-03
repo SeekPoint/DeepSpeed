@@ -753,7 +753,18 @@ def _no_gather_coalesced(params: Iterable[Parameter]) -> AllGatherCoalescedHandl
         return NoGatherHandle(param)
     return NoGatherCoalescedHandle(params)
 
+'''
+4.3. Init 模块
+这个 Init 类来自
 
+from deepspeed.runtime.zero.partition_parameters import Init
+
+先看官方的注释:
+
+A context to enable massive model construction for training with ZeRO-3.
+Models are automatically partitioned (or, sharded) across the system and converted to half precision.
+这个 Init 类就是 Stage-3 阶段对参数进行分割的核心所在了， 还是先从 __init__ 方法开始。
+'''
 # Replaces all parameters in module with Scattered Parameters
 class Init(InsertPostInitMethodToModuleSubClasses):
     param_id = 0
@@ -909,6 +920,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
         # Local device is the device where the parameters are consumed, must be default device.
         # It is the device where parameters are fully instantiated using allgather
+        # 当前进程应该部署的设备
         self.local_device = torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"]))
         get_accelerator().set_device(self.local_device)
 
@@ -932,8 +944,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         self.remote_device = self.local_device if remote_device in [None, OffloadDeviceEnum.none] else remote_device
         self.pin_memory = pin_memory if (self.remote_device in [OffloadDeviceEnum.cpu, OffloadDeviceEnum.nvme
                                                                 ]) else False
-
+        '''
+        4.3.2. partition
+        再次吐槽，这代码写的，生怕别人看懂。
+        '''
         # Enable fp16 param swapping to NVMe
+        #  self.dtype 根据配置文件，self.dtype 有可能是半精度
         if self.remote_device == OffloadDeviceEnum.nvme:
             self.param_swapper = AsyncPartitionedParameterSwapper(_ds_config, self.dtype)
         else:
@@ -942,6 +958,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         # If we are provided an already-allocated module to prepare.
         if module is not None:
             assert isinstance(module, torch.nn.Module)
+            # 参数分割在这里
             self._convert_to_zero_parameters(module.parameters(recurse=True))
 
         self.use_all_gather_into_tensor = dist.has_all_gather_into_tensor()
@@ -954,12 +971,20 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         Init.param_persistence_threshold = ds_config.zero_config.param_persistence_threshold
         Init.model_persistence_threshold = ds_config.zero_config.model_persistence_threshold // self.num_partitions
 
+    '''
+    4.3.1. _convert_to_deepspeed_param
+    从这里开始才是进入到参数分割的过程，
+    '''
     def _convert_to_zero_parameters(self, param_list):
         debuginfo(prj='ds')
+        # 跳过已经被处理过的参数
         for param in param_list:
             if is_zero_param(param):
                 continue
+
+            # 首先把参数数据移到目标设备
             self._convert_to_deepspeed_param(param)
+
             param.partition()
 
     def _validate_remote_device(self, remote_device, ds_config):
@@ -1009,6 +1034,10 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             force=False)
 
     def _convert_to_deepspeed_param(self, param):
+        """
+        这个方法为原始的 param 实例对象扩展一些必要的属性和方法。
+        这里代码真实一言难尽。。。
+        """
 
         # Partitioned, Normal, Remote
         param.ds_param_type = ZeroParamType.PARTITIONED
@@ -1023,6 +1052,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         param.ds_numel = param.numel()
 
         # Stores the partitioned copy of the tensor
+        # 保存分割后的参数向量，只是原来参数向量的一部分
         param.ds_tensor = None
 
         # Keeps track of how many active sub-modules need this param at any given point in time
@@ -1068,10 +1098,15 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                 param_list = [cls]
             return self._all_gather(param_list, async_op=async_op, hierarchy=hierarchy)
 
+        ''''
+        我们发现最终又跳到了每个参数的方法 all_gather_coalesced 中， 
+        这个方法是前面参数分割章节（ 节 4 ） 中赋予的，具体在 节 4.3.1 ，
+        '''
         @instrument_w_nvtx
         def all_gather_coalesced(params: Iterable[Parameter],
                                  forward: bool,
                                  safe_mode: bool = False) -> AllGatherCoalescedHandle:
+            """这个方法是用来恢复还原这个参数的，稍后会详细讨论"""
             debuginfo(prj='ds')
 
             # fetches from nvme if the partition is not available and in nvme
@@ -1273,6 +1308,10 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                         quantization=quant_info,
                     )
 
+        '''
+        上述代码中，为 param 赋予了一个方法 partition 方法，方法实现如下所示， 这个方法接收一个参数列表，
+        并跳转到 Init::_partition 进行参数分割处理。
+        '''
         def partition(param_list=None, backward=False, hierarchy=0, has_been_updated=False):
             debuginfo(prj='ds')
             cls = param
@@ -1437,6 +1476,14 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             #    assert id(param.data) == id(param.ds_tensor.data), \
             #    "After the parameters are initially partitioned, make sure we are not recreating the partition."
             #print_rank_0(f"After Partitioning Param {param.ds_id} {param.ds_tensor.size()} {param.ds_tensor}",force=False)
+
+    # 先把需要的一些变量展示处理，接下来终于进入参数分割逻辑了，真不容易。。。
+    '''
+    参数分割逻辑其实不复杂，就是细节很多，每个 rank 只保留参数的一个片段， 
+    并且这个片段还可以存储在 cpu 内存或则 nvme 高速SSD中，这样能最大限度降低对 GPU 显存的需求。
+
+    弄清楚参数分割的过程后，接下来就是看在前后向过程是如何还原参数的， 可以跳到章节 节 5 进行跟踪。
+    '''
     @instrument_w_nvtx
     def _partition_param(self, param, buffer=None, has_been_updated=False):
         debuginfo(prj='ds')
@@ -1456,7 +1503,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
             # if deepspeed.comm.get_rank():
             #    print(f"Releasing {param.data.numel()}")
-
+            # 这个参数已经被分割过了
             if param.ds_tensor is not None and not has_been_updated:  ##param already partitioned
 
                 #print_rank_0(f"Param  {param.ds_id} pri {param.ds_tensor.size()}  loc? {param.ds_tensor.final_location}", force=True)
@@ -1464,6 +1511,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
                 see_memory_usage(f'Before partitioning param {param.ds_id} {param.shape}', force=False)
                 # param.data does not store anything meaningful in partitioned state
+                # 释放原参数的向量
                 free_param(param)
                 see_memory_usage(f'After partitioning param {param.ds_id} {param.shape}', force=False)
 
@@ -1476,44 +1524,64 @@ class Init(InsertPostInitMethodToModuleSubClasses):
 
                 return
 
+            # 需要把参数张量切分成 self.num_partitions 份
+            # 如果参数张量的元素数量不是 self.num_partitions  的整数倍，需要 padding 对齐
             tensor_size = self._aligned_size(param)
-            partition_size = tensor_size // self.num_partitions
+
+            # self.num_partitions == self.dp_world_size == dist.get_world_size(group=self.ds_process_group)
+            # self.ds_process_group 默认是全体进程组成的默认组，亦可以通过入参 data_parallel_group 指定
+            partition_size = tensor_size // self.num_partitions  # 每一份的尺寸
 
             if param.ds_tensor is None:
+                # 记录参数向量最终被卸载到哪个设备
                 final_location = None
+
+                # self.remote_device 表示参数卸载的最终设备
+                # self.param_swapper 是和 nvme 设备交换的工具类，其内部已经按照 self.dtype 设置数据类型
                 if self.remote_device == OffloadDeviceEnum.nvme and self.param_swapper.swappable_tensor(
                         numel=partition_size):
+
+                    # 如果卸载到 nvme，并且nvme还有足够的缓存空间，可以把 partitioned_tensor 直接创建在nvme缓冲区
                     final_location = OffloadDeviceEnum.nvme
                     buffer = self.param_swapper.get_buffer(param, partition_size)
+
+                    # 注意这里新的参数和原参数数据类型保持一致
                     partitioned_tensor = torch.empty(0, dtype=param.dtype, device=buffer.device)
                     partitioned_tensor.data = buffer.data
                     print_rank_0(f"ID {param.ds_id} Initializing partition for the first time for nvme offload.")
 
                 else:
-                    if param.ds_persist:
-                        device = self.local_device
+                    # 不卸载到 nvme 或者 nvme 没有空间了
+                    if param.ds_persist:   # ds_persist 表示当前参数不进行卸载（Offload）
+                        device = self.local_device  # 保留在原设备中
                     elif self.remote_device == OffloadDeviceEnum.nvme:
+                        # 这里应为nvme没有空间了，即使最终要卸载到 nvme，这里暂时用 cpu 内存进行缓冲
                         device = OffloadDeviceEnum.cpu
                     else:
                         device = self.remote_device
 
+                    # 先创建一个空的向量 device = gpu_x or cpu
                     partitioned_tensor = torch.empty(partition_size, dtype=param.dtype, device=device)
 
                     if device == OffloadDeviceEnum.cpu and self.pin_memory:
+                        # 启动 pin_memory
                         partitioned_tensor = get_accelerator().pin_memory(partitioned_tensor)
 
-                partitioned_tensor.requires_grad = False
-                param.ds_tensor = partitioned_tensor
+                partitioned_tensor.requires_grad = False  # 分割后参数向量只是暂存，不需要求梯度
+                param.ds_tensor = partitioned_tensor  # 这个属性存储分割后参数片段
                 param.ds_tensor.ds_numel = partition_size
-                param.ds_tensor.status = PartitionedParamStatus.AVAILABLE
-                param.ds_tensor.final_location = final_location
+                param.ds_tensor.status = PartitionedParamStatus.AVAILABLE  # 状态标记好
+                param.ds_tensor.final_location = final_location  # 记录下这个片段存储的设备
 
+            # 根据rank编号，判断归属于当前进程的片段起始位置
             start = partition_size * self.get_partition_rank()
             end = start + partition_size
 
+            # 把张量打平成一维连续数组
             one_dim_param = param.contiguous().view(-1)
 
             if start < param.ds_numel and end <= param.ds_numel:
+                # 取出片段，并复制到 param.ds_tensor
                 src_tensor = one_dim_param.narrow(0, start, partition_size)
 
                 param.ds_tensor.copy_(src_tensor)
@@ -1539,9 +1607,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             # param.data does not store anything meaningful in partitioned state
 
             see_memory_usage(f'Before partitioning param {param.ds_id} {param.shape}', force=False)
+
+            # 释放原来的参数张量
             free_param(param)
             see_memory_usage(f'After partitioning param {param.ds_id} {param.shape}', force=False)
 
+            # 如果最终是要卸载到 nvme，这里需要用 self.param_swapper 交换出去
             if param.ds_tensor.final_location == OffloadDeviceEnum.nvme:
                 self.param_swapper.swap_out_and_release([param])
                 print_rank_0(f"ID {param.ds_id} Offloaded to nvme offload and buffers released.")

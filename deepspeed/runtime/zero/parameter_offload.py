@@ -221,7 +221,9 @@ class PostBackwardFunction(torch.autograd.Function):
             #print(f"After Backward: {ctx.module.__class__.__name__}")
         return (None, None) + args
 
-
+# 4.2. DeepSpeedZeRoOffload
+# Stage3 中对参数划分的的核心逻辑在 类 DeepSpeedZeRoOffload 中实现，
+# 这个类在文件 deepspeed.runtime.zero.parameter_offload 中， 同样，查看这个类的初始化方法。
 class DeepSpeedZeRoOffload(object):
 
     def __init__(self,
@@ -257,6 +259,7 @@ class DeepSpeedZeRoOffload(object):
             self.offload_device = offload_param_config.device
             self.offload_param_pin_memory = offload_param_config.pin_memory
 
+        # 参数分割的逻辑
         self._convert_to_zero_parameters(ds_config, module, mpu)
 
         for m in module.modules():
@@ -323,21 +326,26 @@ class DeepSpeedZeRoOffload(object):
         debuginfo(prj='ds')
         self.partition_all_parameters()
 
+    # __init__ 方法中调用了方法 _convert_to_zero_parameters ， 从方法名字也能看出就是我们想要的。
     def _convert_to_zero_parameters(self, ds_config, module, mpu):
+        # 没有 ds_id 属性的参数，即还没有被 deepspeed 处理过的参数
         non_zero_params = [p for p in module.parameters() if not is_zero_param(p)]
-        if non_zero_params:
+        if non_zero_params: # 存在没有处理过的参数
             debuginfo(prj='ds')
             zero_params = [p for p in module.parameters() if is_zero_param(p)]
-            if zero_params:
+            if zero_params: # 存已经处理过参数
+                # 这意味着这个模型，之前被初始化过，现在额外多了一些未处理的新参数
+                # 为了保持一致，调用原先的处理过程
                 debuginfo(prj='ds')
                 zero_params[0].convert_to_zero_parameters(param_list=non_zero_params)
-            else:
+            else:  # 模型参数是首次初始化
                 debuginfo(prj='ds')
                 group = None
                 if mpu:
                     debuginfo(prj='ds')
                     group = mpu.get_data_parallel_group()
 
+                # 核心的参数分割过程在这里,来自 deepspeed.runtime.zero.partition_parameters.Init
                 Init(module=module,
                      data_parallel_group=group,
                      dtype=self.dtype,
@@ -347,6 +355,7 @@ class DeepSpeedZeRoOffload(object):
                      mpu=mpu,
                      zero_param_parallel_group=self.zero_param_parallel_group,
                      zero_quantized_weights=self.zero_quantized_weights)
+                # 这个方法最终又跳到了 Init 类，创建了 Init 实例， 真实够绕的。
 
     def destroy(self):
         debuginfo(prj='ds')
@@ -368,8 +377,22 @@ class DeepSpeedZeRoOffload(object):
         print_rank_0(f'Deleted module hooks: forward = {num_forward_hooks}, backward = {num_backward_hooks}',
                      force=False)
 
+    '''
+    5. Stage3 - hook 注册
+    参数分割之后，在执行前向、后向之前，需要先把参数再还原回来。 
+    同理，在执行前向后向之后，还要释放掉各自不需要的参数。 这里利用 pytorch 的 hook 功能在上述四个关键节点插入相关的动作。 
+    pytorch 的 Module 类型提供了一系列 register_xxx_hook 方法来实现 hook 功能。
+    
+    deepspeed 的 hook 动作都在类 DeepSpeedZeRoOffload 中实现， 
+    具体的在方法 DeepSpeedZeRoOffload::setup_zero_stage3_hooks 中。
+    '''
     def setup_zero_stage3_hooks(self):
         debuginfo(prj='ds')
+        """
+        注册 stage3 相关的hook函数
+        Returns:
+
+        """
         self.hierarchy = 0
 
         #reset step if in inference mode
@@ -379,6 +402,8 @@ class DeepSpeedZeRoOffload(object):
                 self.get_param_coordinator(training=False).reset_step()
 
         #likely one of them should be enough but just to be safe
+        # 注册各种 钩子 hook ，
+        # 包括 pre_forward、pre_backward、post_forward、post_backward
         self._register_hooks_recursively(self.module)
         self.module.register_forward_hook(_end_of_forward_hook)
 
@@ -409,6 +434,7 @@ class DeepSpeedZeRoOffload(object):
 
     def _register_hooks_recursively(self, module, count=[0]):
         debuginfo(prj='ds')
+        """真正执行hook操作"""
         my_count = count[0]
         module.id = my_count
 
@@ -535,6 +561,25 @@ class DeepSpeedZeRoOffload(object):
         # post backward hook
         self.backward_hooks.append(module.register_forward_pre_hook(_post_backward_module_hook))
 
+    '''
+    6. Stage3 - 前后向过程
+    在 Hook 章节（ 节 5 ） 我们看到对每个 Module 的前后向过程都进行了 hook ，
+    在 Module::forward 前后都会执行特定的动作， 也就是在这里需要完成被分割参数的还原与重新释放。 
+    并且关键的动作都在类 PartitionedParameterCoordinator 中， 本章我们研究前向过程。
+    '''
+
+    '''
+    前向过程之前 pre_forward
+    
+    显然，在执行前向过程之前，我们需要 把被分割的参数还原回来，这里自然通过 AllGather 通信还原本层的参数。 
+    这里通过 module.register_forward_pre_hook(_pre_forward_module_hook) 进行注册， 
+    顺着 _pre_forward_module_hook 跟踪下去：
+    '''
+
+    '''
+    6.1. 参数还原
+    理论上，前后向过程前都要还原参数， 先把 hook 的函数贴过来，
+    '''
     @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
         debuginfo(prj='ds')
@@ -548,22 +593,34 @@ class DeepSpeedZeRoOffload(object):
         if param_coordinator.is_record_trace():
             debuginfo(prj='ds')
             param_coordinator.record_module(sub_module)
+
+        # 真正的参数聚合动作是在这里
+        # param_coordinator 的类型是 deepspeed.runtime.zero.PartitionedParameterCoordinator
         param_coordinator.fetch_sub_module(sub_module, forward=True)
 
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__} after fetch", force=False)
 
+    '''
+    6.2. 参数重新分割
+    同样先把直接 hook 的函数贴过来，
+    
+    显然核心的逻辑在 param_coordinator.release_sub_module(sub_module, backward=False) ，接下来跟进去分析。
+    '''
+    # 前向过程之后 post_forward
     @torch.no_grad()
     def post_sub_module_forward_function(self, sub_module):
         debuginfo(prj='ds')
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__} {sub_module.id} before release",
                          force=False)
-
+        # 重新释放参数
         param_coordinator = self.get_param_coordinator(training=sub_module.training)
+        # 具体操作都在 deepspeed.runtime.zero.PartitionedParameterCoordinator::release_sub_module
         param_coordinator.release_sub_module(sub_module, backward=False)
 
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__}  {sub_module.id} after release",
                          force=False)
 
+    # 后向过程之前 pre_backward
     @torch.no_grad()
     def pre_sub_module_backward_function(self, sub_module):
         debuginfo(prj='ds')
@@ -575,6 +632,7 @@ class DeepSpeedZeRoOffload(object):
             param_coordinator.record_module(sub_module)
         param_coordinator.fetch_sub_module(sub_module, forward=False)
 
+    #后向过程之后 post_backward
     @torch.no_grad()
     def post_sub_module_backward_function(self, sub_module):
         debuginfo(prj='ds')
@@ -588,3 +646,6 @@ class DeepSpeedZeRoOffload(object):
         see_memory_usage(
             f"After sub module backward function {sub_module.__class__.__name__} {sub_module.id} after release",
             force=False)
+'''
+可以看到每一个节点的实现其实都在 deepspeed.runtime.zero.PartitionedParameterCoordinator 里面， 最终会跳转这个类里去执行。
+'''

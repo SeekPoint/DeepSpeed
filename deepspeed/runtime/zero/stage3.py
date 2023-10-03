@@ -64,7 +64,13 @@ def move_to_cpu(tensor_list):
 
 INITIAL_MICRO_STEP_ID = -1
 
+'''
+4. Stage3 - 参数分割
+在 DeepSpeedEngine 引擎中，会根据配置创建对应阶段的优化器实例， 
+Stage-3 阶段对应的优化器是类 DeepSpeedZeroOptimizer_Stage3 ， 我们从这个类开始下钻分析。
 
+4.1. DeepSpeedZeroOptimizer_Stage3
+'''
 class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     """
     DeepSpeedZeroOptimizer designed to reduce the memory footprint
@@ -78,10 +84,10 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     """
 
     def __init__(self,
-                 module,
-                 init_optimizer,
+                 module,  # 待处理的模型
+                 init_optimizer,  # 基础优化器
                  timers,
-                 ds_config,
+                 ds_config,  # 配置信息
                  static_loss_scale=1.0,
                  dynamic_loss_scale=False,
                  dynamic_loss_args=None,
@@ -130,7 +136,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         if not get_accelerator().is_available():
             raise SystemError("Cannot use fp16 without accelerator.")
 
-        self.optimizer = init_optimizer
+        self.optimizer = init_optimizer   # 基础优化器，可能是 torch的优化器对象
 
         # Use torch (un)flatten ops
         self.flatten = _flatten_dense_tensors
@@ -162,6 +168,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self._set_zero_group_parallelism()
             zpg = groups._get_zero_param_intra_parallel_group()
 
+        # 参数的处理核心逻辑在这里
+        # self.parameter_offload 是一个 DeepSpeedZeRoOffload 对象
         self.parameter_offload = self.initialize_ds_offload(module=module,
                                                             timers=timers,
                                                             ds_config=ds_config,
@@ -370,6 +378,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.parameter_offload.destroy()
         del self.__ipg_bucket_flat_buffer
 
+    # 顺着跟踪，看下类方法 initialize_ds_offload 的实现，
+    # 它其实就只是创建了一个 DeepSpeedZeRoOffload 的对象。
     def initialize_ds_offload(
         self,
         module,
@@ -523,6 +533,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     def _configure_offloading(self, offload_optimizer_config, offload_param_config):
         debuginfo(prj='ds')
+        # 二阶段也支持 cpu offload 和 pin memory，根据配置情况判断是否启用
         ###################### offload optimizer setup ##################################
         if offload_optimizer_config is not None and offload_optimizer_config.device != OffloadDeviceEnum.none:
             debuginfo(prj='ds')
