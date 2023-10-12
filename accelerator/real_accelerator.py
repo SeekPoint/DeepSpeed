@@ -46,7 +46,7 @@ def _validate_accelerator(accel_obj):
 def get_accelerator():
     global ds_accelerator
     if ds_accelerator is not None:
-        debuginfo(prj='ds', info='ds_accelerator not None:' + str(ds_accelerator))
+        # debuginfo(prj='ds', info='ds_accelerator not None:' + str(ds_accelerator))
         return ds_accelerator
 
     accelerator_name = None

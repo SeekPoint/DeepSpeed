@@ -847,18 +847,18 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         def set_key_value_list(dictionary, key, value):
             if key in dictionary:
-                debuginfo(prj='ds')
+                # debuginfo(prj='ds')
                 dictionary[key].append(value)
             else:
-                debuginfo(prj='ds')
+                # debuginfo(prj='ds')
                 dictionary[key] = [value]
 
         def increment_value(dictionary, key):
             if key in dictionary:
-                debuginfo(prj='ds')
+                # debuginfo(prj='ds')
                 dictionary[key] += 1
             else:
-                debuginfo(prj='ds')
+                # debuginfo(prj='ds')
                 dictionary[key] = 1
 
         partition_size = self.partition_size[i]
@@ -875,7 +875,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             param_id = self.get_param_id(param)
 
             if start_index <= current_index < end_index:
-                debuginfo(prj='ds')
+                # debuginfo(prj='ds')
                 set_key_value_list(self.param_to_partition_ids[i], param_id, partition_id)
                 increment_value(self.total_grads_in_partition[i], partition_id)
 
@@ -924,7 +924,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     wrapper(param, i)
 
     def get_param_id(self, param):
-        debuginfo(prj='ds')
+        # debuginfo(prj='ds')
         unique_id = id(param)
         return self.param_id[unique_id]
 

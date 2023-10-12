@@ -23,7 +23,7 @@ class SparsityConfig:
              block: optional: an integer determining the block size. Current implementation of sparse self-attention is based on blocked sparse matrices. In which this parameter defines size of such blocks, `Block X Block`.
              different_layout_per_head: optional: a boolean determining if each head should be assigned a different sparsity layout; default is false and this will be satisfied based on availability.
         """
-        debuginfo(prj='ds', info='SparsityConfig init')
+        # debuginfo(prj='ds', info='SparsityConfig init')
         self.num_heads = num_heads
         self.block = block
         self.different_layout_per_head = different_layout_per_head

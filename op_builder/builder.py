@@ -345,11 +345,11 @@ class OpBuilder(ABC):
         '''
         Drop any empty strings from the list of compile and link flags
         '''
-        debuginfo(prj='ds')
+        #debuginfo(prj='ds')
         return [x for x in args if len(x) > 0]
 
     def cpu_arch(self):
-        debuginfo(prj='ds')
+        # debuginfo(prj='ds')
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -462,10 +462,10 @@ class OpBuilder(ABC):
 
     def deepspeed_src_path(self, code_path):
         if os.path.isabs(code_path):
-            debuginfo(prj='ds')
+            print("path is:", code_path)
             return code_path
         else:
-            debuginfo(prj='ds')
+            print("path is:", os.path.join(Path(__file__).parent.parent.absolute(), code_path))
             return os.path.join(Path(__file__).parent.parent.absolute(), code_path)
 
     def builder(self):

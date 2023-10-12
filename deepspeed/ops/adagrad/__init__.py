@@ -7,4 +7,4 @@ from .cpu_adagrad import DeepSpeedCPUAdagrad
 
 from pydebug import debuginfo
 
-debuginfo(prj='ds')
+#debuginfo(prj='ds')

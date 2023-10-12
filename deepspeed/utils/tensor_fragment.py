@@ -149,7 +149,7 @@ def safe_get_full_grad(param):
 
 def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                             param_group_index, partition_start, partition_size, optimizer_state_dict):
-    debuginfo(prj='ds')
+    #debuginfo(prj='ds')
     lp_end = lp_param.numel() + lp_start
     hp_start = partition_start
     hp_end = partition_start + partition_size

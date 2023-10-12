@@ -205,12 +205,12 @@ class TorchBackend(Backend):
 
     def broadcast(self, tensor, src, group=None, async_op=False):
         if DS_COMM_BROADCAST_OFF:
-            debuginfo(prj='ds')
+            # debuginfo(prj='ds')
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("BROADCAST  is OFF")
             return Noop()
         else:
-            debuginfo(prj='ds')
+            # debuginfo(prj='ds')
             return torch.distributed.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 
     def all_gather(self, tensor_list, tensor, group=None, async_op=False):
@@ -353,15 +353,15 @@ class TorchBackend(Backend):
         return torch.distributed.monitored_barrier(group=group, timeout=timeout, wait_all_ranks=wait_all_ranks)
 
     def get_rank(self, group=None):
-        debuginfo(prj='ds')
+        # debuginfo(prj='ds')
         return torch.distributed.get_rank(group=group)
 
     def get_world_size(self, group=None):
-        debuginfo(prj='ds')
+        # debuginfo(prj='ds')
         return torch.distributed.get_world_size(group=group)
 
     def is_initialized(self):
-        debuginfo(prj='ds')
+        # debuginfo(prj='ds')
         return torch.distributed.is_initialized()
 
     def get_backend(self, group=None):
@@ -374,10 +374,10 @@ class TorchBackend(Backend):
 
     def get_global_rank(self, group, group_rank):
         if hasattr(torch.distributed.distributed_c10d, "get_global_rank"):
-            debuginfo(prj='ds')
+            # debuginfo(prj='ds')
             from torch.distributed.distributed_c10d import get_global_rank as _get_global_rank
         else:
-            debuginfo(prj='ds')
+            # debuginfo(prj='ds')
             from torch.distributed.distributed_c10d import _get_global_rank
         return _get_global_rank(group, group_rank)
 

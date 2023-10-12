@@ -44,7 +44,7 @@ def parse_args():
                         help="The rank of the node for multi-node distributed "
                         "training")
     parser.add_argument("--master_addr",
-                        default="127.0.0.1",
+                        default="192.168.1.11",
                         type=str,
                         help="Master node (rank 0)'s address, should be either"
                         " the IP address or the hostname of node 0, for"

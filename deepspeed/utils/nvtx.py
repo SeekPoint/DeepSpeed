@@ -9,7 +9,7 @@ from pydebug import debuginfo
 def instrument_w_nvtx(func):
     """decorator that causes an NVTX range to be recorded for the duration of the
     function call."""
-    debuginfo(prj='ds')
+    #debuginfo(prj='ds')
 
     def wrapped_fn(*args, **kwargs):
         #debuginfo(prj='ds', info='wrapped_fn called')
