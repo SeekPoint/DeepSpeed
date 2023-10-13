@@ -27,9 +27,9 @@ def _log_rank0(msg):
 
 @torch.jit.script
 def scale_tensors(tensors: List[Tensor], scale: int):
-    # debuginfo(prj='ds')
+    # yknote 会涉及jit，必须屏蔽 !!! debuginfo(prj='ds')
     '''
-    yk==
+    yknote==
         File "/home/ub2004/yk_fork/DeepSpeed/deepspeed/runtime/zero/mics.py", line 15, in <module>
           from deepspeed.runtime.zero.mics_utils import (MiCS_CommGroups, create_mics_comm_groups, scale_tensors)
         File "/home/ub2004/yk_fork/DeepSpeed/deepspeed/runtime/zero/mics_utils.py", line 29, in <module>

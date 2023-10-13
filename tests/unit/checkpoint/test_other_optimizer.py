@@ -13,7 +13,7 @@ from unit.checkpoint.common import checkpoint_correctness_verification
 
 import pytest
 
-
+from pydebug import debuginfo
 class TestOtherOptimizerCheckpoint(DistributedTest):
     world_size = 2
 

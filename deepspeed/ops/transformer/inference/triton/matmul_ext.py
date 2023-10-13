@@ -18,7 +18,7 @@ from pydebug import debuginfo
 # -----------------------------------------------------------------------------
 # util class/functions for triton
 def _default_cache_dir():
-    # debuginfo(prj='ds')
+    debuginfo(prj='ds')
     return os.path.join(Path.home(), ".triton", "autotune")
 
 
@@ -58,10 +58,10 @@ class AutotuneCacheManager:
         # if caching is enabled, get the lock and bin path
         self.cache_dir = os.environ.get('TRITON_CACHE_DIR', _default_cache_dir())
         if self.cache_dir:
-            # debuginfo(prj='ds')
+            debuginfo(prj='ds')
             os.makedirs(self.cache_dir, exist_ok=True)
         if self.cache_dir:
-            # debuginfo(prj='ds')
+            debuginfo(prj='ds')
             self.file_path = os.path.join(self.cache_dir, self.key + ".pickle")
             self.lock_path = self.file_path + ".lock"
 
@@ -71,7 +71,7 @@ class AutotuneCacheManager:
 
     def put(self, table):
         if self.file_path:
-            # debuginfo(prj='ds')
+            debuginfo(prj='ds')
             assert self.lock_path is not None
             with FileLock(self.lock_path):
                 with open(self.file_path + ".tmp", 'wb') as handle:

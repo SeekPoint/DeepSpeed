@@ -10,7 +10,15 @@ import unittest
 import subprocess
 import os
 import re
-from .test_common import BaseTestCase
+from pydebug import debuginfo
+'''
+fail
+'''
+import os
+
+os.path.append('./')
+
+from test_common import BaseTestCase
 
 LAYERS = 2
 HIDDEN_SIZE = 128

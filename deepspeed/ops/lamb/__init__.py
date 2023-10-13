@@ -5,4 +5,4 @@
 
 from .fused_lamb import FusedLamb
 from pydebug import debuginfo
-#debuginfo(prj='ds')
+debuginfo(prj='ds')

@@ -21,7 +21,7 @@ import deepspeed.comm as dist
 import deepspeed
 from deepspeed.runtime.config import DeepSpeedConfig, get_bfloat16_enabled
 
-
+from pydebug import debuginfo
 class TestBasicConfig(DistributedTest):
     world_size = 1
 

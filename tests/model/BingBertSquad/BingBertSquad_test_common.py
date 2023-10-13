@@ -7,7 +7,7 @@ import unittest
 import subprocess
 import os
 import time
-
+from pydebug import debuginfo
 
 class BaseTestCase(unittest.TestCase):
 

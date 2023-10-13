@@ -14,7 +14,7 @@ from unit.simple_model import *
 from unit.checkpoint.common import *
 
 import pytest
-
+from pydebug import debuginfo
 
 class TestMiCSCheckpoint(DistributedTest):
     world_size = 4

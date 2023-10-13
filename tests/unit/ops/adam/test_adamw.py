@@ -11,7 +11,7 @@ from deepspeed.ops.adam import FusedAdam
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from unit.common import DistributedTest
 from unit.simple_model import SimpleModel
-
+from pydebug import debuginfo
 # yapf: disable
 #'optimizer, zero_offload, torch_adam, adam_w_mode, resulting_optimizer
 adam_configs = [["AdamW", False, False, False, (FusedAdam, True)],

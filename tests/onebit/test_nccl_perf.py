@@ -14,7 +14,7 @@ from deepspeed.runtime.comm.nccl import NcclBackend
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 from deepspeed.accelerator import get_accelerator
 from statistics import mean
-
+from pydebug import debuginfo
 timers = SynchronizedWallClockTimer()
 
 parser = argparse.ArgumentParser()
@@ -95,3 +95,7 @@ size = tensor_size * 4
 n = dist.get_world_size()
 busbw = (size / duration) * (2 * (n - 1) / n)
 print("busbw: %f GB/s" % (busbw / 1e9)) if rank == 0 else None
+
+'''
+pass
+'''

@@ -6,7 +6,7 @@
 import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 import time
-
+from pydebug import debuginfo
 NUM_ITERS = 100
 
 
@@ -35,3 +35,9 @@ def _main():
 
 
 _main()
+
+
+'''
+pass
+
+'''

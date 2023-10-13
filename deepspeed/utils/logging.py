@@ -34,8 +34,7 @@ class LoggerFactory:
         if name is None:
             raise ValueError("name for logger cannot be None")
 
-        formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] "
-                                      "[%(filename)s:%(lineno)d:%(funcName)s] %(message)s")
+        formatter = logging.Formatter("[%(filename)s:%(lineno)d:%(funcName)s] %(message)s")
 
         logger_ = logging.getLogger(name)
         logger_.setLevel(level)
@@ -93,7 +92,7 @@ def log_dist(message, ranks=None, level=logging.INFO):
         should_log = should_log or (my_rank in set(ranks))
     if should_log:
         final_message = "[Rank {}] {}".format(my_rank, message)
-        #yk== logger.log(level, final_message)
+        logger.log(level, final_message)
         '''
         [2023-07-21 23:11:22,157] [INFO] [logging.py:96:log_dist] [Rank 0] rank=0 time (ms) | forward: 1.26 | backward: 3.18 | backward_inner: 3.05 | backward_allreduce: 0.12 | step: 2.22
         [2023-07-21 23:11:22,164] [INFO] [logging.py:96:log_dist] [Rank 0] rank=0 time (ms) | compute_norm: 0.18 | overflow_check: 0.89 | unscale_and_clip: 0.04 | basic_step: 0.34 | update_fp16: 0.22

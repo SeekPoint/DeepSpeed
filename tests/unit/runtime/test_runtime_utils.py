@@ -14,6 +14,7 @@ from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
 
+from pydebug import debuginfo
 
 def test_call_to_str():
     c2s = ds_utils.call_to_str

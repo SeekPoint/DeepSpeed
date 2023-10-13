@@ -6,7 +6,7 @@
 import pytest
 
 from deepspeed.launcher import runner as dsrun
-
+from pydebug import debuginfo
 
 def test_parser_mutual_exclusive():
     '''Ensure dsrun.parse_resource_filter() raises a ValueError when include_str and

@@ -59,7 +59,7 @@ class DeepSpeedConfigModel(BaseModel):
         self._deprecated_fields_check(self)
 
     def _process_deprecated_field(self, pydantic_config, field):
-        #debuginfo(prj='ds')
+        debuginfo(prj='ds')
         # Get information about the deprecated field
         fields_set = pydantic_config.__fields_set__
         dep_param = field.name

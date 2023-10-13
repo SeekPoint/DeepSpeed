@@ -11,6 +11,7 @@ import os
 from os.path import abspath, dirname, join
 import torch
 import warnings
+from pydebug import debuginfo
 
 # Set this environment variable for the T5 inference unittest(s) (e.g. google/t5-v1_1-small)
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'

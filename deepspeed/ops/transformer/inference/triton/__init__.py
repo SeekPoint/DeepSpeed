@@ -11,4 +11,4 @@ from .ops import *
 from .matmul_ext import fp16_matmul, matmul_4d, score_4d_matmul, context_4d_matmul
 from pydebug import debuginfo
 
-#debuginfo(prj='ds', info='triton __init__')
+debuginfo(prj='ds', info='triton __init__')

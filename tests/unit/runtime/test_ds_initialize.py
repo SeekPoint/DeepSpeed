@@ -19,7 +19,7 @@ from deepspeed.runtime.lr_schedules import WARMUP_LR, WarmupLR
 from deepspeed.runtime.config import ADAM_OPTIMIZER
 from deepspeed.runtime.utils import see_memory_usage
 
-
+from pydebug import debuginfo
 @pytest.mark.parametrize('zero_stage', [0, 3])
 class TestNoOptim(DistributedTest):
     world_size = 1

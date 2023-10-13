@@ -15,7 +15,7 @@ from deepspeed.accelerator import get_accelerator
 from unit.modeling import BertConfig, BertLayerNorm, BertEncoder as BertEncoderPostln
 from unit.modelingpreln import BertEncoder as BertEncoderPreln
 from unit.common import DistributedTest, is_rocm_pytorch
-
+from pydebug import debuginfo
 #if not deepspeed.ops.__installed_ops__['transformer']:
 #pytest.skip(
 #    "transformer kernels are temporarily disabled because of unexplained failures",
@@ -278,3 +278,70 @@ class TestCUDABackward(DistributedTest):
         ds_config.fp16 = use_fp16
 
         run_backward(ds_config, seq_len, atol=atol, verbose=True)
+
+'''
+(ds_chat_py39) amd00@MZ32-00:~/yk_repo/ds/DeepSpeed/tests/unit/ops/accelerators$ pytest
+==================================================================================================================================== test session starts =====================================================================================================================================
+platform linux -- Python 3.9.18, pytest-7.4.0, pluggy-1.0.0 -- /home/amd00/anaconda3/envs/ds_chat_py39/bin/python
+cachedir: .pytest_cache
+rootdir: /home/amd00/yk_repo/ds/DeepSpeed/tests
+configfile: pytest.ini
+plugins: anyio-3.5.0
+collected 45 items / 35 deselected / 10 selected
+
+test_accelerator_backward.py::TestCUDABackward::test_backward[64-160-128-2-24-False-True-0.2] PASSED                                                                                                                                                                                   [ 10%]
+test_accelerator_backward.py::TestCUDABackward::test_backward[64-1600-128-2-4-False-True-0.2] PASSED                                                                                                                                                                                   [ 20%]
+test_accelerator_backward.py::TestCUDABackward::test_backward[8-1600-128-25-3-True-True-0.05] PASSED                                                                                                                                                                                   [ 30%]
+test_accelerator_backward.py::TestCUDABackward::test_backward[8-160-128-2-3-True-True-0.1] PASSED                                                                                                                                                                                      [ 40%]
+test_accelerator_backward.py::TestCUDABackward::test_backward[8-1600-128-2-3-True-True-0.05] PASSED                                                                                                                                                                                    [ 50%]
+test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-3-1024-512-16-3-True-False] PASSED                                                                                                                                                           [ 60%]
+test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-7-1024-512-16-3-True-True] PASSED                                                                                                                                                            [ 70%]
+test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-3-1024-512-16-3-False-False] PASSED                                                                                                                                                          [ 80%]
+test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-7-1024-512-16-3-False-True] PASSED                                                                                                                                                           [ 90%]
+test_accelerator_forward.py::TestCUDAForwardStochastic::test_forward_stochastic[batch_size0-hidden_size0-seq_len0-heads0-num_layers0-is_preln0-use_fp160] SKIPPED (got empty parameter set ['batch_size', 'hidden_size', 'seq_len', 'heads', 'num_layers', 'is_preln', 'use_fp16']...) [100%]
+
+====================================================================================================================================== warnings summary ======================================================================================================================================
+<string>:8
+  <string>:8: PytestDeprecationWarning: A private pytest class or function was used.
+
+unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[64-160-128-2-24-False-True-0.2]
+  /home/amd00/yk_repo/ds/DeepSpeed/tests/conftest.py:47: UserWarning: Running test without verifying torch version, please provide an expected torch version with --torch_ver
+    warnings.warn(
+
+unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[64-160-128-2-24-False-True-0.2]
+  /home/amd00/yk_repo/ds/DeepSpeed/tests/conftest.py:54: UserWarning: Running test without verifying cuda version, please provide an expected cuda version with --cuda_ver
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+===================================================================================================================================== slowest durations ======================================================================================================================================
+77.81s call     unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[64-160-128-2-24-False-True-0.2]
+52.90s call     unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[64-1600-128-2-4-False-True-0.2]
+41.11s call     unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[8-1600-128-25-3-True-True-0.05]
+40.90s call     unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[8-1600-128-2-3-True-True-0.05]
+39.47s call     unit/ops/accelerators/test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-3-1024-512-16-3-True-False]
+39.45s call     unit/ops/accelerators/test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-3-1024-512-16-3-False-False]
+39.34s call     unit/ops/accelerators/test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-7-1024-512-16-3-False-True]
+39.33s call     unit/ops/accelerators/test_accelerator_forward.py::TestCUDAForwardSmallBatchSize::test_forward_with_small_bsz[8-7-1024-512-16-3-True-True]
+34.49s call     unit/ops/accelerators/test_accelerator_backward.py::TestCUDABackward::test_backward[8-160-128-2-3-True-True-0.1]
+
+(20 durations < 1s hidden.  Use -vv to show these durations.)
+============================================================================================================ 9 passed, 1 skipped, 35 deselected, 3 warnings in 431.31s (0:07:11) =============================================================================================================
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: _default_cache_dir L#: 21
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 61
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 64
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: load L#: 83
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: _default_cache_dir L#: 21
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 61
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 64
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: put L#: 74
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: _default_cache_dir L#: 21
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 61
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 64
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: load L#: 83
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: _default_cache_dir L#: 21
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 61
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: __init__ L#: 64
+ds P: 20766 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/deepspeed/ops/transformer/inference/triton/matmul_ext.py f: put L#: 74
+(ds_chat_py39) amd00@MZ32-00:~/yk_repo/ds/DeepSpeed/tests/unit/ops/accelerators$
+
+'''

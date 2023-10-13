@@ -11,7 +11,7 @@ from typing import List
 from deepspeed.runtime import config as ds_config
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 
-
+from pydebug import debuginfo
 class SimpleConf(DeepSpeedConfigModel):
     param_1: int = 0
     param_2_old: str = Field(None, deprecated=True, new_param="param_2", new_param_fn=(lambda x: [x]))

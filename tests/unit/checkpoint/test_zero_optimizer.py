@@ -16,7 +16,7 @@ from unit.checkpoint.common import *
 
 import pytest
 
-
+from pydebug import debuginfo
 class TestZeROCheckpoint(DistributedTest):
     world_size = 2
 

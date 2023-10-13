@@ -11,6 +11,8 @@ from unit.simple_model import SimpleModel, random_dataloader
 from unit.common import DistributedTest
 from unit.util import required_minimum_torch_version
 from pydebug import debuginfo
+from pydebug import debuginfo
+
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=3),
                                 reason='requires Pytorch version 1.3 or above')
 

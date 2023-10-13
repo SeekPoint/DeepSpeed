@@ -9,7 +9,7 @@ from unit.common import DistributedTest
 
 import deepspeed
 
-
+from pydebug import debuginfo
 class TestNewClassDeclaredNestingInit(DistributedTest):
     world_size = 1
 

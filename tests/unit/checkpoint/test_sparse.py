@@ -10,7 +10,7 @@ from unit.simple_model import *
 
 import pytest
 
-
+from pydebug import debuginfo
 class TestSparseCheckpoint(DistributedTest):
     world_size = 2
 

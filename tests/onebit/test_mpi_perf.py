@@ -14,7 +14,7 @@ from deepspeed.utils.timer import SynchronizedWallClockTimer
 from deepspeed.accelerator import get_accelerator
 
 from statistics import mean
-
+from pydebug import debuginfo
 timers = SynchronizedWallClockTimer()
 
 comm = MPI.COMM_WORLD
@@ -74,3 +74,13 @@ minlat = round(min(time_list) * convert)
 maxlat = round(max(time_list) * convert)
 meanlat = round(mean(time_list) * convert, places)
 print("min, max, and mean = {} ms, {} ms, {} ms".format(minlat, maxlat, meanlat))
+
+
+# Traceback (most recent call last):
+#   File "/home/amd00/yk_repo/ds/DeepSpeed/tests/onebit/test_mpi_backend.py", line 67, in <module>
+#     a_after = backend.compressed_allreduce(a, worker_error, server_error, local_rank)
+#   File "/home/amd00/yk_repo/ds/DeepSpeed/deepspeed/runtime/comm/mpi.py", line 160, in compressed_allreduce
+#     self.compression_backend.torch2cupy(buffer_m.sign_().add_(1).bool()), self.size)
+#   File "/home/amd00/yk_repo/ds/DeepSpeed/deepspeed/runtime/compression/cupy.py", line 19, in torch2cupy
+#     return cupy.fromDlpack(to_dlpack(tensor))
+# RuntimeError: Bool type is not supported by dlpack

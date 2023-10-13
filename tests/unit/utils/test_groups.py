@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from deepspeed.utils.groups import _get_expert_parallel_ranks
-
+from pydebug import debuginfo
 
 def test_get_expert_parallel_ranks():
     """

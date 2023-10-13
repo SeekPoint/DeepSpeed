@@ -73,5 +73,5 @@ tensor([0.4119, 0.3984, 0.4307, 0.4651, 0.4661, 0.3464, 0.4761, 0.3530, 0.4272,
         0.4421, 0.4229, 0.9312, 0.4124, 0.4570, 0.4321, 0.3259, 0.4626, 0.4431,
 
     '''
-    # debuginfo(prj='ds', info='param_and_offset_list :' + param_and_offset_list)
+    debuginfo(prj='ds', info='param_and_offset_list :' + param_and_offset_list)
     return param_and_offset_list

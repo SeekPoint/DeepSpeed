@@ -17,7 +17,7 @@ from deepspeed.utils import RepeatingLoader
 from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
-
+from pydebug import debuginfo
 HIDDEN_DIM = 32
 LAYERS = 8
 

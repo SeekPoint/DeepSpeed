@@ -273,7 +273,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # return an op builder class, name specified by class_name
     def get_op_builder(self, class_name):
-        # debuginfo(prj='ds')
+        debuginfo(prj='ds')
         self._lazy_init_class_dict()
         if class_name in self.class_dict:
             return self.class_dict[class_name]

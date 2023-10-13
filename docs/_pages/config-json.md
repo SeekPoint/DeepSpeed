@@ -679,7 +679,7 @@ Configuring the asynchronous I/O module for offloading parameter and optimizer s
 {
   "autotuning": {
     "enabled": false,
-    "results_dir": "autotuning_results",
+    "results_dir": "autotuning_results.txt",
     "exps_dir": "autotuning_exps",
     "overwrite": false,
     "metric": "throughput",

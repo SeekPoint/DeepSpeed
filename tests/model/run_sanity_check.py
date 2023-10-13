@@ -8,7 +8,7 @@ Note: please copy webtext data to "Megatron-LM" folder, before running this scri
 
 import sys
 import unittest
-
+from pydebug import debuginfo
 sys.path.append('../DeepSpeedExamples/Megatron_GPT2')
 sys.path.append('../DeepSpeedExamples/BingBertSquad')
 

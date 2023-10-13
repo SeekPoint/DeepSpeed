@@ -13,7 +13,7 @@ from unit.simple_model import SimpleModel
 from deepspeed.accelerator import get_accelerator
 
 import pytest
-
+from pydebug import debuginfo
 
 class TestInit(DistributedTest):
     world_size = 3

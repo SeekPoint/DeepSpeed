@@ -5,7 +5,7 @@
 
 import pytest
 import deepspeed.runtime.pipe.schedule as schedule
-
+from pydebug import debuginfo
 
 def _count_type(cmds, classtype):
     return len(list(filter(lambda c: type(c) == classtype, cmds)))

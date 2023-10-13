@@ -9,7 +9,7 @@ from pytorch_lightning.strategies import DeepSpeedStrategy
 from torch.utils.data import DataLoader, Dataset
 
 from pydebug import debuginfo
-
+from pydebug import debuginfo
 class RandomDataset(Dataset):
     debuginfo(prj='ds', info='RandomDataset init')
     def __init__(self, size, length):
@@ -61,3 +61,11 @@ def test_lightning_model():
     model = BoringModel()
     trainer = Trainer(strategy=DeepSpeedStrategy(), max_epochs=1, precision=16, accelerator="gpu", devices=1)
     trainer.fit(model)
+
+'''
+
+(ds_chat_py39) amd00@MZ32-00:~/yk_repo/ds/DeepSpeed/tests/lightning$ python test_simple.py
+ds P: 57181 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/tests/lightning/test_simple.py f: RandomDataset L#: 14 I: RandomDataset init
+ds P: 57181 at MZ32-00 F: /home/amd00/yk_repo/ds/DeepSpeed/tests/lightning/test_simple.py f: BoringModel L#: 27 I: BoringModel init
+
+'''

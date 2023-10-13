@@ -16,7 +16,7 @@ import numpy.testing as npt
 from unit.common import DistributedTest
 
 from transformers import (AutoConfig, AutoTokenizer, AutoModelForCausalLM)
-
+from pydebug import debuginfo
 rocm_version = OpBuilder.installed_rocm_version()
 if rocm_version != (0, 0):
     pytest.skip("skip inference tests on rocm for now", allow_module_level=True)

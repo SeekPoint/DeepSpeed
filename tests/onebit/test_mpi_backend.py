@@ -11,7 +11,7 @@ import deepspeed
 
 from deepspeed.runtime.comm.mpi import MpiBackend
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
@@ -86,3 +86,16 @@ if test_correctness:
             print('Successfully passed the test for MPI Backend at Rank {}'.format(rank))
         else:
             print('Fails at {} of positions'.format(torch.sum(check_mag_mask)))
+
+'''
+
+Traceback (most recent call last):
+  File "/home/amd00/yk_repo/ds/DeepSpeed/tests/onebit/test_mpi_backend.py", line 67, in <module>
+    a_after = backend.compressed_allreduce(a, worker_error, server_error, local_rank)
+  File "/home/amd00/yk_repo/ds/DeepSpeed/deepspeed/runtime/comm/mpi.py", line 160, in compressed_allreduce
+    self.compression_backend.torch2cupy(buffer_m.sign_().add_(1).bool()), self.size)
+  File "/home/amd00/yk_repo/ds/DeepSpeed/deepspeed/runtime/compression/cupy.py", line 19, in torch2cupy
+    return cupy.fromDlpack(to_dlpack(tensor))
+RuntimeError: Bool type is not supported by dlpack
+
+'''

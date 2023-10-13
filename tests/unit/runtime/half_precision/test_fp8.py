@@ -8,7 +8,7 @@ import deepspeed
 import pytest
 from unit.common import DistributedTest
 from unit.util import skip_on_arch
-
+from pydebug import debuginfo
 try:
     import transformer_engine.pytorch as transformer_engine
     from transformer_engine.common import recipe

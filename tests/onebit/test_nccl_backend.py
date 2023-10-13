@@ -12,7 +12,7 @@ import os
 
 from deepspeed.runtime.comm.nccl import NcclBackend
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 parser = argparse.ArgumentParser()
 parser.add_argument('--local_rank', type=int, default=-1)
 args = parser.parse_args()
@@ -91,3 +91,7 @@ if test_correctness:
             print('Successfully passed the test for NCCL Backend at Rank {}'.format(rank))
         else:
             print('Fails at {} of positions'.format(torch.sum(check_mag_mask)))
+
+'''
+pass
+'''

@@ -6,4 +6,4 @@
 from .cpu_adam import DeepSpeedCPUAdam
 from .fused_adam import FusedAdam
 from pydebug import debuginfo
-#debuginfo(prj='ds')
+debuginfo(prj='ds')

@@ -47,7 +47,7 @@ AUTOTUNING_FAST = "fast"
 AUTOTUNING_FAST_DEFAULT = True
 
 AUTOTUNING_RESULTS_DIR = "results_dir"
-AUTOTUNING_RESULTS_DIR_DEFAULT = "autotuning_results"
+AUTOTUNING_RESULTS_DIR_DEFAULT = "autotuning_results.txt"
 
 AUTOTUNING_EXPS_DIR = "exps_dir"
 AUTOTUNING_EXPS_DIR_DEFAULT = "autotuning_exps"

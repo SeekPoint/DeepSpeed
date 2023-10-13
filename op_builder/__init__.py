@@ -40,7 +40,7 @@ def builder_closure(member_name):
 
         return _builder
     else:
-        #debuginfo(prj='ds')
+        debuginfo(prj='ds')
         # during runtime, return op builder class directly
         from deepspeed.accelerator import get_accelerator
         builder = get_accelerator().get_op_builder(member_name)
@@ -49,7 +49,7 @@ def builder_closure(member_name):
 
 # reflect builder names and add builder closure, such as 'TransformerBuilder()' creates op builder wrt current accelerator
 for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(this_module.__file__)]):
-    #debuginfo(prj='ds', info='1-module_name:' + module_name)
+    debuginfo(prj='ds', info='1-module_name:' + module_name)
     if module_name != 'all_ops' and module_name != 'builder':
         module = importlib.import_module(f".{module_name}", package=op_builder_dir)
         for member_name in module.__dir__():

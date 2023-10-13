@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import torch
-
+from pydebug import debuginfo
 
 class MultiOutputModel(torch.nn.Module):
 

@@ -21,6 +21,15 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import UtilsBuilder
 
 from apex_C import flatten as flatten_apex
+from pydebug import debuginfo
+'''yknote
+failed
+
+Traceback (most recent call last):
+  File "/home/amd00/yk_repo/ds/DeepSpeed/tests/benchmarks/flatten_bench.py", line 21, in <module>
+    from deepspeed.ops.op_builder import UtilsBuilder
+ImportError: cannot import name 'UtilsBuilder' from 'deepspeed.ops.op_builder' 
+'''
 
 util_ops = UtilsBuilder().load()
 flatten = util_ops.flatten

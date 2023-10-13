@@ -21,7 +21,7 @@ except ImportError:
 class CudaEventTimer(object):
 
     def __init__(self, start_event: get_accelerator().Event, end_event: get_accelerator().Event):
-        #debuginfo(prj='ds', info='CudaEventTimer init:', start_event, end_event)
+        debuginfo(prj='ds', info='CudaEventTimer init:')
         #yk==CudaEventTimer init: <torch.cuda.Event 0x52c1b0c0> <torch.cuda.Event 0x629e64d0>
         self.start_event = start_event
         self.end_event = end_event

@@ -12,6 +12,7 @@ from .common import get_test_path
 from deepspeed.pipe import PipelineModule, LayerSpec
 from deepspeed.accelerator import get_accelerator
 
+from pydebug import debuginfo
 
 def get_megatron_version():
     p = os.popen("pip list --format=columns | grep megatron-lm")

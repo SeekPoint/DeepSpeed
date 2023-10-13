@@ -345,11 +345,11 @@ class OpBuilder(ABC):
         '''
         Drop any empty strings from the list of compile and link flags
         '''
-        #debuginfo(prj='ds')
+        debuginfo(prj='ds')
         return [x for x in args if len(x) > 0]
 
     def cpu_arch(self):
-        # debuginfo(prj='ds')
+        debuginfo(prj='ds')
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:

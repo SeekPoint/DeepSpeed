@@ -11,7 +11,7 @@ import deepspeed
 from transformers import pipeline
 from unit.common import DistributedTest
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 
 @pytest.mark.inference
 @pytest.mark.parametrize("use_cuda_events", [True, False])

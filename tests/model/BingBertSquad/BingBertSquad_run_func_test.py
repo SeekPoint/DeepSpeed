@@ -10,7 +10,7 @@ import unittest
 import os
 import re
 from .BingBertSquad_test_common import BaseTestCase
-
+from pydebug import debuginfo
 
 def grep_loss_from_file(file_name):
     loss = 0.0

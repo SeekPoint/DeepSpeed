@@ -9,7 +9,11 @@ Note: please copy webtext data to "Megatron-LM" folder, before running this scri
 import unittest
 import os
 import re
-from .test_common import BaseTestCase
+from test_common import BaseTestCase
+from pydebug import debuginfo
+'''
+fail
+'''
 
 LAYERS = 2
 HIDDEN_SIZE = 128

@@ -5,7 +5,7 @@
 
 from deepspeed.runtime.zero.config import DeepSpeedZeroConfig, DeepSpeedZeroOffloadParamConfig, DeepSpeedZeroOffloadOptimizerConfig
 
-
+from pydebug import debuginfo
 def test_zero_config_deprecatedfields():
     config = DeepSpeedZeroConfig(**{"cpu_offload_param": True})
     assert isinstance(config.offload_param, DeepSpeedZeroOffloadParamConfig)

@@ -16,7 +16,7 @@ from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
 
-
+from pydebug import debuginfo
 class TestPartitionedTensor(DistributedTest):
     world_size = 4
 

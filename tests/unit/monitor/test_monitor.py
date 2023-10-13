@@ -11,7 +11,7 @@ from deepspeed.monitor.config import DeepSpeedMonitorConfig
 from unit.common import DistributedTest
 from deepspeed.runtime.config import DeepSpeedConfig
 
-
+from pydebug import debuginfo
 class TestTensorBoard(DistributedTest):
     world_size = 2
 

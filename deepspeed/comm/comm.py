@@ -101,7 +101,7 @@ def configure(
 
 # Logging wrapper for timing ops
 def timed_op(func):
-    # debuginfo(prj='ds')
+    debuginfo(prj='ds')
     def log_wrapper(*args, **kwargs):
         # Add enabled flag so that overhead to each comm op is two if conditions at most
         if comms_logger.enabled:
@@ -169,10 +169,10 @@ def init_deepspeed_backend(ds_backend, timeout, init_method):
 def is_initialized():
     #assert cdb is not None, 'DeepSpeed backend not set, please initialize it using init_process_group()'
     if cdb is None:
-        # debuginfo(prj='ds')
+        debuginfo(prj='ds')
         return False
     else:
-        # debuginfo(prj='ds')
+        debuginfo(prj='ds')
         return cdb.is_initialized()
 
 
@@ -225,7 +225,7 @@ def set_backend():
 @timed_op
 def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='broadcast', debug=get_caller_func()):
     global cdb
-    # debuginfo(prj='ds')
+    debuginfo(prj='ds')
     return cdb.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 
 
@@ -553,7 +553,7 @@ def get_world_size(group=None) -> int:
         -1, if not part of the group
     """
     global cdb
-    #debuginfo(prj='ds')
+    debuginfo(prj='ds')
     assert cdb is not None and cdb.is_initialized(
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
     return cdb.get_world_size(group)
@@ -597,7 +597,7 @@ def get_local_rank():
 
 def get_global_rank(group=None, group_rank=0):
     global cdb
-    # debuginfo(prj='ds')
+    debuginfo(prj='ds')
     assert cdb is not None and cdb.is_initialized(
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
     return cdb.get_global_rank(group, group_rank)

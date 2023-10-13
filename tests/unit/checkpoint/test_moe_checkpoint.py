@@ -13,7 +13,7 @@ from unit.checkpoint.common import checkpoint_correctness_verification
 
 import pytest
 
-
+from pydebug import debuginfo
 class TestMoECheckpoint(DistributedTest):
     world_size = 4
 

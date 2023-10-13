@@ -20,7 +20,7 @@ from huggingface_hub import HfApi
 from deepspeed.model_implementations import DeepSpeedTransformerInference
 from torch import nn
 from deepspeed.accelerator import get_accelerator
-
+from pydebug import debuginfo
 rocm_version = OpBuilder.installed_rocm_version()
 if rocm_version != (0, 0):
     pytest.skip("skip inference tests on rocm for now", allow_module_level=True)
