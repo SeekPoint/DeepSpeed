@@ -21,14 +21,17 @@ import deepspeed.comm as dist
 import deepspeed
 from deepspeed.runtime.config import DeepSpeedConfig, get_bfloat16_enabled
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class TestBasicConfig(DistributedTest):
+
     world_size = 1
 
     def test_accelerator(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert (get_accelerator().is_available())
 
     def test_check_version(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert hasattr(deepspeed, "__git_hash__")
         assert hasattr(deepspeed, "__git_branch__")
         assert hasattr(deepspeed, "__version__")
@@ -89,6 +92,8 @@ class TestBatchConfig(DistributedTest):
     world_size = 2
 
     def test(self, num_ranks, batch, micro_batch, gas, success):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         assert dist.get_world_size() == num_ranks, \
         'The test assumes a world size of f{num_ranks}'
 

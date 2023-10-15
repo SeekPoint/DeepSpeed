@@ -15,7 +15,7 @@ from .constants import ELASTICITY, ENABLED, ENABLED_DEFAULT, LATEST_ELASTICITY_V
     MINIMUM_DEEPSPEED_VERSION, DEEPSPEED_ELASTICITY_CONFIG
 from ..git_version_info import version as __version__
 from ..utils import logger
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 # Thirty eight smallest highly composite numbers. The list should
 # be enough to support up to 720K batch size.
 HCN_LIST = [
@@ -25,7 +25,7 @@ HCN_LIST = [
 
 
 def get_candidate_batch_sizes(base_list, max_acceptable_batch_size):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     candidate_batch_size = []
     for base in base_list:
         if base >= max_acceptable_batch_size:
@@ -40,7 +40,7 @@ def get_candidate_batch_sizes(base_list, max_acceptable_batch_size):
 
 
 def get_valid_gpus(batch_size, micro_batches, min_valid_gpus, max_valid_gpus):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     valid_gpus = []
     for micro_batch in micro_batches:
         if batch_size % micro_batch == 0:
@@ -63,7 +63,7 @@ def get_valid_gpus(batch_size, micro_batches, min_valid_gpus, max_valid_gpus):
 
 
 def get_best_candidates(candidate_batch_sizes, micro_batches, min_gpus, max_gpus, prefer_larger):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     max_valid_gpus = 0
     valid_gpus = None
@@ -105,7 +105,7 @@ def _get_compatible_gpus_v01(micro_batches,
         final_batch_size
         valid_gpus
     '''
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     min_gpus = min_gpus or 1
     max_gpus = max_gpus or max_acceptable_batch_size // min(micro_batches)
 
@@ -141,7 +141,7 @@ def _get_compatible_gpus_v02(micro_batches,
         valid_gpus
         micro-batch size
     '''
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if num_gpus_per_node % model_parallel_size != 0:
         raise ElasticityError(
             f"In Elasticity v0.2, number of GPUs per node:" \
@@ -150,7 +150,7 @@ def _get_compatible_gpus_v02(micro_batches,
 
     def get_microbatch(final_batch_size):
         candidate_microbatch = None
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         for micro_batch in micro_batches:
             if final_batch_size // current_num_gpus % micro_batch == 0:
@@ -172,7 +172,7 @@ def _get_compatible_gpus_v02(micro_batches,
     final_batch_size = int(final_batch_size) * dp_size_per_node
     valid_dp_world_size = [i * dp_size_per_node for i in valid_world_size]
     if current_num_gpus // model_parallel_size in valid_dp_world_size:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         candidate_microbatch = get_microbatch(final_batch_size)
         return final_batch_size, valid_dp_world_size, candidate_microbatch
 
@@ -186,10 +186,10 @@ def _get_compatible_gpus_v02(micro_batches,
 
     used_microbatch = None
     if prefer_larger:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         candidate_batch_size = max(candidate_batch_sizes)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         candidate_batch_size = min(candidate_batch_sizes)
 
     candidate_microbatch = get_microbatch(candidate_batch_size)
@@ -198,7 +198,7 @@ def _get_compatible_gpus_v02(micro_batches,
 
 
 def _compatible_ds_version_check(target_deepspeed_version: str):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     min_version = pkg_version.parse(MINIMUM_DEEPSPEED_VERSION)
     target_version = pkg_version.parse(target_deepspeed_version)
 
@@ -210,9 +210,9 @@ def _compatible_ds_version_check(target_deepspeed_version: str):
 
 
 def elasticity_enabled(ds_config: dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if ELASTICITY not in ds_config:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
     return ds_config[ELASTICITY].get(ENABLED, ENABLED_DEFAULT)
 
@@ -222,7 +222,7 @@ def ensure_immutable_elastic_config(runtime_elastic_config_dict: dict):
     Ensure the resource scheduler saw the same elastic config we are using at runtime
     """
     if DEEPSPEED_ELASTICITY_CONFIG in os.environ:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         scheduler_elastic_config_dict = json.loads(os.environ[DEEPSPEED_ELASTICITY_CONFIG])
         scheduler_elastic_config = ElasticityConfig(scheduler_elastic_config_dict)
         runtime_elastic_config = ElasticityConfig(runtime_elastic_config_dict)
@@ -284,7 +284,7 @@ def compute_elastic_config(ds_config: dict, target_deepspeed_version: str, world
         micro_batch_size (int, optional): if world_size is provided will return
             specific micro batch size
     """
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not isinstance(ds_config, dict):
         raise ValueError("Expected ds_config to be a dictionary but received " \
             f"a {type(ds_config)}, containing: {ds_config}")
@@ -318,7 +318,7 @@ def compute_elastic_config(ds_config: dict, target_deepspeed_version: str, world
             f" {target_deepspeed_version}, currently {__version__}")
 
     if float(elastic_config.version) == 0.1:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         final_batch_size, valid_gpus = _get_compatible_gpus_v01(
             micro_batches=elastic_config.micro_batches,
             max_acceptable_batch_size=elastic_config.max_acceptable_batch_size,
@@ -329,15 +329,15 @@ def compute_elastic_config(ds_config: dict, target_deepspeed_version: str, world
         final_batch_size = int(final_batch_size)
     elif float(elastic_config.version) == 0.2:
         if world_size != 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             current_num_gpus = world_size
         else:
             if "WORLD_SIZE" in os.environ and \
                 os.getenv('WORLD_SIZE').isnumeric():
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 current_num_gpus = int(os.getenv('WORLD_SIZE'))
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 WORLD_SIZE = os.getenv('WORLD_SIZE')
                 raise ElasticityConfigError(
                     'Elasticity V 0.2 needs WORLD_SIZE '\
@@ -381,10 +381,10 @@ def compute_elastic_config(ds_config: dict, target_deepspeed_version: str, world
     if return_microbatch:
         # Pick a valid micro batch size
         if float(elastic_config.version) == 0.2:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return final_batch_size, valid_gpus, candidate_microbatch_size
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             micro_batch_size = None
             for mbsz in sorted(list(set(elastic_config.micro_batches)), reverse=True):
                 if final_batch_size // world_size % mbsz == 0:

@@ -13,11 +13,12 @@ from deepspeed.moe.layer import MoE
 from deepspeed.accelerator import get_accelerator
 
 import deepspeed.comm as dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class SimpleModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, empty_grad=False, nlayers=1):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimpleModel, self).__init__()
         self.linears = torch.nn.ModuleList([torch.nn.Linear(hidden_dim, hidden_dim) for i in range(nlayers)])
         if empty_grad:
@@ -26,6 +27,7 @@ class SimpleModel(torch.nn.Module):
         self.empty_grad = empty_grad
 
     def forward(self, x, y):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if len(self.linears) == 1:
             x = self.linears[0](x)
         else:
@@ -37,6 +39,7 @@ class SimpleModel(torch.nn.Module):
 class SimpleFrozenModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, empty_grad=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimpleFrozenModel, self).__init__()
         self.linears = torch.nn.ModuleList([torch.nn.Linear(hidden_dim, hidden_dim) for i in range(2)])
         if empty_grad:
@@ -48,6 +51,7 @@ class SimpleFrozenModel(torch.nn.Module):
         self.linears[0].bias.requires_grad = False
 
     def forward(self, x, y):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if len(self.linears) == 1:
             x = self.linears[0](x)
         else:
@@ -59,9 +63,11 @@ class SimpleFrozenModel(torch.nn.Module):
 class Curriculum_SimpleModel(SimpleModel):
 
     def __init__(self, hidden_dim, empty_grad=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(Curriculum_SimpleModel, self).__init__(hidden_dim, empty_grad)
 
     def forward(self, x, y, **kwargs):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         seqlen = kwargs.get('curriculum_seqlen', None)
         loss = super(Curriculum_SimpleModel, self).forward(x, y)
         return loss, seqlen
@@ -70,6 +76,7 @@ class Curriculum_SimpleModel(SimpleModel):
 class SimpleMoEModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, num_experts=4, ep_size=1, use_residual=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimpleMoEModel, self).__init__()
         self.linear1 = torch.nn.Linear(hidden_dim, hidden_dim)
         expert = torch.nn.Sequential(torch.nn.Linear(hidden_dim, hidden_dim), torch.nn.Linear(hidden_dim, hidden_dim))
@@ -93,6 +100,7 @@ class SimpleMoEModel(torch.nn.Module):
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self, x, y):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         hidden_dim = self.linear1(x)
         output, _, _ = self.moe_1(hidden_dim)
         output = self.linear2(output)
@@ -106,6 +114,7 @@ class SimpleMoEModel(torch.nn.Module):
 class SimplePRMoEModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, num_experts=2, ep_size=1, use_residual=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimplePRMoEModel, self).__init__()
         self.linear = torch.nn.Linear(hidden_dim, hidden_dim)
         linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
@@ -125,6 +134,7 @@ class SimplePRMoEModel(torch.nn.Module):
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self, x, y):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         hidden_dim = x
         hidden_dim = self.linear(hidden_dim)
         output, _, _ = self.linear2(hidden_dim)
@@ -137,6 +147,7 @@ class SimplePRMoEModel(torch.nn.Module):
 class UnusedParametersModel(SimpleModel):
 
     def __init__(self, hidden_dim, empty_grad=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super().__init__(hidden_dim, empty_grad)
 
         self.unused_linear = torch.nn.Linear(hidden_dim, hidden_dim)
@@ -145,6 +156,7 @@ class UnusedParametersModel(SimpleModel):
 class LinearStack(torch.nn.Module):
 
     def __init__(self, input_dim=128, hidden_dim=128, output_dim=128, num_layers=4):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -160,6 +172,7 @@ class LinearStack(torch.nn.Module):
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self, x, y):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         x = self.input_layer(x)
         for layer in self.layers:
             x = layer(x)
@@ -170,6 +183,7 @@ class LinearStack(torch.nn.Module):
 class LinearStackPipe(PipelineModule):
 
     def __init__(self, input_dim=128, hidden_dim=128, output_dim=128, num_layers=4, **kwargs):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_dim = hidden_dim
@@ -188,13 +202,16 @@ class LinearStackPipe(PipelineModule):
 class SimpleOptimizer(torch.optim.Optimizer):
 
     def __init__(self, params, lr=0.11072018):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         defaults = dict(lr=lr)
         super(SimpleOptimizer, self).__init__(params, defaults)
 
     def __setstate__(self, state):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimpleOptimizer, self).__setstate__(state)
 
     def step(self, closure=None):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         loss = None
         if closure is not None:
             loss = closure()
@@ -212,13 +229,16 @@ class SimpleOptimizer(torch.optim.Optimizer):
 class HybridStateOptimizer(torch.optim.Optimizer):
 
     def __init__(self, params, lr=0.11072018):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         defaults = dict(lr=lr)
         super(HybridStateOptimizer, self).__init__(params, defaults)
 
     def __setstate__(self, state):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(HybridStateOptimizer, self).__setstate__(state)
 
     def step(self, closure=None):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         loss = None
         if closure is not None:
             loss = closure()
@@ -244,9 +264,11 @@ class HybridStateOptimizer(torch.optim.Optimizer):
 class PLD_SimpleModel(SimpleModel):
 
     def __init__(self, hidden_dim, empty_grad=False):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(PLD_SimpleModel, self).__init__(hidden_dim, empty_grad)
 
     def forward(self, x, y, **kwargs):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         pld = kwargs.get('progressive_layer_drop', False)
         theta = kwargs.get('pld_theta', 1.0)
         hidden_dim = super(PLD_SimpleModel, self).forward(x, y)

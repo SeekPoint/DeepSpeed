@@ -12,7 +12,7 @@ from .utils import TopKBinarizer, SymQuantizer, AsymQuantizer, TernaryQuantizer,
 from deepspeed.utils import logger
 
 g_mpu = None
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class QuantAct(nn.Module):
     """
@@ -26,7 +26,7 @@ class QuantAct(nn.Module):
     """
 
     def __init__(self, act_range_momentum=0.95, quant_mode='symmetric'):
-        debuginfo(prj='ds', info='QuantAct init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(QuantAct, self).__init__()
 
         self.act_range_momentum = act_range_momentum
@@ -44,10 +44,10 @@ class QuantAct(nn.Module):
         num_bits: the number of bits we need to quantize the activation to
         *args: some extra arguments that are useless but needed for align with the interface of other quantization functions
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.training:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             x_min = x.data.min()
             x_max = x.data.max()
 
@@ -68,7 +68,7 @@ class QuantAct(nn.Module):
 class Embedding_Compress(nn.Embedding):
 
     def __init__(self, *kargs):
-        debuginfo(prj='ds', info='Embedding_Compress init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(Embedding_Compress, self).__init__(*kargs)
         self.weight.start_bits = None
         self.weight.target_bits = None
@@ -77,13 +77,13 @@ class Embedding_Compress(nn.Embedding):
         self.weight_quantization_enabled = False
 
     def extra_repr(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return 'num_embeddings={}, embedding_dim={}, weight_quantization={}'.format(
             self.num_embeddings, self.embedding_dim, self.weight.target_bits)
 
     def enable_weight_quantization(self, start_bits, target_bits, quantization_period,
                                    weight_quantization_enabled_in_forward, quantization_type, num_groups):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.start_bits = start_bits
         self.weight.target_bits = target_bits
         self.weight.q_period = quantization_period
@@ -94,10 +94,10 @@ class Embedding_Compress(nn.Embedding):
             )
             if self.weight.target_bits >= 3:
                 if quantization_type == 'symmetric':
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.weight_quantizer = SymQuantizer.apply
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.weight_quantizer = AsymQuantizer.apply
             elif self.weight.target_bits == 2:
                 assert quantization_type == 'symmetric', 'Only symmetric quantization is supported for ternary weight quantization'
@@ -109,7 +109,7 @@ class Embedding_Compress(nn.Embedding):
             self.weight_quantize_num_groups = self.weight.size(0)
 
     def fix_weight_quantization(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.data = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                                  self.weight_quantize_num_groups).data
         self.weight_quantization_enabled_in_forward = False
@@ -117,11 +117,11 @@ class Embedding_Compress(nn.Embedding):
 
     def forward(self, input):
         if self.weight_quantization_enabled_in_forward and self.weight_quantization_enabled:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                            self.weight_quantize_num_groups)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight = self.weight
 
         out = nn.functional.embedding(input, weight, self.padding_idx, self.max_norm, self.norm_type,
@@ -135,7 +135,7 @@ class LinearLayer_Compress(nn.Linear):
     """
 
     def __init__(self, *kargs, bias=True):
-        debuginfo(prj='ds', info='LinearLayer_Compress init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(LinearLayer_Compress, self).__init__(*kargs, bias=bias)
         self.sparse_pruning_method = None
         self.row_pruning_method = None
@@ -152,7 +152,7 @@ class LinearLayer_Compress(nn.Linear):
         self.activation_quantization_enabled = False
 
     def extra_repr(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return 'in_features={}, out_features={}, bias={}, sparse pruning={}, row pruning={}, head pruning={}, activation quantization={}, weight_quantization={}'.format(
             self.in_features, self.out_features, self.bias is not None, self.sparse_pruning_method is not None, \
             self.row_pruning_method is not None, self.head_pruning_method is not None, self.activation_quantization_method is not None, self.weight.target_bits)
@@ -162,13 +162,13 @@ class LinearLayer_Compress(nn.Linear):
         self.sparse_pruning_ratio = ratio
         self.sparse_pruning_method = method
         if method == 'l1':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight_norm = torch.abs(self.weight.data)
             mask = TopKBinarizer.apply(weight_norm, self.sparse_pruning_ratio, False)
             mask = mask.view(self.weight.size())
             mask = mask.to(self.weight.device)
         elif method == 'topk':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.sparse_mask_scores = nn.Parameter(torch.Tensor(self.weight.size()))
             self.sparse_mask_scores.data = self.sparse_mask_scores.data.to(self.weight.device)
             init.kaiming_uniform_(self.sparse_mask_scores, a=math.sqrt(5))
@@ -184,14 +184,14 @@ class LinearLayer_Compress(nn.Linear):
         self.row_pruning_method = method
 
         if method == 'l1':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # compute the l1 norm of each column
             weight_norm = torch.linalg.norm(self.weight.data, ord=1, dim=1)
             mask = TopKBinarizer.apply(weight_norm, self.row_pruning_ratio, False)
             mask = mask.view(-1, 1)
             mask = mask.to(self.weight.device)
         elif method == 'topk':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.row_mask_scores = nn.Parameter(torch.Tensor(self.weight.size(0), 1))
             self.row_mask_scores.data = self.row_mask_scores.data.to(self.weight.device)
             init.kaiming_uniform_(self.row_mask_scores, a=math.sqrt(5))
@@ -210,7 +210,7 @@ class LinearLayer_Compress(nn.Linear):
         if method not in ['topk']:
             raise NotImplementedError
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.head_pruning_ratio = ratio
             self.head_pruning_scores = nn.Parameter(torch.Tensor(1,
                                                                  self.num_heads))  # we apply the pruning to O matrix
@@ -218,7 +218,7 @@ class LinearLayer_Compress(nn.Linear):
             init.kaiming_uniform_(self.head_pruning_scores, a=math.sqrt(5))
 
     def fix_sparse_pruning_helper(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         mask = self.get_mask(pruning_type='sparse')
         self.weight.data = self.weight.data * mask
         del self.sparse_pruning_mask
@@ -237,7 +237,7 @@ class LinearLayer_Compress(nn.Linear):
         if mask is None:
             mask = self.get_mask(pruning_type='row').bool()
             if dim_reduction:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 start_bits = self.weight.start_bits
                 target_bits = self.weight.target_bits
                 q_period = self.weight.q_period
@@ -249,18 +249,18 @@ class LinearLayer_Compress(nn.Linear):
                     self.bias = nn.Parameter(self.bias.data[mask.view(-1)])
                 self.out_features = self.weight.size(0)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.weight.data = self.weight.data * mask.view(-1, 1)
                 if self.bias is not None:
                     self.bias.data = self.bias.data * mask.view(-1)
 
             del self.row_pruning_mask
             if self.row_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 del self.row_mask_scores
             self.row_pruning_method = None
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # this is generally for column pruning
             start_bits = self.weight.start_bits
             target_bits = self.weight.target_bits
@@ -281,7 +281,7 @@ class LinearLayer_Compress(nn.Linear):
             if self.head_pruning_method == 'topk':
                 mask = self.get_mask(pruning_type='head').bool()
                 if dim_reduction:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     shape = self.weight.size(0)
                     start_bits = self.weight.start_bits
                     target_bits = self.weight.target_bits
@@ -293,7 +293,7 @@ class LinearLayer_Compress(nn.Linear):
                     self.weight.target_bits = target_bits
                     self.weight.q_period = q_period
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     shape = self.weight.size()
                     self.weight.data = (self.weight.data.t().reshape(self.num_heads, -1) * mask.view(-1, 1)).reshape(
                         shape[1], shape[0]).t()
@@ -304,7 +304,7 @@ class LinearLayer_Compress(nn.Linear):
             else:
                 raise NotImplementedError
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             start_bits = self.weight.start_bits
             target_bits = self.weight.target_bits
             q_period = self.weight.q_period
@@ -321,25 +321,25 @@ class LinearLayer_Compress(nn.Linear):
     def get_mask(self, pruning_type='row'):
         if pruning_type == 'sparse':
             if self.sparse_pruning_method == 'l1':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self.sparse_pruning_mask.to(self.weight.device)
             elif self.sparse_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return TopKBinarizer.apply(self.sparse_mask_scores, self.sparse_pruning_ratio, False)
             else:
                 raise NotImplementedError
         if pruning_type == 'row':
             if self.row_pruning_method == 'l1':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self.row_pruning_mask.to(self.weight.device)
             elif self.row_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return TopKBinarizer.apply(self.row_mask_scores, self.row_pruning_ratio, False)
             else:
                 raise NotImplementedError
         elif pruning_type == 'head':
             if self.head_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return TopKBinarizer.apply(self.head_pruning_scores, self.head_pruning_ratio, False)
             else:
                 raise NotImplementedError
@@ -348,7 +348,7 @@ class LinearLayer_Compress(nn.Linear):
 
     def enable_weight_quantization(self, start_bits, target_bits, quantization_period,
                                    weight_quantization_enabled_in_forward, quantization_type, num_groups):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.start_bits = start_bits
         self.weight.target_bits = target_bits
         self.weight.q_period = quantization_period
@@ -359,23 +359,23 @@ class LinearLayer_Compress(nn.Linear):
             )
             if self.weight.target_bits >= 3:
                 if quantization_type == 'symmetric':
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.weight_quantizer = SymQuantizer.apply
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.weight_quantizer = AsymQuantizer.apply
             elif self.weight.target_bits == 2:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 assert quantization_type == 'symmetric', 'Only symmetric quantization is supported for ternary weight quantization'
                 self.weight_quantizer = TernaryQuantizer.apply
             elif self.weight.target_bits == 1:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 assert quantization_type == 'symmetric', 'Only symmetric quantization is supported for binary weight quantization'
                 self.weight_quantizer = BinaryQuantizer.apply
             self.weight_quantize_num_groups = num_groups
 
     def fix_weight_quantization(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.data = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                                  self.weight_quantize_num_groups).data
         self.weight_quantization_enabled_in_forward = False
@@ -386,66 +386,66 @@ class LinearLayer_Compress(nn.Linear):
         self.activation_quantization_bits = bits
         self.activation_quantization_method = f"{quantization_type}_{range_calibration}"
         if range_calibration == 'static':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.activation_quantizer = QuantAct(quant_mode=quantization_type)
         else:
             if quantization_type == 'symmetric':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.activation_quantizer = SymQuantizer.apply
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.activation_quantizer = AsymQuantizer.apply
 
     def head_pruning_reshape(self, w, mask):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         shape = w.shape
         return (w.t().reshape(self.num_heads, -1) * mask.view(-1, 1)).reshape(shape[1], shape[0]).t()
 
     def forward(self, input, skip_bias_add=False):
         if self.weight_quantization_enabled_in_forward and self.weight_quantization_enabled:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                            self.weight_quantize_num_groups)
             bias = self.bias
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight = self.weight
             bias = self.bias
 
         if self.sparse_pruning_enabled and self.sparse_pruning_method:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mask = self.get_mask(pruning_type='sparse')
             weight = weight * mask.view(self.weight.size())
 
         if self.row_pruning_enabled and self.row_pruning_method:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mask = self.get_mask(pruning_type='row')
             weight = weight * mask.view(-1, 1)
             if bias is not None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 bias = bias * mask.view(-1)
 
         if self.head_pruning_enabled and self.head_pruning_method:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mask = self.get_mask(pruning_type='head')
             weight = self.head_pruning_reshape(weight, mask)
 
         if self.activation_quantization_enabled:
             if 'dynamic' in self.activation_quantization_method:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 num_groups = input.numel() // input.size(-1)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 num_groups = 1
             input = self.activation_quantizer(input, self.activation_quantization_bits, None, None, num_groups)
 
         if skip_bias_add:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # used for mpu linear layers
             output = nn.functional.linear(input, weight, None)
             return output, bias
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = nn.functional.linear(input, weight, bias)
             return output
 
@@ -456,7 +456,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
     """
 
     def __init__(self, *kargs):
-        debuginfo(prj='ds', info='Conv2dLayer_Compress init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(Conv2dLayer_Compress, self).__init__(*kargs)
         self.sparse_pruning_method = None
         self.channel_pruning_method = None
@@ -470,7 +470,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
         self.activation_quantization_enabled = False
 
     def __repr__(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         s = ('{in_channels}, {out_channels}, kernel_size={kernel_size}'
              ', stride={stride}')
         if self.padding != (0, ) * len(self.padding):
@@ -495,13 +495,13 @@ class Conv2dLayer_Compress(nn.Conv2d):
         self.sparse_pruning_ratio = ratio
         self.sparse_pruning_method = method
         if method == 'l1':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             weight_norm = torch.abs(self.weight.data)
             mask = TopKBinarizer.apply(weight_norm, self.sparse_pruning_ratio, False)
             mask = mask.view(self.weight.size())
             mask = mask.to(self.weight.device)
         elif method == 'topk':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.sparse_mask_scores = nn.Parameter(torch.Tensor(self.weight.size()))
             self.sparse_mask_scores.data = self.sparse_mask_scores.data.to(self.weight.device)
             init.kaiming_uniform_(self.sparse_mask_scores, a=math.sqrt(5))
@@ -517,14 +517,14 @@ class Conv2dLayer_Compress(nn.Conv2d):
         self.channel_pruning_method = method
 
         if method == 'l1':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # compute the l1 norm of each conv2d kernel (the last three dimension)
             weight_norm = torch.linalg.norm(self.weight.data, ord=1, dim=[1, 2, 3])
             mask = TopKBinarizer.apply(weight_norm, self.channel_pruning_ratio, False)
             mask = mask.view(-1, 1, 1, 1)
             mask = mask.to(self.weight.device)
         elif method == 'topk':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.channel_mask_scores = nn.Parameter(torch.Tensor(self.weight.size(0), 1, 1, 1))
             self.channel_mask_scores.data = self.channel_mask_scores.data.to(self.weight.device)
             init.kaiming_uniform_(self.channel_mask_scores, a=math.sqrt(5))
@@ -535,12 +535,12 @@ class Conv2dLayer_Compress(nn.Conv2d):
         self.register_buffer('channel_pruning_mask', mask)
 
     def fix_sparse_pruning_helper(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         mask = self.get_mask(pruning_type='sparse')
         self.weight.data = self.weight.data * mask
         del self.sparse_pruning_mask
         if self.sparse_pruning_method == 'topk':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             del self.sparse_mask_scores
         self.sparse_pruning_method = None
         self.sparse_pruning_enabled = False
@@ -549,10 +549,10 @@ class Conv2dLayer_Compress(nn.Conv2d):
     def fix_channel_pruning_helper(self, mask=None, dim_reduction=False):
         if mask is None:
             if self.channel_pruning_method in ['l1', 'topk']:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 mask = self.get_mask(pruning_type='channel').bool()
                 if dim_reduction:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     start_bits = self.weight.start_bits
                     target_bits = self.weight.target_bits
                     q_period = self.weight.q_period
@@ -563,7 +563,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
                     if self.bias is not None:
                         self.bias = nn.Parameter(self.bias.data[mask.view(-1)])
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.weight.data = self.weight.data * mask.view(-1, 1, 1, 1)
                     if self.bias is not None:
                         self.bias.data = self.bias.data * mask.view(-1)
@@ -574,7 +574,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
             else:
                 raise NotImplementedError
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             start_bits = self.weight.start_bits
             target_bits = self.weight.target_bits
             q_period = self.weight.q_period
@@ -589,19 +589,19 @@ class Conv2dLayer_Compress(nn.Conv2d):
     def get_mask(self, pruning_type='sparse'):
         if pruning_type == 'sparse':
             if self.sparse_pruning_method == 'l1':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self.sparse_pruning_mask.to(self.weight.device)
             elif self.sparse_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return TopKBinarizer.apply(self.sparse_mask_scores, self.sparse_pruning_ratio, False)
             else:
                 raise NotImplementedError
         elif pruning_type == 'channel':
             if self.channel_pruning_method == 'l1':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self.channel_pruning_mask.to(self.weight.device)
             elif self.channel_pruning_method == 'topk':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return TopKBinarizer.apply(self.channel_mask_scores, self.channel_pruning_ratio, False)
             else:
                 raise NotImplementedError
@@ -609,7 +609,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
             raise NotImplementedError
 
     def fix_weight_quantization(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.data = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                                  self.weight_quantize_num_groups).data
         self.weight_quantization_enabled_in_forward = False
@@ -617,7 +617,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
 
     def enable_weight_quantization(self, start_bits, target_bits, quantization_period,
                                    weight_quantization_enabled_in_forward, quantization_type, num_groups):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight.start_bits = start_bits
         self.weight.target_bits = target_bits
         self.weight.q_period = quantization_period
@@ -628,10 +628,10 @@ class Conv2dLayer_Compress(nn.Conv2d):
                 "************ A lot of MoQ features are not supported in quantize_weight_in_forward mode, please consider to use DS-FP16 optimizer************"
             )
             if quantization_type == 'symmetric':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.weight_quantizer = SymQuantizer.apply
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.weight_quantizer = AsymQuantizer.apply
             self.weight_quantize_num_groups = num_groups
 
@@ -640,14 +640,14 @@ class Conv2dLayer_Compress(nn.Conv2d):
         self.activation_quantization_bits = bits
         self.activation_quantization_method = f"{quantization_type}_{range_calibration}"
         if range_calibration == 'static':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.activation_quantizer = QuantAct(quant_mode=quantization_type)
         else:
             if quantization_type == 'symmetric':
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.activation_quantizer = SymQuantizer.apply
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.activation_quantizer = AsymQuantizer.apply
 
     def forward(self, input):
@@ -656,32 +656,32 @@ class Conv2dLayer_Compress(nn.Conv2d):
             weight = self.weight_quantizer(self.weight, self.weight.target_bits, None, None,
                                            self.weight_quantize_num_groups)
             bias = self.bias
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         else:
             weight = self.weight
             bias = self.bias
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.sparse_pruning_enabled and self.sparse_pruning_method:
             mask = self.get_mask(pruning_type='sparse')
             weight = weight * mask.view(self.weight.size())
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.channel_pruning_enabled:
             mask = self.get_mask(pruning_type='channel')
             weight = weight * mask.view(-1, 1, 1, 1)
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if bias is not None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 bias = bias * mask.view(-1)
 
         if self.activation_quantization_enabled:
             if 'dynamic' in self.activation_quantization_method:
                 num_groups = input.numel() // input[0].numel()
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             else:
                 num_groups = 1
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             input = self.activation_quantizer(input, self.activation_quantization_bits, None, None, num_groups)
 
         return nn.functional.conv2d(input, weight, bias, self.stride, self.padding, self.dilation, self.groups)
@@ -690,7 +690,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
 class BNLayer_Compress(nn.BatchNorm2d):
 
     def fix_channel_pruning_helper(self, mask, dim_reduction=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.weight = nn.Parameter(self.weight.data[mask.view(-1)])
         self.bias = nn.Parameter(self.bias.data[mask.view(-1)])
         self.running_mean = self.running_mean[mask.view(-1)]
@@ -698,7 +698,7 @@ class BNLayer_Compress(nn.BatchNorm2d):
 
 
 def _reduce(input_):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """All-reduce the the input tensor across model parallel group."""
     group = g_mpu.get_model_parallel_group()
 
@@ -721,7 +721,7 @@ def split_tensor_along_last_dim(tensor, num_partitions, contiguous_split_chunks=
                                  in memory.
     """
     # Get the size and dimension.
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     last_dim = tensor.dim() - 1
     assert tensor.size()[last_dim] % num_partitions == 0
     last_dim_size = tensor.size()[last_dim] // num_partitions
@@ -729,7 +729,7 @@ def split_tensor_along_last_dim(tensor, num_partitions, contiguous_split_chunks=
     tensor_list = torch.split(tensor, last_dim_size, dim=last_dim)
     # Note: torch.split does not create contiguous tensors by default.
     if contiguous_split_chunks:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return tuple(chunk.contiguous() for chunk in tensor_list)
 
     return tensor_list
@@ -738,7 +738,7 @@ def split_tensor_along_last_dim(tensor, num_partitions, contiguous_split_chunks=
 def _split(input_):
     """Split the tensor along its last dimension and keep the
     corresponding slice."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     group = g_mpu.get_model_parallel_group()
 
     # Bypass the function if we are using only 1 GPU.
@@ -761,9 +761,9 @@ def _gather(input_):
     group = g_mpu.get_model_parallel_group()
 
     # Bypass the function if we are using only 1 GPU.
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if dist.get_world_size(group=group) == 1:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return input_
 
     # Size and dimension.
@@ -783,7 +783,7 @@ def _gather(input_):
 
 class _CopyToModelParallelRegion(torch.autograd.Function):
     """Pass the input to the model parallel region."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     @staticmethod
     def forward(ctx, input_):
@@ -796,7 +796,7 @@ class _CopyToModelParallelRegion(torch.autograd.Function):
 
 class _ReduceFromModelParallelRegion(torch.autograd.Function):
     """All-reduce the input from the model parallel region."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     @staticmethod
     def forward(ctx, input_):
@@ -809,7 +809,7 @@ class _ReduceFromModelParallelRegion(torch.autograd.Function):
 
 class _ScatterToModelParallelRegion(torch.autograd.Function):
     """Split the input and keep only the corresponding chuck to the rank."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     @staticmethod
     def forward(ctx, input_):
@@ -822,7 +822,7 @@ class _ScatterToModelParallelRegion(torch.autograd.Function):
 
 class _GatherFromModelParallelRegion(torch.autograd.Function):
     """Gather the input from model parallel region and concatenate."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     @staticmethod
     def forward(ctx, input_):
@@ -839,29 +839,29 @@ class _GatherFromModelParallelRegion(torch.autograd.Function):
 
 
 def copy_to_model_parallel_region(input_):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return _CopyToModelParallelRegion.apply(input_)
 
 
 def reduce_from_model_parallel_region(input_):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return _ReduceFromModelParallelRegion.apply(input_)
 
 
 def scatter_to_model_parallel_region(input_):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return _ScatterToModelParallelRegion.apply(input_)
 
 
 def gather_from_model_parallel_region(input_):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return _GatherFromModelParallelRegion.apply(input_)
 
 
 class ColumnParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, gather_output=True, skip_bias_add=False):
-        debuginfo(prj='ds', info='ColumnParallelLinear_Compress init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         # Keep input parameters
         global g_mpu
         g_mpu = mpu
@@ -882,18 +882,18 @@ class ColumnParallelLinear_Compress(LinearLayer_Compress):
         input_parallel = copy_to_model_parallel_region(input_)
         # Matrix multiply.
         if self.skip_bias_add:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_parallel, bias = super().forward(input_parallel, True)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_parallel = super().forward(input_parallel)
             bias = None
         if self.gather_output:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # All-gather across the partitions.
             output = gather_from_model_parallel_region(output_parallel)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = output_parallel
         return output, bias
 
@@ -901,7 +901,7 @@ class ColumnParallelLinear_Compress(LinearLayer_Compress):
 class RowParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, input_is_parallel=False, skip_bias_add=False):
-        debuginfo(prj='ds', info='RowParallelLinear_Compress init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         # Keep input parameters
         global g_mpu
         g_mpu = mpu
@@ -920,10 +920,10 @@ class RowParallelLinear_Compress(LinearLayer_Compress):
     def forward(self, input_):
         # Set up backprop all-reduce.
         if self.input_is_parallel:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             input_parallel = input_
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             input_parallel = scatter_to_model_parallel_region(input_)
         # Matrix multiply.
         output_parallel, bias = super().forward(input_parallel, True)
@@ -932,14 +932,14 @@ class RowParallelLinear_Compress(LinearLayer_Compress):
         output_ = reduce_from_model_parallel_region(output_parallel)
         if not self.skip_bias_add:
             if bias is not None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 output = output_ + bias
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 output = output_
             output_bias = None
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = output_
             output_bias = bias
         return output, output_bias

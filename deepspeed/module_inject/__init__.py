@@ -8,5 +8,5 @@ from .module_quantize import quantize_transformer_layer
 from .replace_policy import HFBertLayerPolicy
 from .layers import LinearAllreduce, LinearLayer, EmbeddingLayer, Normalize
 from .policy import DSPolicy
-from pydebug import debuginfo
-debuginfo(prj='ds')
+from pydebug import debuginfo, infoTensor
+debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

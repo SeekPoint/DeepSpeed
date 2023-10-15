@@ -12,7 +12,7 @@ import itertools
 import copy
 
 from ..utils import logger
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def search_error(filename):
     debuginfo(prj='ds', info=f'filename:{filename}')
@@ -41,7 +41,7 @@ def was_interruptted(filename):
 
 
 def find_replace_str(value, replace_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not isinstance(value, str):
         return str(value)
 

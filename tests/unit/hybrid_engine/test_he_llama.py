@@ -11,7 +11,7 @@ from deepspeed.ops.op_builder import OpBuilder
 from unit.common import DistributedTest
 
 from transformers import (AutoConfig, AutoTokenizer, AutoModelForCausalLM)
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 rocm_version = OpBuilder.installed_rocm_version()
 if rocm_version != (0, 0):
     pytest.skip("skip inference tests on rocm for now", allow_module_level=True)
@@ -24,6 +24,7 @@ class TestHybridEngineLlama(DistributedTest):
     world_size = 1
 
     def _generate(self, model, tokenizer, prompt):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         tokens = tokenizer.batch_encode_plus(prompt, return_tensors="pt", padding=True)
         for t in tokens:
@@ -35,6 +36,7 @@ class TestHybridEngineLlama(DistributedTest):
         return outputs
 
     def get_model(self, model_name):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         model_config = AutoConfig.from_pretrained(model_name)
         model_config.dropout = 0.0
@@ -46,11 +48,13 @@ class TestHybridEngineLlama(DistributedTest):
         return model
 
     def get_tokenizer(self, model_name):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
     def get_prompt(self, batch_size):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if batch_size == 1:
             prompt = ["Microsoft is in Washington"]
         elif batch_size == 2:
@@ -60,7 +64,10 @@ class TestHybridEngineLlama(DistributedTest):
         return prompt
 
     def test_correctness(self, batch_size, model_name):
+
         pytest.skip("skip test for now, will fix in follow-up PR")
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         model = self.get_model(model_name)
         tokenizer = self.get_tokenizer(model_name)
         prompt = self.get_prompt(batch_size)
@@ -80,6 +87,7 @@ class TestHybridEngineLlama(DistributedTest):
         assert base_out == ds2_out
 
     def test_functionality(self, batch_size, model_name):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         model = self.get_model(model_name)
         tokenizer = self.get_tokenizer(model_name)
         prompt = self.get_prompt(batch_size)

@@ -7,7 +7,7 @@ import pytest
 import torch
 from deepspeed.ops.transformer.inference.bias_add import nhwc_bias_add
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def allclose(x, y):
     assert x.dtype == y.dtype

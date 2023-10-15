@@ -6,7 +6,7 @@
 import os
 import pkgutil
 import importlib
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 from .abstract_accelerator import DeepSpeedAccelerator
 # During setup stage torch may not be installed, pass on no torch will
 # allow op builder related API to be executed.
@@ -19,7 +19,7 @@ except ImportError:
 class CUDA_Accelerator(DeepSpeedAccelerator):
 
     def __init__(self):
-        debuginfo(prj='ds', info='CUDA_Accelerator init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._name = 'cuda'
         self._communication_backend_name = 'nccl'
 
@@ -28,7 +28,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # Device APIs
     def device_name(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if device_index == None:
             return 'cuda'
         return 'cuda:{}'.format(device_index)
@@ -43,7 +43,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         return torch.cuda.current_device()
 
     def current_device_name(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return 'cuda:{}'.format(torch.cuda.current_device())
 
     def device_count(self):
@@ -57,14 +57,14 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         return torch.random
 
     def set_rng_state(self, new_state, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if device_index is None:
             return torch.cuda.set_rng_state(new_state)
 
         return torch.cuda.set_rng_state(new_state, device_index)
 
     def get_rng_state(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if device_index is None:
             return torch.cuda.get_rng_state()
 
@@ -123,22 +123,22 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         return torch.cuda.reset_max_memory_cached(device_index)
 
     def memory_stats(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda, 'memory_stats'):
             return torch.cuda.memory_stats(device_index)
 
     def reset_peak_memory_stats(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda, 'reset_peak_memory_stats'):
             return torch.cuda.reset_peak_memory_stats(device_index)
 
     def memory_reserved(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda, 'memory_reserved'):
             return torch.cuda.memory_reserved(device_index)
 
     def max_memory_reserved(self, device_index=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda, 'max_memory_reserved'):
             return torch.cuda.max_memory_reserved(device_index)
 
@@ -147,11 +147,11 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # Data types
     def is_bf16_supported(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return torch.cuda.is_bf16_supported()
 
     def is_fp16_supported(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         major, _ = torch.cuda.get_device_capability()
         if major >= 7:
             return True
@@ -160,7 +160,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # Misc
     def amp(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda, 'amp'):
             return torch.cuda.amp
         return None
@@ -169,12 +169,12 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         return torch.cuda.is_available()
 
     def range_push(self, msg):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda.nvtx, 'range_push'):
             return torch.cuda.nvtx.range_push(msg)
 
     def range_pop(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(torch.cuda.nvtx, 'range_pop'):
             return torch.cuda.nvtx.range_pop()
 
@@ -218,7 +218,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         return tensor.pin_memory()
 
     def on_accelerator(self, tensor):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         device_str = str(tensor.device)
         if device_str.startswith('cuda:'):
             return True
@@ -226,7 +226,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
             return False
 
     def op_builder_dir(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         try:
             # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
             # if successful this also means we're doing a local install and not JIT compile path
@@ -244,7 +244,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
         if self.class_dict != None:
             return
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.class_dict = {}
             # begin initialize for create_op_builder()
             # put all valid class name <--> class type mapping into class_dict
@@ -264,7 +264,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # create an instance of op builder and return, name specified by class_name
     def create_op_builder(self, class_name):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._lazy_init_class_dict()
         if class_name in self.class_dict:
             return self.class_dict[class_name]()
@@ -273,7 +273,7 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
 
     # return an op builder class, name specified by class_name
     def get_op_builder(self, class_name):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._lazy_init_class_dict()
         if class_name in self.class_dict:
             return self.class_dict[class_name]
@@ -281,6 +281,6 @@ class CUDA_Accelerator(DeepSpeedAccelerator):
             return None
 
     def build_extension(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from torch.utils.cpp_extension import BuildExtension
         return BuildExtension

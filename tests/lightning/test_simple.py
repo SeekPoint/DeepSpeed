@@ -8,10 +8,10 @@ from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.strategies import DeepSpeedStrategy
 from torch.utils.data import DataLoader, Dataset
 
-from pydebug import debuginfo
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
+from pydebug import debuginfo, infoTensor
 class RandomDataset(Dataset):
-    debuginfo(prj='ds', info='RandomDataset init')
+    debuginfo(prj='ds', info=self.__class__.__name__)
     def __init__(self, size, length):
         self.len = length
         self.data = torch.randn(length, size)
@@ -24,7 +24,7 @@ class RandomDataset(Dataset):
 
 
 class BoringModel(LightningModule):
-    debuginfo(prj='ds', info='BoringModel init')
+    debuginfo(prj='ds', info=self.__class__.__name__)
     def __init__(self):
         super().__init__()
         self.layer = torch.nn.Linear(32, 2)

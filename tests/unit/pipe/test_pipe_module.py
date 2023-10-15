@@ -17,7 +17,7 @@ from deepspeed.utils import RepeatingLoader
 from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 HIDDEN_DIM = 32
 LAYERS = 8
 
@@ -63,6 +63,7 @@ class TestPipeModuleSequential(DistributedTest):
 
     @pytest.mark.parametrize("activation_checkpoints", [False, True])
     def test(self, sequential_model, simple_config, batch_input, activation_checkpoints):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         base_model = copy.deepcopy(sequential_model)
         base_input = batch_input.clone().detach()
         base_output = base_model(base_input)
@@ -84,6 +85,7 @@ class TestPipeModuleSequential(DistributedTest):
                                                    model_parameters=[p for p in pipe_model.parameters()])
 
         if activation_checkpoints:
+            debuginfo(prj='dsUT')
             deepspeed.checkpointing.configure(None,
                                               deepspeed_config=pipe_model.config,
                                               partition_activations=True,
@@ -91,12 +93,14 @@ class TestPipeModuleSequential(DistributedTest):
                                               num_checkpoints=9)
 
         if pipe_model.is_first_stage or pipe_model.is_last_stage:
+            debuginfo(prj='dsUT')
             pipe_input = base_input.clone().detach().to(get_accelerator().device_name())
             # label 0 is meaningless
             dataset = [(pipe_input, 0)]
             loader = RepeatingLoader(dataset)
             data_iter = iter(loader)
         else:
+            debuginfo(prj='dsUT')
             data_iter = None
 
         pipe_output = pipe_model.eval_batch(data_iter=data_iter)

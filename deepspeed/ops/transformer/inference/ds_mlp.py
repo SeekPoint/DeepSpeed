@@ -11,13 +11,13 @@ from deepspeed.utils.types import GATED_ACTIVATION_TYPES
 from deepspeed.accelerator import get_accelerator
 from .op_binding import MLPGemmOp, VectorMatMulOp, GELUGemmOp, ResidualAddOp
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedMLP(nn.Module):
     _inter_w_buffers = []
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, mlp_extra_grouping=False):
-        debuginfo(prj='ds', info='DeepSpeedMLP init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(DeepSpeedMLP, self).__init__()
 
         self.config = config
@@ -32,7 +32,7 @@ class DeepSpeedMLP(nn.Module):
         self.intm_o_sz_per_partition = self.config.intermediate_size // self.config.mp_size
 
         if self.config.set_empty_params:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.attn_nw = None
             self.attn_nb = None
             self.inter_w = None
@@ -44,7 +44,7 @@ class DeepSpeedMLP(nn.Module):
             self.output_w = None
             self.output_b = None
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.attn_nw = nn.Parameter(torch.empty(self.config.hidden_size, dtype=data_type_fp, device=device),
                                         requires_grad=False)
             self.attn_nb = nn.Parameter(torch.empty(self.config.hidden_size, dtype=data_type_fp, device=device),
@@ -77,19 +77,19 @@ class DeepSpeedMLP(nn.Module):
         self.residual_add_func = ResidualAddOp(config)
 
         if len(DeepSpeedMLP._inter_w_buffers) == 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             DeepSpeedMLP._inter_w_buffers = [
                 torch.empty(self.config.hidden_size, self.intm_w_sz_per_partition, dtype=data_type, device=device),
                 torch.empty(self.intm_w_sz_per_partition, dtype=data_type_fp, device=device)
             ]
 
     def _merge_inter_w(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         inter_w = DeepSpeedMLP._inter_w_buffers[0]
         inter_w[:self.intm_w_sz_per_partition, :] = self.inter_up_w  # type: ignore
         inter_w[self.intm_w_sz_per_partition:, :] = self.inter_gate_w  # type: ignore
         if self.inter_up_b is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             inter_b = DeepSpeedMLP._inter_w_buffers[1]
             inter_b[:self.intm_w_sz_per_partition] = self.inter_up_b  # type: ignore
             inter_b[self.intm_w_sz_per_partition:] = self.inter_gate_b  # type: ignore
@@ -98,22 +98,22 @@ class DeepSpeedMLP(nn.Module):
     def forward(self, input, residual, residual_norm, bias):
 
         if self.inter_w is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._inter_w, self._inter_b = self._merge_inter_w()
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._inter_w = self.inter_w
             self._inter_b = self.inter_b
 
         residual_add = None
         if self.attn_nw is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = self.fused_gemm_gelu(input=residual_norm,
                                           weight=self.inter_w,
                                           bias=self.inter_b,
                                           weight_out=self.output_w)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output, residual_add = self.mlp_gemm_func(input=input,
                                                       residual=residual,
                                                       weight_interm=self.inter_w,
@@ -131,7 +131,7 @@ class DeepSpeedMLP(nn.Module):
                                           final_bias=self.output_b,
                                           residual_add=residual_add)
         if self.mp_group is not None and dist.get_world_size(group=self.mp_group) > 1:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(residual, group=self.mp_group)
 
         return residual

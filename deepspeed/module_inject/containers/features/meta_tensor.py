@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 from packaging import version as pkg_version
 import torch
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class MetaTensorContainer(ABC):
     """
@@ -16,7 +16,7 @@ class MetaTensorContainer(ABC):
     """
 
     def __init__(self, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if pkg_version.parse('1.10') > pkg_version.parse(torch.__version__):
             raise NotImplementedError("Meta tensor support is not available, please upgrade to torch 1.10+")
         super().__init__(**kwargs)
@@ -24,36 +24,36 @@ class MetaTensorContainer(ABC):
         self.ckpt_load_enabled = True
 
     def initialize_tensors(self, enable_training=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().initialize_tensors(enable_training=enable_training)
         self.is_meta = self.qkvw.is_meta
 
     def apply_tensor_parallelism(self, mp_replace, **kwargs):
         if self.is_meta:
             if self.qkvb is None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.module.attention.attn_qkvb = None
             if self.dense_b is None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.module.attention.attn_ob = None
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             super().apply_tensor_parallelism(mp_replace, **kwargs)
 
     def copy_data_to_new_module(self):
         if self.is_meta:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.attn_nw is None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.module.mlp.attn_nw = self.attn_nw
                 self.module.mlp.attn_nb = self.attn_nb
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             super().copy_data_to_new_module()
 
     def transpose(self):
         if not self.is_meta:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             super().transpose()
 
     @abstractmethod

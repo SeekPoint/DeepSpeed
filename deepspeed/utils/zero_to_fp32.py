@@ -20,7 +20,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 # while this script doesn't use deepspeed to recover data, since the checkpoints are pickled with
 # DeepSpeed data structures it has to be available in the current python environment.
 from deepspeed.utils import logger
@@ -59,7 +59,7 @@ def natural_keys(text):
 
 
 def get_model_state_file(checkpoint_dir, zero_stage):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not os.path.isdir(checkpoint_dir):
         raise FileNotFoundError(f"Directory '{checkpoint_dir}' doesn't exist")
 
@@ -76,7 +76,7 @@ def get_model_state_file(checkpoint_dir, zero_stage):
 
 
 def get_checkpoint_files(checkpoint_dir, glob_pattern):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # XXX: need to test that this simple glob rule works for multi-node setup too
     ckpt_files = sorted(glob.glob(os.path.join(checkpoint_dir, glob_pattern)), key=natural_keys)
 

@@ -7,7 +7,7 @@ import pytest
 import torch
 import deepspeed
 from deepspeed.git_version_info import torch_info
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def skip_on_arch(min_arch=7):
     if deepspeed.accelerator.get_accelerator().device_name() == 'cuda':

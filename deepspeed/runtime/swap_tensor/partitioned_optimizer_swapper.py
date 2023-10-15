@@ -17,18 +17,18 @@ from deepspeed.runtime.swap_tensor.utils import swap_in_tensors, swap_out_tensor
     get_sized_buffers
 from deepspeed.runtime.swap_tensor.async_swapper import AsyncTensorSwapper
 from deepspeed.runtime.swap_tensor.optimizer_utils import OptimizerSwapper
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 DEBUG_MODE = False
 
 SWAP_IN_PARAM_TIMER = 'swap_in_param'
 SWAP_OUT_PARAM_TIMER = 'swap_out_param'
 SWAP_IN_GRADIENT_TIMER = 'swap_in_gradient'
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class PartitionedOptimizerSwapper(OptimizerSwapper):
 
     def __init__(self, swap_config, aio_config, base_folder, optimizer, largest_numel, device, dtype, timers):
-        debuginfo(prj='ds', info='PartitionedOptimizerSwapper init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(PartitionedOptimizerSwapper, self).__init__(swap_config, aio_config, base_folder, optimizer,
                                                           largest_numel, device, dtype, timers)
 
@@ -48,12 +48,12 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
             print_object(obj=self, name='PartitionedOptimizerSwapper', exclude_list=self.print_exclude_list)
 
     def initialize_parameters(self, parameters, src_tensors):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._initialize_parameters(parameters=parameters, src_tensors=src_tensors, aio_handle=self.aio_handle)
 
     def initialize_from_swapped_fp16_params(self, fp16_partitions_info, fp16_num_elems, fp16_pinned_buffers,
                                             fp32_parameters):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._initialize_from_swapped_fp16_params(aio_handle=self.aio_handle,
                                                   fp16_partitions_info=fp16_partitions_info,
                                                   fp16_num_elems=fp16_num_elems,
@@ -61,11 +61,11 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
                                                   fp32_parameters=fp32_parameters)
 
     def flush_gradients(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._flush_gradient_swapper(self.gradient_swapper)
 
     def swap_in_optimizer_state(self, parameter, async_parameter=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         swap_info = self._get_param_swap_info(parameter)
         if swap_info is None:
             return
@@ -93,7 +93,7 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
         self.timer_names.add(SWAP_IN_GRADIENT_TIMER)
 
     def swap_out_optimizer_state(self, parameter, async_swap=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         swap_info = self._get_param_swap_info(parameter=parameter)
 
         if swap_info is None:
@@ -135,14 +135,14 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
             logger.info(f'optimizer_param_swap_out: {(swap_bytes/(1024**3)):5.2f} GB')
 
     def swap_out_gradients(self, parameter, gradient_offsets, gradient_tensors):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._swap_out_gradients(parameter=parameter,
                                  gradient_offsets=gradient_offsets,
                                  gradient_tensors=gradient_tensors,
                                  gradient_swapper=self.gradient_swapper)
 
     def _swap_in_parameter(self, aio_handle, parameter, dest_buffers):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         swap_info = self._get_param_swap_info(parameter)
         if swap_info is None:
             return
@@ -175,7 +175,7 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
             logger.info(f'optimizer_param_swap_in: {(swap_bytes/(1024**3)):5.2f} GB')
 
     def _separate_pinned_tensors(self, swap_info):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         pinned_tensors = []
         pinned_paths = []
 
@@ -193,7 +193,7 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
         return pinned_tensors, pinned_paths, unpinned_tensors, unpinned_paths
 
     def _swap_in_pinned_gradients(self, aio_handle, parameter, gradient_tensor):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         swap_info = self.swap_params_info[id(parameter)]
         param_gradients = swap_info.swapped_gradients.values()
         swap_buffers = [gradient_tensor.narrow(0, grad.offset, grad.length) for grad in param_gradients]
@@ -212,10 +212,10 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
         self._log_timers([SWAP_READ_GRADIENTS, SWAP_WAIT_GRADIENTS])
 
     def _swap_in_gradients(self, aio_handle, parameter, dest_buffer):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         swap_info = self.swap_params_info.get(id(parameter), None)
         if not (swap_info and swap_info.has_gradients()):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
 
         assert dest_buffer.is_pinned()
@@ -224,9 +224,9 @@ class PartitionedOptimizerSwapper(OptimizerSwapper):
         parameter.grad = dest_buffer.narrow(0, 0, parameter.numel())
 
         if swap_info.swapped_gradients:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._swap_in_pinned_gradients(aio_handle, parameter, parameter.grad)
 
         if swap_info.unswapped_gradients:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._retrieve_unswapped_grad_partitions(swap_info=swap_info, dest_buffer=parameter.grad)

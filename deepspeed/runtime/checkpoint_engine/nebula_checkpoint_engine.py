@@ -11,7 +11,7 @@ from deepspeed.runtime.checkpoint_engine.checkpoint_engine import \
     CheckpointEngine
 from deepspeed.utils import logger, log_dist
 from deepspeed.nebula.constants import *
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def _get_tag_from_path(path):
     return os.path.basename(os.path.dirname(path))
@@ -20,7 +20,7 @@ def _get_tag_from_path(path):
 class NebulaCheckpointEngine(CheckpointEngine):
 
     def __init__(self, config_params=None):
-        debuginfo(prj='ds', info='NebulaCheckpointEngine init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(config_params)
         self.checkpoint = None
         self.tag_flag = None
@@ -54,7 +54,7 @@ class NebulaCheckpointEngine(CheckpointEngine):
         return None
 
     def load(self, path: str, map_location=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         tag = _get_tag_from_path(path)
         first_load_flag = self.tag_flag is None or self.tag_flag == tag
         if not self.enable_nebula_load and first_load_flag:
@@ -69,7 +69,7 @@ class NebulaCheckpointEngine(CheckpointEngine):
 
         checkpoint = None
         if tag in (None, 'latest', 'latest_universal'):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # In some cases, there is the inconsistent tag between deepspeed metadata (latest file)
             # and nebula metadata, will lead to the failure on loading with deepspeed tag. Then we
             # will try to load the valid latest checkpoint from nebula(tier3 > tier1). So, in summary
@@ -77,7 +77,7 @@ class NebulaCheckpointEngine(CheckpointEngine):
             #               nebula tier3 latest > nebula tier1 latest.
             checkpoint = torch_nebula.get_latest_checkpoint(persist_path=self.nebula_load_path)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             checkpoint = torch_nebula.get_checkpoint(tag=tag, persist_path=self.nebula_load_path)
 
         if checkpoint is None or (checkpoint is not None and checkpoint.tag == ''):
@@ -102,7 +102,7 @@ class NebulaCheckpointEngine(CheckpointEngine):
         return partition
 
     def commit(self, tag):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # nebula commit will be call when all files under give tag are ready to be persisted in the async way.
         logger.info(f"[Nebula] all files for {tag} are saved in tier1. It is ready to start persisting")
         commit_rls = self.checkpoint.commit()

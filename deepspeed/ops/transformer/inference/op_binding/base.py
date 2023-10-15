@@ -7,13 +7,13 @@ import torch
 from ..config import DeepSpeedInferenceConfig
 
 from deepspeed.ops.op_builder import InferenceBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class BaseOp(torch.nn.Module):
     inference_module = None
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        debuginfo(prj='ds', info='BaseOp init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(BaseOp, self).__init__()
         self.config = config
         if BaseOp.inference_module is None:

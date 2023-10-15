@@ -4,31 +4,31 @@
 # DeepSpeed Team
 
 from .builder import CUDAOpBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class TransformerBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_TRANSFORMER"
     NAME = "transformer"
 
     def __init__(self, name=None):
-        debuginfo(prj='ds', info='TransformerBuilder init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.transformer.{self.NAME}_op'
 
     def extra_ldflags(self):
         if not self.is_rocm_pytorch():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return ['-lcurand']
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return []
 
     def sources(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [
             'csrc/transformer/ds_transformer_cuda.cpp', 'csrc/transformer/cublas_wrappers.cu',
             'csrc/transformer/transform_kernels.cu', 'csrc/transformer/gelu_kernels.cu',
@@ -37,10 +37,10 @@ class TransformerBuilder(CUDAOpBuilder):
         ]
 
     def include_paths(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         includes = ['csrc/includes']
         if self.is_rocm_pytorch():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             from torch.utils.cpp_extension import ROCM_HOME
             includes += ['{}/hiprand/include'.format(ROCM_HOME), '{}/rocrand/include'.format(ROCM_HOME)]
         return includes

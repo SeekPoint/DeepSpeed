@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class ZeroOneAdam(torch.optim.Optimizer):
     """Implements the 0/1 Adam algorithm. Currently GPU-only.
@@ -70,7 +70,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
-        debuginfo(prj='ds', info='ZeroOneAdam init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
 
         if amsgrad:
             raise RuntimeError('0/1 Adam does not support the AMSGrad variant.')
@@ -104,7 +104,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
             assert (
@@ -116,7 +116,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
             self.comm_backend_handle = NcclBackend(self.deepspeed.mpu)
 
         elif self.comm_backend_name == 'mpi':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             from deepspeed.runtime.comm.mpi import MpiBackend
             self.comm_backend_handle = MpiBackend(cuda_aware)
 
@@ -143,18 +143,18 @@ class ZeroOneAdam(torch.optim.Optimizer):
             loss = closure()
 
         if grads is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         elif type(grads[0]) != list:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = grads
 
         for group, grads_this_group in zip(self.param_groups, grads_group):
@@ -309,10 +309,10 @@ class ZeroOneAdam(torch.optim.Optimizer):
         if self.state[self.param_groups[0]['params'][0]]['step'] > self.var_freeze_step:
             self.freeze_key = True
             if self.using_pipeline:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.deepspeed.pipeline_enable_backward_allreduce = False
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.deepspeed.enable_backward_allreduce = False
 
         if self.freeze_key is True and self.reinitial_error_buffer is False:
@@ -330,7 +330,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
         """
         Overrides load_state_dict() to add special handling when loading checkpoints
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Because at different stage exp_avg_mask may change (e.g.,
         # BERT pre-training seqlen 128 and 512 ), we don't use the exp_avg_mask
         # in checkpoints but always use the one user provided in training script.
@@ -347,25 +347,25 @@ class ZeroOneAdam(torch.optim.Optimizer):
             if (self.state[self.param_groups[0]['params'][0]]['step'] +
                     1) % self.state[self.param_groups[0]['params'][0]]['var_interval'] == 0:
                 if self.using_pipeline:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.pipeline_enable_backward_allreduce = True
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.enable_backward_allreduce = True
             else:
                 if self.using_pipeline:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.enable_backward_allreduce = False
         else:
             self.var_freeze_key = True
             if self.using_pipeline:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.deepspeed.pipeline_enable_backward_allreduce = False
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.deepspeed.enable_backward_allreduce = False
         self.reinitial_error_buffer = False
         for group in self.param_groups:

@@ -13,7 +13,7 @@ from transformers import AutoConfig, AutoModelForCausalLM
 import deepspeed.comm as dist
 from huggingface_hub import snapshot_download
 from transformers.utils import is_offline_mode
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def check_dtype(model, expected_dtype):
 
@@ -46,6 +46,7 @@ class save_shard(DistributedFixture):
     world_size = 2
 
     def run(self, model_name, class_tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         # Only write a checkpoint if one does not exist
         if not os.path.isdir(os.path.join(class_tmpdir, model_name)):
             world_size = int(os.getenv("WORLD_SIZE", "1"))
@@ -69,6 +70,7 @@ class TestCheckpointShard(DistributedTest):
     world_size = 2
 
     def test(self, model_name, dtype, class_tmpdir, save_shard):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         world_size = int(os.getenv("WORLD_SIZE", "1"))
         inf_config = {
             "replace_with_kernel_inject": True,
@@ -95,8 +97,10 @@ class TestCheckpointShardinAutoTP(DistributedTest):
     world_size = 2
 
     def test(self, model_name, class_tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         def write_checkpoints_json(model_name, class_tmpdir):
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             import json
             from pathlib import Path
             local_rank = int(os.getenv("LOCAL_RANK", "0"))

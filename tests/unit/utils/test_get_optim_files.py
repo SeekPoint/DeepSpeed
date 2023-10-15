@@ -6,7 +6,7 @@
 import os
 import pytest
 from deepspeed.utils.zero_to_fp32 import get_optim_files
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 @pytest.mark.parametrize('num_checkpoints', [1, 2, 12, 24])
 def test_get_optim_files(tmpdir, num_checkpoints):

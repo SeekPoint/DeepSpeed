@@ -32,7 +32,7 @@ DS_INFERENCE_ENABLED = False
 from torch import nn
 
 INFERENCE_MODEL_TIMER = "model-forward-inference"
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def build_bloom_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
     """
@@ -77,14 +77,14 @@ def build_bloom_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype
     arange_tensor = ((attention_mask.cumsum(dim=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None] * arange_tensor
     if dist.is_initialized():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         num_heads_per_rank = int(num_heads / dist.get_world_size())
         offset = dist.get_rank() * num_heads_per_rank
         alibi = alibi.view(batch_size, num_heads, 1, seq_length)
         alibi = alibi[:, offset:num_heads_per_rank + offset, :, :]
         return alibi.reshape(batch_size * num_heads_per_rank, 1, seq_length).to(dtype)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return alibi.reshape(batch_size * num_heads, 1, seq_length).to(dtype)
 
 
@@ -99,7 +99,7 @@ class InferenceEngine(Module):
             model: torch.nn.Module
             config: DeepSpeedInferenceConfig
         """
-        debuginfo(prj='ds', info='InferenceEngine init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         global DS_INFERENCE_ENABLED
         DS_INFERENCE_ENABLED = True
 
@@ -112,11 +112,11 @@ class InferenceEngine(Module):
 
         # patch model generate with ours if model uses it
         if hasattr(self.module, "generate"):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.generate = self._generate
 
         if hasattr(self.module, "config"):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             TransformerPolicy.hf_model_config = self.module.config
 
         # todo: keep this self.injection_dict because we don't use to change config.injection_policy API
@@ -144,14 +144,14 @@ class InferenceEngine(Module):
         self._model_times = []
 
         if not self.injection_dict and config.replace_with_kernel_inject:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # This is a hack to remove the prepare_mask function on HF side for BLOOM architecture
             self.remove_mask_prepare_for_bloom()
 
         if self.injection_dict or not config.replace_with_kernel_inject:
             # This is a hack to redefine the alibi func due to TP
             if config.tensor_parallel.tp_size > 1:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.build_alibi_tensor()
 
         if get_accelerator().device_name() == 'cuda' and config.enable_cuda_graph:
@@ -165,23 +165,23 @@ class InferenceEngine(Module):
 
         # convert model to intended dtype
         if config.dtype:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._convert_to_dtype(config)
 
         if self.mpu:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             config.tensor_parallel.tp_size = dist.get_world_size(group=self.mpu.get_model_parallel_group())
             self.mp_group = self.mpu.get_model_parallel_group()
         elif config.tensor_parallel.tp_size > 1:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._create_model_parallel_group(config)
             config.tensor_parallel.tp_group = self.mp_group
 
         if isinstance(self.module, torch.nn.Module):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             moe, _ = has_moe_layers(self.module)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             moe = False
 
         if moe and dist.get_world_size() > 1:
@@ -189,7 +189,7 @@ class InferenceEngine(Module):
 
         # We only support three modes: 1) user specified policy for tensor-parallelism, 2) kernel injection (replace_with_kernel_inject), and 3) automatic tensor parallelism if tp_size > 1.
         if self.injection_dict:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # 1. User specified Tensor Parallelism
             assert not config.replace_with_kernel_inject, "Cannot use both user specified injection policy and kernel injection"
             for client_module, injection_policy in self.injection_dict.items():
@@ -201,11 +201,11 @@ class InferenceEngine(Module):
                 self._apply_injection_policy(config, client_module)
         else:
             if config.replace_with_kernel_inject:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # 2. DeepSpeed Kernel Injection
                 self._apply_injection_policy(config)
             elif config.tensor_parallel.tp_size > 1:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # 3. Automatic Tensor Parallelism
                 parser_dict = AutoTP.tp_parser(model)
                 print("AutoTP: ", parser_dict)
@@ -220,7 +220,7 @@ class InferenceEngine(Module):
         self.module.to(device)
 
         if config.tensor_parallel.tp_size > 1:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             _rng_state = get_accelerator().get_rng_state().to(get_accelerator().current_device_name())
             dist.broadcast(_rng_state, 0)
             get_accelerator().set_rng_state(_rng_state.cpu())
@@ -232,28 +232,28 @@ class InferenceEngine(Module):
         self.local_cuda_graph = self._local_cuda_graph_used(self.module)
 
     def profile_model_time(self, use_cuda_events=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not self.model_profile_enabled and not self._config.enable_cuda_graph:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.module.register_forward_pre_hook(self._pre_forward_hook)
             self.module.register_forward_hook(self._post_forward_hook)
         self.model_profile_enabled = True
         self.use_cuda_events = use_cuda_events
         if self.use_cuda_events:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.timers = SynchronizedWallClockTimer()
 
     # todo: remove this once all the config dicts are centralized from top level pydantic config
     def _get_model_config_generate(self, config):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # this is being passed to replace_transformer_layer(config=self.user_model_config_dict)
         self.config = getattr(self.module, 'config', None) if config.config is None else config.config
 
     def remove_mask_prepare_for_bloom(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(self.module, 'transformer'):
             if hasattr(self.module.transformer, '_prepare_attn_mask'):
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.module.transformer._prepare_attn_mask = lambda attention_mask, *args, **kwargs: attention_mask
 
     def build_alibi_tensor(self):
@@ -263,20 +263,20 @@ class InferenceEngine(Module):
 
     def _pre_forward_hook(self, module, *inputs, **kwargs):
         if self.use_cuda_events:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.timers(INFERENCE_MODEL_TIMER).start()
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             get_accelerator().synchronize()
             self._start = time.time()
 
     def _post_forward_hook(self, module, input, output):
         if self.use_cuda_events:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.timers(INFERENCE_MODEL_TIMER).stop()
             elapsed_time = self.timers(INFERENCE_MODEL_TIMER).elapsed(reset=True)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             get_accelerator().synchronize()
             self._end = time.time()
             elapsed_time = (self._end - self._start) * 1e3  # convert seconds to ms
@@ -285,7 +285,7 @@ class InferenceEngine(Module):
     def _create_model_parallel_group(self, config):
         # Call the init process
         if InferenceEngine.inference_mp_group is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             init_distributed()
             local_rank = int(os.getenv('LOCAL_RANK', '0'))
             get_accelerator().set_device(local_rank)
@@ -294,11 +294,11 @@ class InferenceEngine(Module):
             self.mp_group = dist.new_group(ranks)
             InferenceEngine.inference_mp_group = self.mp_group
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.mp_group = InferenceEngine.inference_mp_group
 
     def _create_ep_parallel_group(self, moe_experts):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Call the init process
         self.ep_group = {}
         self.expert_mp_group = {}
@@ -330,11 +330,11 @@ class InferenceEngine(Module):
         self.mlp_extra_grouping = False
         self.quantize_groups = 1
         if type(quantization_setting) is tuple:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.mlp_extra_grouping, \
             self.quantize_groups = quantization_setting
         elif quantization_setting is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.quantize_groups = quantization_setting
         log_dist(
             f"quantize_bits = {self.quantize_bits} "
@@ -343,7 +343,7 @@ class InferenceEngine(Module):
 
     # TODO: remove this function and add this functionality to pydantic config checking
     def _validate_args(self, mpu, replace_with_kernel_inject):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # TODO: to support SD pipeline we need to avoid this check for now
         if replace_with_kernel_inject and not isinstance(self.module, Module):
             raise ValueError(f"model must be a torch.nn.Module, got {type(self.module)}")
@@ -366,7 +366,7 @@ class InferenceEngine(Module):
             raise ValueError(f"injection_dict must be None or a dict, got: {self.injection_dict}")
 
     def load_model_with_checkpoint(self, r_module):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.mp_replace = ReplaceWithTensorSlicing(
             mp_group=self.mp_group, mp_size=self._config.tensor_parallel.tp_size)  #, out_dim=0, in_dim=1)
         error_msgs = []
@@ -375,33 +375,33 @@ class InferenceEngine(Module):
             args = (state_dict, prefix, {}, True, [], [], error_msgs)
             if hasattr(module, 'weight'):
                 if module.weight.data.is_meta:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                     module.weight = torch.nn.parameter.Parameter(data=torch.empty_like(module.weight.data,
                                                                                        device="cpu"),
                                                                  requires_grad=module.weight.data.requires_grad)
                 if 'query_key_value' in prefix:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     module.weight = self.mp_replace.strided_copy(module.weight.data,
                                                                  state_dict[prefix + 'weight'],
                                                                  num_splits=3)
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     module.weight = self.mp_replace.copy(module.weight.data, state_dict[prefix + 'weight'])
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if module.norm.weight.data.is_meta:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                     module.norm.weight = torch.nn.parameter.Parameter(
                         data=torch.empty_like(module.norm.weight.data, device="cpu"),
                         requires_grad=module.norm.weight.data.requires_grad)
                 module.norm.weight = self.mp_replace.copy(module.norm.weight.data, state_dict[prefix + 'weight'])
             if prefix + 'bias' in self.key_list:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if hasattr(module, 'norm'):
                     if module.norm.bias.data.is_meta:
-                        debuginfo(prj='ds')
+                        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                         # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                         module.norm.bias = torch.nn.parameter.Parameter(
                             data=torch.empty_like(module.norm.bias.data, device="cpu"),
@@ -409,7 +409,7 @@ class InferenceEngine(Module):
                     module.norm.bias = self.mp_replace.copy(module.norm.bias, state_dict[prefix + 'bias'])
                 else:
                     if module.bias.data.is_meta:
-                        debuginfo(prj='ds')
+                        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                         # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                         module.bias = torch.nn.parameter.Parameter(data=torch.empty_like(module.bias.data,
                                                                                          device="cpu"),
@@ -427,7 +427,7 @@ class InferenceEngine(Module):
         }
 
         def load_module_recursive(module, prefix='', level=0):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for name, child in module.named_children():
                 if child.__class__ in layer_policies:
                     checking_key = prefix + name + '.'
@@ -468,7 +468,7 @@ class InferenceEngine(Module):
             replace_transformer_layer(client_module, self.module, checkpoint, config, self.config)
 
     def _get_all_ckpt_names(self, checkpoints_path, tag):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         ckpt_file_pattern = self._get_ckpt_name(checkpoints_path, tag, mp_placeholder="*")
         import glob
 
@@ -478,10 +478,10 @@ class InferenceEngine(Module):
 
     def _get_ckpt_name(self, checkpoints_path, tag, mp_placeholder=None):
         if mp_placeholder is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mp_rank_str = mp_placeholder
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
             mp_rank_str = "{:02d}".format(mp_rank)
 
@@ -496,25 +496,25 @@ class InferenceEngine(Module):
         if is_pipe_parallel:
             raise RuntimeError('pipeline parallelism is currently not supported in inference.')
         if not isinstance(load_dir, dict) and os.path.isdir(load_dir):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if tag is None:
                 latest_path = os.path.join(load_dir, "latest")
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if os.path.isfile(latest_path):
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     with open(latest_path, "r") as fd:
                         tag = fd.read().strip()
 
             ckpt_list = self._get_all_ckpt_names(load_dir, tag)
             sd_loader = SDLoaderFactory.get_sd_loader(ckpt_list, self.checkpoint_engine)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             sd_loader = SDLoaderFactory.get_sd_loader_json(load_dir, self.checkpoint_engine)
 
         checkpoint = sd_loader['checkpoints']
 
         if type(checkpoint) is list:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.sd = torch.load(checkpoint[0], map_location='cpu')
             self.key_list = list(self.sd.keys())
 
@@ -527,7 +527,7 @@ class InferenceEngine(Module):
                 self.key_list = list(self.sd.keys())
                 self.load_model_with_checkpoint(self.module)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
 
             load_path, checkpoint, quantize_config = sd_loader.load(self._config.tensor_parallel.tp_size,
@@ -541,7 +541,7 @@ class InferenceEngine(Module):
 
             moe, _ = has_moe_layers(self.module)
             if moe:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 from deepspeed.runtime.engine import DeepSpeedEngine
                 old_moe_load = False
                 if not isinstance(checkpoint['num_experts'], list):
@@ -562,34 +562,34 @@ class InferenceEngine(Module):
                     and 'model' in sd), "checkpoint has both 'model' and 'module' keys, not sure how to proceed"
         assert 'module' in sd or 'model' in sd, "checkpoint contains neither 'model' or 'module' keys, not sure how to proceed"
         if 'module' in sd:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return 'module'
         elif 'model' in sd:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return 'model'
 
     def _convert_to_dtype(self, config):
         if not isinstance(self.module, torch.nn.Module):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
 
         if False:  #config.dtype is torch.int8 and self.quantization_scales is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             quantizer = WeightQuantization(mlp_extra_grouping=self.mlp_extra_grouping)
             model, self.quantization_scales = quantizer.model_quantize(self.module, self.injection_dict,
                                                                        self.quantize_bits, self.quantize_groups)
         elif config.dtype == torch.half:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.module.half()
         elif config.dtype == torch.bfloat16:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.module.bfloat16()
         elif config.dtype == torch.float:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.module.float()
 
     def _create_cuda_graph(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # warmup to create the workspace and cublas handle
         cuda_stream = get_accelerator().Stream()
         cuda_stream.wait_stream(get_accelerator().current_stream())
@@ -609,7 +609,7 @@ class InferenceEngine(Module):
         self.cuda_graph_created = True
 
     def _graph_replay(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_inputs[i].copy_(inputs[i])
@@ -620,7 +620,7 @@ class InferenceEngine(Module):
         return self.static_output
 
     def model_times(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert self.model_profile_enabled, "model profiling is not enabled"
         model_times = self._model_times
         if self._config.enable_cuda_graph and len(self._model_times) == 0:
@@ -632,7 +632,7 @@ class InferenceEngine(Module):
         return model_times
 
     def _module_match(self, module):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for policy in generic_policies:
             policy = policy()
             if policy.match_replaced(module):
@@ -641,10 +641,10 @@ class InferenceEngine(Module):
 
     def _local_cuda_graph_used(self, module):
         if isinstance(module, torch.nn.Module):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return False
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             sub_module_cuda_graph = False
             for name in module.__dict__.keys():
                 sub_module = getattr(module, name)
@@ -665,23 +665,23 @@ class InferenceEngine(Module):
         if self.model_profile_enabled and get_accelerator().device_name() == 'cuda' and self._config.enable_cuda_graph:
             get_accelerator().synchronize()
             start = time.time()
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if get_accelerator().device_name() == 'cuda' and self._config.enable_cuda_graph and not self.local_cuda_graph:
             if self.cuda_graph_created:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 outputs = self._graph_replay(*inputs, **kwargs)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._create_cuda_graph(*inputs, **kwargs)
                 outputs = self._graph_replay(*inputs, **kwargs)
 
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             outputs = self.module(*inputs, **kwargs)
 
         if self.model_profile_enabled and self._config.enable_cuda_graph:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             get_accelerator().synchronize()
             duration = (time.time() - start) * 1e3  # convert seconds to ms
             self._model_times.append(duration)
@@ -691,7 +691,7 @@ class InferenceEngine(Module):
     def _generate(self, *inputs, **kwargs):
         # Reset KV-cache at the beginning of generate
         if hasattr(self.module, 'reset_cache'):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.module.reset_cache()
         num_beams = 1
         if "generation_config" in kwargs:

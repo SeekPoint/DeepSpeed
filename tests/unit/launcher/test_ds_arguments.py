@@ -7,7 +7,7 @@ import argparse
 import pytest
 import deepspeed
 from deepspeed.utils.numa import parse_range_list
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def basic_parser():
     parser = argparse.ArgumentParser()

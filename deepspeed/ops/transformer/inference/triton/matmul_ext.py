@@ -13,34 +13,34 @@ from io import open
 import deepspeed
 from pathlib import Path
 import atexit
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 # -----------------------------------------------------------------------------
 # util class/functions for triton
 def _default_cache_dir():
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return os.path.join(Path.home(), ".triton", "autotune")
 
 
 def bias_add_activation(C, bias=None, activation=""):
     if bias is not None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         C += bias
     # activation
     if activation == "relu":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         relu = torch.nn.Relu()
         C = relu(C)
     elif activation == "leaky_relu":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         leaky_relu = torch.nn.LeakyReLU(0.01)
         C = leaky_relu(C)
     elif activation == "gelu":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sigmoid = torch.nn.Sigmoid()
         C = sigmoid(1.702 * C) * C
     elif activation == "sigmoid":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sigmoid = torch.nn.Sigmoid()
         C = sigmoid(C)
     return C
@@ -58,20 +58,20 @@ class AutotuneCacheManager:
         # if caching is enabled, get the lock and bin path
         self.cache_dir = os.environ.get('TRITON_CACHE_DIR', _default_cache_dir())
         if self.cache_dir:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             os.makedirs(self.cache_dir, exist_ok=True)
         if self.cache_dir:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.file_path = os.path.join(self.cache_dir, self.key + ".pickle")
             self.lock_path = self.file_path + ".lock"
 
     def has_file(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.file_path and os.path.exists(self.file_path)
 
     def put(self, table):
         if self.file_path:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert self.lock_path is not None
             with FileLock(self.lock_path):
                 with open(self.file_path + ".tmp", 'wb') as handle:
@@ -80,12 +80,12 @@ class AutotuneCacheManager:
 
     def load(self):
         if os.path.exists(self.file_path):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             with open(self.file_path, 'rb') as handle:
                 loaded_dict = pickle.load(handle)
             return loaded_dict
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return None
 
 
@@ -184,7 +184,7 @@ class Fp16Matmul(TritonMatmul):
     _cache_stride = 32
 
     def __init__(self, read_cache=True):
-        debuginfo(prj='ds', info='Fp16Matmul init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__()
         if read_cache:
             __class__._read_autotune_table()

@@ -5,11 +5,11 @@
 
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def instrument_w_nvtx(func):
     """decorator that causes an NVTX range to be recorded for the duration of the
     function call."""
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     def wrapped_fn(*args, **kwargs):
         debuginfo(prj='ds', info='wrapped_fn called')

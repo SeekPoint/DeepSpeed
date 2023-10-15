@@ -41,9 +41,9 @@ PDSH_MAX_FAN_OUT = 1024
 # exporting rank-0 env variables in case of heterogeneous compute.
 EXCLUDE_ENVS = {'AISC_JOB_NAME': ['NCCL_IB_HCA', 'UCX_NET_DEVICES']}
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def parse_args(args=None):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     parser = argparse.ArgumentParser(description="DeepSpeed runner to help launch distributed "
                                      "multi-node/multi-gpu training jobs.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -193,7 +193,7 @@ def parse_args(args=None):
 
 
 def fetch_hostfile(hostfile_path):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not os.path.isfile(hostfile_path):
         logger.warning("Unable to find hostfile, will proceed with training "
                        "with local resources only.")
@@ -207,7 +207,7 @@ def fetch_hostfile(hostfile_path):
 
 
 def _parse_hostfile(hostfile_lines):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # Regex matches one or more non-whitespace characters (\S+) at the start of
     # the line, followed by one or more whitespace characters (\s+), followed
     # by the string "slots=", followed by one or more digits (\d+).
@@ -240,7 +240,7 @@ def _parse_hostfile(hostfile_lines):
 
 
 def _stable_remove_duplicates(data):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # Create a new list in the same order as original but with duplicates
     # removed, should never be more than ~16 elements so simple is best
     new_list = []
@@ -263,7 +263,7 @@ def parse_resource_filter(host_info, include_str="", exclude_str=""):
         exclude_str="worker-1:0" will use all available resources except
           slot 0 on worker-1.
     '''
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     # Constants that define our syntax
     NODE_SEP = '@'
@@ -342,7 +342,7 @@ def parse_resource_filter(host_info, include_str="", exclude_str=""):
 
 
 def parse_inclusion_exclusion(resource_pool, inclusion, exclusion):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     active_resources = collections.OrderedDict()
     for hostname, slots in resource_pool.items():
         active_resources[hostname] = list(range(slots))
@@ -351,14 +351,14 @@ def parse_inclusion_exclusion(resource_pool, inclusion, exclusion):
 
 
 def encode_world_info(world_info):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     world_info_json = json.dumps(world_info).encode('utf-8')
     world_info_base64 = base64.urlsafe_b64encode(world_info_json).decode('utf-8')
     return world_info_base64
 
 
 def run_autotuning(args, active_resources):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     tuner = Autotuner(args, active_resources)
     logger.info("[Start] Running autotuning")
 
@@ -369,7 +369,7 @@ def run_autotuning(args, active_resources):
     tuner.write_optimal_config()
 
     if args.autotuning == "run":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         tuner.run_after_tuning()
 
 
@@ -377,10 +377,10 @@ def parse_num_nodes(str_num_nodes: str, elastic_training: bool):
     node_list = str_num_nodes.split(":")
 
     if len(node_list) == 1:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         min_nodes, max_nodes = int(node_list[0]), -1
     elif len(node_list) == 2 and elastic_training:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         min_nodes, max_nodes = int(node_list[0]), int(node_list[1])
     elif len(node_list) == 2 and not elastic_training:
         raise RuntimeError("MIN:MAX format is only supported in elastic training")
@@ -391,7 +391,7 @@ def parse_num_nodes(str_num_nodes: str, elastic_training: bool):
 
 
 def main(args=None):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     args = parse_args(args)
 
     if args.elastic_training:
@@ -589,5 +589,5 @@ def main(args=None):
 
 
 if __name__ == "__main__":
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     main()

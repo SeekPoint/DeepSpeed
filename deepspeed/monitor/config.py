@@ -5,16 +5,16 @@
 
 from pydantic import root_validator
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def get_monitor_config(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     monitor_dict = {key: param_dict.get(key, {}) for key in ("tensorboard", "wandb", "csv_monitor")}
     return DeepSpeedMonitorConfig(**monitor_dict)
 
 
 class TensorBoardConfig(DeepSpeedConfigModel):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Sets parameters for TensorBoard monitor."""
 
     enabled: bool = False
@@ -31,7 +31,7 @@ class TensorBoardConfig(DeepSpeedConfigModel):
 
 
 class WandbConfig(DeepSpeedConfigModel):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Sets parameters for WandB monitor."""
 
     enabled: bool = False
@@ -48,7 +48,7 @@ class WandbConfig(DeepSpeedConfigModel):
 
 
 class CSVConfig(DeepSpeedConfigModel):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Sets parameters for CSV monitor."""
 
     enabled: bool = False
@@ -65,7 +65,7 @@ class CSVConfig(DeepSpeedConfigModel):
 
 
 class DeepSpeedMonitorConfig(DeepSpeedConfigModel):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Sets parameters for various monitoring methods."""
 
     tensorboard: TensorBoardConfig = {}
@@ -79,7 +79,7 @@ class DeepSpeedMonitorConfig(DeepSpeedConfigModel):
 
     @root_validator
     def check_enabled(cls, values):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         values["enabled"] = values.get("tensorboard").enabled or values.get("wandb").enabled or values.get(
             "csv_monitor").enabled
         return values

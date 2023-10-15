@@ -14,7 +14,7 @@ from deepspeed.utils.timer import SynchronizedWallClockTimer
 from deepspeed.accelerator import get_accelerator
 
 from statistics import mean
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 timers = SynchronizedWallClockTimer()
 
 comm = MPI.COMM_WORLD

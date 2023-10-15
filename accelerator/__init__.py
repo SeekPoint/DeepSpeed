@@ -5,6 +5,6 @@
 
 from .abstract_accelerator import DeepSpeedAccelerator
 from .real_accelerator import get_accelerator, set_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
-debuginfo(prj='ds', info='accelerate __init__')  
+debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

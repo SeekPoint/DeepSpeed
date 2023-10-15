@@ -4,22 +4,22 @@
 # DeepSpeed Team
 
 from .transformer import TransformerBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class StochasticTransformerBuilder(TransformerBuilder):
     BUILD_VAR = "DS_BUILD_STOCHASTIC_TRANSFORMER"
     NAME = "stochastic_transformer"
 
     def __init__(self):
-        debuginfo(prj='ds', info='StochasticTransformerBuilder init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.transformer.{self.NAME}_op'
 
     def nvcc_args(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         args = super().nvcc_args()
         args.append('-D__STOCHASTIC_MODE__')
         debuginfo(prj='ds', info=' args: ' + str(args))

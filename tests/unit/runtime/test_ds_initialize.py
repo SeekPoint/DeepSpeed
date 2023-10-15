@@ -19,12 +19,14 @@ from deepspeed.runtime.lr_schedules import WARMUP_LR, WarmupLR
 from deepspeed.runtime.config import ADAM_OPTIMIZER
 from deepspeed.runtime.utils import see_memory_usage
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 @pytest.mark.parametrize('zero_stage', [0, 3])
 class TestNoOptim(DistributedTest):
     world_size = 1
 
     def test(self, zero_stage):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         if zero_stage == 3 and not required_torch_version():
             pytest.skip("zero-3 param offload requires at least torch 1.8")
 
@@ -64,8 +66,10 @@ class TestClientOptimizer(DistributedTest):
     world_size = 1
 
     def test(self, optimizer_type):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         def _optimizer_callable(params) -> Optimizer:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             return AdamW(params=params)
 
         hidden_dim = 10
@@ -97,6 +101,7 @@ class TestConfigOptimizer(DistributedTest):
     world_size = 1
 
     def test(self, client_parameters):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         ds_config = {"train_batch_size": 1, "optimizer": {"type": "Adam", "params": {"lr": 0.001}}}
 
         hidden_dim = 10
@@ -120,6 +125,7 @@ class TestOptimizerImplementation(DistributedTest):
     reuse_dist_env = True
 
     def test(self, optimizer_extension, model_dtype, grad_accum_dtype):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if optimizer_extension == 'zero1':
             zero_stage = 1
         elif optimizer_extension == 'zero2':
@@ -216,6 +222,7 @@ class TestClientLrScheduler(DistributedTest):
     world_size = 1
 
     def test(self, scheduler_type, optimizer_type):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         def _my_lambda(epoch):
             return epoch // 10

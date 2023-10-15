@@ -27,14 +27,14 @@ try:
 except:
     OPTLearnedPositionalEmbedding = None
 inference_cuda_module = None
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedHybridEngine(DeepSpeedEngine):
     r"""DeepSpeed engine for training and inference."""
     inference_mp_group = None
 
     def __init__(self, args, model, **kwargs):
-        debuginfo(prj='ds', info='DeepSpeedHybridEngine init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         super().__init__(args, model, **kwargs)
 
@@ -70,10 +70,8 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         self.is_lora_fused = False
 
     def convert_to_linear_transposed(self, model):
-        debuginfo(prj='ds')
-
         def _replace_linear_layer(r_module, parent_type=None, prev_type=None):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for name, child in r_module.named_children():
                 if child.__class__ in [torch.nn.Linear] and \
                     (parent_type is torch.nn.ModuleList or prev_type is torch.nn.ModuleList):
@@ -88,13 +86,13 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         policy = policy_cls(orig_layer, inference=True)
 
         if self._config.fp16_enabled:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             inference_dtype = torch.float16
         elif self._config.bfloat16_enabled:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             inference_dtype = torch.bfloat16
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             inference_dtype = torch.float32
 
         _container = policy_to_ds_container(
@@ -126,7 +124,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         return _container
 
     def populate_all_inference_policies(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.inference_policies = {}
         for plcy in replace_policies:
             _ = plcy(None)
@@ -143,25 +141,25 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         })
 
     def _fuse_lora_layer(self, layer_id):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._inference_containers[layer_id].fuse_lora()
 
     def fuse_lora_weight(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for layer_id in range(len(self.layer_params)):
             self._fuse_lora_layer(layer_id)
 
     def _unfuse_lora_layer(self, layer_id):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._inference_containers[layer_id].unfuse_lora()
 
     def unfuse_lora_weight(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for layer_id in range(len(self.layer_params)):
             self._unfuse_lora_layer(layer_id)
 
     def unfuse_lora_weight_non_pinned(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for layer_id in range(len(self.layer_params)):
             non_active_params = get_inactive_params(self.layer_params[layer_id])
             non_active_lora_params = get_inactive_params(self.layer_lora_params[layer_id])
@@ -171,7 +169,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 self._unfuse_lora_layer(layer_id)
 
     def retake_inference_cache(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self._config.hybrid_engine.release_inference_cache:
             retake_success = inference_cuda_module.retake_workspace()
 
@@ -186,7 +184,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
 
     def generate(self, *inputs, **kwargs):
         if self._total_batch_size is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             bsz = inputs[0].shape[0] if len(inputs) > 0 else \
                 kwargs['input_ids'].shape[0]
             self._total_batch_size = bsz * dist.get_world_size()
@@ -194,9 +192,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         self._t0 = time.time()
 
         if self.Z3_enabled and self.gather_all_layers:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self._config.hybrid_engine.inference_tp_size > 1:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 non_tp_params = []
                 for other_layer in self._other_layers:
                     non_tp_params.extend(list(other_layer.parameters()))
@@ -256,7 +254,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 generate_ret_vals = generate_ret_vals[input_shape[0] * rank:input_shape[0] * (rank + 1)]
 
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 non_active_layers = get_inactive_params(self.all_layers_params)
                 non_active_lora_params = get_inactive_params(self.all_lora_params)
                 non_active_layers.extend(non_active_lora_params)
@@ -272,9 +270,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                     if len(self.all_lora_params) > 0:
                         self.unfuse_lora_weight()
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if len(self.all_lora_params) > 0 and (not self.Z3_enabled):
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.fuse_lora_weight()
 
             self.retake_inference_cache()
@@ -288,7 +286,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 self.is_lora_fused = False
 
         if self._config.hybrid_engine.release_inference_cache:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             inference_cuda_module.release_workspace()
             gc.collect()
             get_accelerator().empty_cache()
@@ -298,7 +296,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         return generate_ret_vals
 
     def create_inference_containers(self, module, layer_id=0):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for name, child in module.named_children():
             if child.__class__ in self.inference_policies:
                 if self.inference_policies[child.__class__][0] == self.new_inference_container:
@@ -336,7 +334,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
 
         if self._config.hybrid_engine.inference_tp_size > 1:
             if self.mpu is None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 global_rank = dist.get_rank()
                 world_size = dist.get_world_size()
                 mp_group_id = global_rank // self._config.hybrid_engine.inference_tp_size
@@ -361,7 +359,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                             in_dim=1)
 
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.mp_group = self.mpu.get_model_parallel_group() if hasattr(self.mpu, 'get_model_parallel_group') else \
                     self.mpu.get_tensor_model_parallel_group()
 
@@ -371,7 +369,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                                                            out_dim=0,
                                                            in_dim=1)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.mp_group = None
             self.mp_replace = None
         self.populate_all_inference_policies()
@@ -379,17 +377,17 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         self.create_inference_containers(self.module)
 
         if len(self._inference_containers) > 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._generate = self.module.generate
             self.module.generate = self.generate
 
         self._t0 = time.time()
 
     def _zero3_forward(self, layer_id):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def run_forward(*inputs, **kwargs):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             non_active_params = get_inactive_params(self.layer_params[layer_id])
             non_active_lora_params = get_inactive_params(self.layer_lora_params[layer_id])
             non_active_params.extend(non_active_lora_params)
@@ -407,9 +405,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         return run_forward
 
     def eval(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self._t_start is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             latency = time.time() - self._t_start
             self._total_latency = self._total_latency + latency
             self._iters = self._iters + 1
@@ -426,7 +424,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         self._training_latency = 0
         super().eval()
         if len(self._inference_containers) > 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for i, (orig_module, inference_container) in enumerate(zip(self._orig_modules,
                                                                        self._inference_containers)):
                 if self.Z3_enabled and not self.gather_all_layers:
@@ -440,15 +438,15 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 for orig_module, inference_layer in zip(self._orig_modules_others, self._other_layers):
                     orig_module.forward = inference_layer.forward
         if self.Z3_enabled:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             gc.collect()
             get_accelerator().empty_cache()
         if self._t_start is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._t_start = time.time()
 
     def train(self, mode=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if mode and len(self._orig_modules) > 0:
             for inference_container, orig_module, orig_fwd in zip(self._inference_containers, self._orig_modules,
                                                                   self._orig_fwds):
@@ -458,11 +456,11 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 orig_module.forward = orig_fwd
         super().train(mode)
         if mode:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._training_start_time = time.time()
 
     def step(self, lr_kwargs=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().step(lr_kwargs=lr_kwargs)
 
         if len(self._inference_containers) > 0:

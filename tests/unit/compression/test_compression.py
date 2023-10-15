@@ -16,7 +16,7 @@ from deepspeed.compression.helper import convert_conv1d_to_linear
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 from unit.util import required_minimum_torch_version, required_maximum_torch_version
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=5),
                                 reason='Megatron-LM package requires Pytorch version 1.5 or above')
@@ -77,6 +77,7 @@ class Conv1D(torch.nn.Module):
     """
 
     def __init__(self, nf, nx):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super().__init__()
         self.nf = nf
         w = torch.empty(nx, nf)
@@ -84,6 +85,7 @@ class Conv1D(torch.nn.Module):
         self.bias = torch.nn.Parameter(torch.zeros(nf))
 
     def forward(self, x):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         size_out = x.size()[:-1] + (self.nf, )
         x = torch.addmm(self.bias, x.view(-1, x.size(-1)), self.weight)
         x = x.view(size_out)

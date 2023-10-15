@@ -6,7 +6,7 @@
 import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 import time
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 NUM_ITERS = 100
 
 

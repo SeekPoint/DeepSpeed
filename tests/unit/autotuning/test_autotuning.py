@@ -12,7 +12,7 @@ from deepspeed.autotuning.scheduler import ResourceManager
 
 RUN_OPTION = 'run'
 TUNE_OPTION = 'tune'
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def test_command_line():
     '''Validate handling of command line arguments'''

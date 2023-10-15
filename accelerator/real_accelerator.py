@@ -21,7 +21,7 @@ except ImportError as e:
     dsa2 = None
 
 ds_accelerator = None
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def _validate_accelerator(accel_obj):
     # because abstract_accelerator has different path during
@@ -34,7 +34,7 @@ def _validate_accelerator(accel_obj):
     # accelerator.abstractor_accelerator
     # or deepspeed.accelerator.abstract_accelerator, consider accel_obj
     # is a conforming object
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not ((dsa1 != None and isinstance(accel_obj, dsa1)) or (dsa2 != None and isinstance(accel_obj, dsa2))):
         raise AssertionError(f"{accel_obj.__class__.__name__} accelerator is not subclass of DeepSpeedAccelerator")
 
@@ -56,24 +56,24 @@ def get_accelerator():
     if "DS_ACCELERATOR" in os.environ.keys():
         accelerator_name = os.environ["DS_ACCELERATOR"]
         if accelerator_name == "xpu":
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             try:
                 from intel_extension_for_deepspeed import XPU_Accelerator  # noqa: F401
             except ImportError as e:
                 raise ValueError(
                     f"XPU_Accelerator requires intel_extension_for_deepspeed, which is not installed on this system.")
         elif accelerator_name == "cpu":
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             try:
                 import intel_extension_for_pytorch  # noqa: F401
             except ImportError as e:
                 raise ValueError(
                     f"CPU_Accelerator requires intel_extension_for_pytorch, which is not installed on this system.")
         elif accelerator_name == "cuda":
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             pass
         elif accelerator_name == "mps":
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             try:
                 import torch.mps
 
@@ -88,7 +88,7 @@ def get_accelerator():
 
     # 2. If no override, detect which accelerator to use automatically
     if accelerator_name == None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         try:
             from intel_extension_for_deepspeed import XPU_Accelerator  # noqa: F401,F811
 
@@ -121,21 +121,21 @@ def get_accelerator():
 
     # 3. Set ds_accelerator accordingly
     if accelerator_name == "cuda":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from .cuda_accelerator import CUDA_Accelerator
 
         ds_accelerator = CUDA_Accelerator()
     elif accelerator_name == "cpu":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from .cpu_accelerator import CPU_Accelerator
 
         ds_accelerator = CPU_Accelerator()
     elif accelerator_name == "xpu":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # XPU_Accelerator is already imported in detection stage
         ds_accelerator = XPU_Accelerator()
     elif accelerator_name == "mps":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from .mps_accelerator import MPS_Accelerator
 
         ds_accelerator = MPS_Accelerator()

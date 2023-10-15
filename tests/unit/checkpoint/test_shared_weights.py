@@ -10,10 +10,11 @@ import deepspeed
 from deepspeed.utils.zero_to_fp32 import get_fp32_state_dict_from_zero_checkpoint
 from unit.common import DistributedTest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class ModelWithSharedWeights(nn.Module):
 
     def __init__(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super().__init__()
         self.layer0 = nn.Linear(100, 100)
         self.layer1 = nn.Linear(200, 200)
@@ -26,6 +27,7 @@ class TestCheckpointSharedWeights(DistributedTest):
     world_size = 2
 
     def test_checkpoint_shared_weights(self, tmp_path):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config = {
             "train_micro_batch_size_per_gpu": 2,
             "zero_allow_untested_optimizer": True,

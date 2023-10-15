@@ -15,7 +15,7 @@ from deepspeed.accelerator import get_accelerator
 from unit.modeling import BertConfig, BertLayerNorm, BertEncoder as BertEncoderPostln
 from unit.modelingpreln import BertEncoder as BertEncoderPreln
 from unit.common import DistributedTest, is_rocm_pytorch
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 #if not deepspeed.ops.__installed_ops__['transformer']:
 #pytest.skip(
 #    "transformer kernels are temporarily disabled because of unexplained failures",

@@ -11,12 +11,14 @@ from unit.util import skip_on_arch
 
 import pytest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class TestPipelineCheckpoint(DistributedTest):
     world_size = 4
 
     @pytest.mark.parametrize("zero_stage", [0, 1])
     def test_checkpoint_pipe_engine(self, zero_stage, tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         skip_on_arch(min_arch=7)
 
         config_dict = {
@@ -80,6 +82,8 @@ class TestPipelineCheckpoint(DistributedTest):
             #          num_dp=2)),
         ])
     def test_checkpoint_pipe_module(self, base_topo, test_topo, tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         checkpoint_engine = TorchCheckpointEngine()
         base_model = LinearStackPipe(topology=base_topo)
         base_model.save_state_dict(tmpdir, checkpoint_engine=checkpoint_engine)

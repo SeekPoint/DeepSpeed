@@ -7,12 +7,12 @@ from .utils import check_wandb_availability
 from .monitor import Monitor
 
 import deepspeed.comm as dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class WandbMonitor(Monitor):
 
     def __init__(self, wandb_config):
-        debuginfo(prj='ds', info='WandbMonitor init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(wandb_config)
         check_wandb_availability()
         import wandb
@@ -23,7 +23,7 @@ class WandbMonitor(Monitor):
         self.project = wandb_config.project
 
         if self.enabled and dist.get_rank() == 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             wandb.init(project=self.project, group=self.group, entity=self.team)
 
     def log(self, data, step=None, commit=None, sync=None):
@@ -32,9 +32,9 @@ class WandbMonitor(Monitor):
             return wandb.log(data, step=step, commit=commit, sync=sync)
 
     def write_events(self, event_list):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.enabled and dist.get_rank() == 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for event in event_list:
                 label = event[0]
                 value = event[1]

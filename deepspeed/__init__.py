@@ -12,9 +12,9 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 from packaging import version as pkg_version
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
-debuginfo(prj='ds', info='deepspeed __init__')
+debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 try:
     import triton  # noqa: F401

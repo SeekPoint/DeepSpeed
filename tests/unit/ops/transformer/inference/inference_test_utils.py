@@ -5,7 +5,7 @@
 
 import torch
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 TOLERANCES = None
 
 

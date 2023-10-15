@@ -7,5 +7,5 @@ from .sparsity_config import SparsityConfig, DenseSparsityConfig, FixedSparsityC
 from .sparse_self_attention import SparseSelfAttention
 from .bert_sparse_self_attention import BertSparseSelfAttention
 from .sparse_attention_utils import SparseAttentionUtils
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 debuginfo(prj='ds', info='sparse_attention __init__')

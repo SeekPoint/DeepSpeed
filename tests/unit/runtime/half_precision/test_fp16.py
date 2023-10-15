@@ -13,7 +13,7 @@ from unit.simple_model import SimpleModel, SimpleOptimizer, random_dataloader, S
 from unit.util import required_torch_version
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import CPUAdamBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 try:
     from apex import amp  # noqa: F401
     _amp_available = True

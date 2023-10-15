@@ -28,12 +28,12 @@ SEQUENTIAL_LAYERS = [
 ]
 
 LAYER_CONCAT_DIM = {'self_attention.dense.weight': 1, 'mlp.dense_4h_to_h.weight': 1}
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedCheckpoint(object):
 
     def __init__(self, dir, tp_degree=None, pp_degree=None, dp_degree=None):
-        debuginfo(prj='ds', info='DeepSpeedCheckpoint init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         self.dir = dir
         self._validate_folder(dir)
 
@@ -63,7 +63,7 @@ class DeepSpeedCheckpoint(object):
                                                   new_tp_degree=self.tp_degree)
 
         if self.is_change_pp_degree() or self.is_change_tp_degree() or self.is_change_dp_degree():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.zero_checkpoint.reshape(model_3d_desc(self.pp_degree, self.tp_degree, self.dp_degree))
 
         self.global_state = {}
@@ -76,15 +76,15 @@ class DeepSpeedCheckpoint(object):
         self._build_global_state()
 
     def is_change_tp_degree(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.tp_degree != self.zero_checkpoint.get_src_tp_degree()
 
     def is_change_pp_degree(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.pp_degree != self.zero_checkpoint.get_src_pp_degree()
 
     def is_change_dp_degree(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.dp_degree != self.zero_checkpoint.get_src_dp_degree()
 
     def show_2d_mapping(self):
@@ -98,48 +98,48 @@ class DeepSpeedCheckpoint(object):
         print(f'reshaped 2d map ---- end')
 
     def show_tp_embedding_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._dump_mapping(self.tp_to_embedding_map, 'tp_to_embedding_layers')
 
     def show_tp_final_norm_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._dump_mapping(self.tp_to_final_norm_map, 'tp_to_final_norm_layers')
 
     def show_pp_transformer_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._dump_mapping(self.pp_to_transformer_map, 'pp_to_transformer_layers')
 
     def show_transformer_file_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._dump_mapping(self.transformer_file_map, 'rank_to_transformer_files')
 
     def _build_global_state(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sd = torch.load(self.mp_rank_files[0], map_location=torch.device('cpu'))
         self.global_state[ITERATION_KEY] = sd.get(ITERATION_KEY, 0)
         self.global_state[ARGS_KEY] = sd.get(ARGS_KEY, None)
 
     def get_zero_checkpoint_state(self, pp_index, tp_index, dp_index) -> dict:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.zero_checkpoint.get_state_for_rank(pp_index=pp_index,
                                                        tp_index=tp_index,
                                                        dp_index=dp_index,
                                                        keys_to_ignore=[PARAM_SHAPES])
 
     def get_zero_files(self, pp_index, tp_index, dp_index) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.zero_checkpoint.get_files_for_rank(pp_index=pp_index, tp_index=tp_index, dp_index=dp_index)
 
     def get_embedding_layer_id(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.layer_keys[EMBEDDING_LAYER_INDEX]
 
     def get_final_norm_layer_id(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.layer_keys[FINAL_LAYER_NORM_INDEX]
 
     def get_iteration(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not ITERATION_KEY in self.global_state:
             sd = torch.load(self.mp_rank_files[0], map_location=torch.device('cpu'))
             self.global_state[ITERATION_KEY] = sd.get(ITERATION_KEY, 0)
@@ -147,19 +147,19 @@ class DeepSpeedCheckpoint(object):
         return self.global_state[ITERATION_KEY]
 
     def get_embedding_state(self, tp_index: int) -> Dict:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index in self.tp_to_embedding_map.keys()
         sd_list = [torch.load(fname, map_location=torch.device('cpu')) for fname in self.tp_to_embedding_map[tp_index]]
         sd = self._merge_state_dicts(sd_list)
         return sd
 
     def get_embedding_files(self, tp_index: int) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index in self.tp_to_embedding_map.keys()
         return self.tp_to_embedding_map[tp_index]
 
     def _get_checkpoint_value(self, key):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not key in self.global_state:
             sd = torch.load(self.mp_rank_files[0], map_location=torch.device('cpu'))
             self.global_state[key] = sd.get(key, None)
@@ -167,15 +167,15 @@ class DeepSpeedCheckpoint(object):
         return self.global_state[key]
 
     def get_args(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self._get_checkpoint_value(ARGS_KEY)
 
     def get_checkpoint_info(self, info_key=CHECKPOINT_INFO_KEY):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self._get_checkpoint_value(info_key)
 
     def get_2d_parallel_state(self, tp_index: int, pp_index: int) -> dict:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index < self.tp_degree
         assert pp_index < self.pp_degree
         fname_list = self.get_2d_parallel_files(tp_index=tp_index, pp_index=pp_index)
@@ -191,7 +191,7 @@ class DeepSpeedCheckpoint(object):
         return merged_sd
 
     def get_transformer_state(self, tp_index: int, pp_index: int) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index < self.tp_degree
         assert pp_index < self.pp_degree
         t_list = []
@@ -202,23 +202,23 @@ class DeepSpeedCheckpoint(object):
         return t_list
 
     def get_pp_transformer_map(self, pp_index: int) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert pp_index < self.pp_degree
         return self.pp_to_transformer_map[pp_index]
 
     def get_final_norm_state(self, tp_index: int) -> Dict:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index in self.tp_to_final_norm_map.keys()
         sd = torch.load(self.tp_to_final_norm_map[tp_index][0], map_location=torch.device('cpu'))
         return sd
 
     def get_final_norm_files(self, tp_index: int) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index in self.tp_to_final_norm_map.keys()
         return self.tp_to_final_norm_map[tp_index]
 
     def _build_tp_other_layer_map(self, layer_index: int):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert layer_index < len(self.layer_files)
         layer_files = get_files_with_prefix(self.layer_files, self.layer_keys[layer_index])
         layer_file_partitions = partition_data(layer_files, self.tp_degree)
@@ -226,14 +226,14 @@ class DeepSpeedCheckpoint(object):
         return data_map
 
     def get_2d_parallel_files(self, tp_index: int, pp_index: int) -> list:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert tp_index < self.tp_degree
         assert pp_index < self.pp_degree
         file_indices = self.new_2d_map.get_data(pp_index=pp_index, tp_index=tp_index)
         return [self.mp_rank_files[i] for i in file_indices]
 
     def _build_pp_transformer_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         data_map = {}
         transformer_layers = self.layer_keys[1:-1]
         layers_per_pp = len(transformer_layers) // self.pp_degree
@@ -241,14 +241,14 @@ class DeepSpeedCheckpoint(object):
         return data_map
 
     def _dump_mapping(self, data_map, map_tag=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if map_tag is not None:
             print(f'Dump mapping: {map_tag}')
         for k, v in data_map.items():
             print(f'{k} = {v}')
 
     def _build_transformer_file_map(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         transformer_layer_keys = self.layer_keys[1:-1]
         file_map = {}
         # XXX: this is not guaranteed
@@ -269,7 +269,7 @@ class DeepSpeedCheckpoint(object):
         return file_map
 
     def _sanity_check(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert len(self.mp_rank_files) % self.tp_degree == 0
         assert len(self.layer_keys) > 2
         assert self.zero_checkpoint.num_files % (self.pp_degree * self.tp_degree) == 0
@@ -278,13 +278,13 @@ class DeepSpeedCheckpoint(object):
         # assert (len(self.layer_keys) - 2) % self.pp_degree == 0
 
     def validate_files(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for file in self.file_list:
             if not os.path.isfile(file):
                 print(f'Error: {file} is not existent')
 
     def _get_layer_keys(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         key_set = set()
         key_len = len(LAYER_FILE_PREFIX) + 2
         for file_path in self.layer_files:
@@ -293,7 +293,7 @@ class DeepSpeedCheckpoint(object):
         return sorted(list(key_set))
 
     def _merge_state_dicts(self, sd_list):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         merged_sd = {}
         for key in sd_list[0].keys():
             if not key in SEQUENTIAL_LAYERS:
@@ -305,7 +305,7 @@ class DeepSpeedCheckpoint(object):
         return merged_sd
 
     def _validate_folder(self, dir):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         basic_folder_validation(dir)
 
         file_list = get_files(dir)

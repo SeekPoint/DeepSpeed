@@ -7,7 +7,7 @@ import torch
 from typing import Callable
 from torch import Tensor
 from packaging import version as pkg_version
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class OnDevice(object):
     """
@@ -31,7 +31,7 @@ class OnDevice(object):
     _orig_torch_full = torch.full
 
     def __init__(self, dtype, device="meta", enabled=True):
-        debuginfo(prj='ds', info='OnDevice init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.dtype = dtype
         self.enabled = enabled
         self.device = device

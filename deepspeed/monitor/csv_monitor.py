@@ -7,12 +7,12 @@ from .monitor import Monitor
 import os
 
 import deepspeed.comm as dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class csvMonitor(Monitor):
 
     def __init__(self, csv_config):
-        debuginfo(prj='ds', info='csvMonitor init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(csv_config)
         self.filenames = []
         self.enabled = csv_config.enabled
@@ -21,21 +21,21 @@ class csvMonitor(Monitor):
         self.log_dir = self.setup_log_dir()
 
     def setup_log_dir(self, base=os.path.join(os.path.expanduser("~"), "csv_monitor")):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.enabled and dist.get_rank() == 0:
             if self.output_path is not None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 log_dir = os.path.join(self.output_path, self.job_name)
             # NOTE: This code path currently is never used since the default tensorboard_output_path is an empty string and not None. Saving it in case we want this functionality in the future.
             else:
                 if "DLWS_JOB_ID" in os.environ:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = os.environ["DLWS_JOB_ID"]
                 elif "DLTS_JOB_ID" in os.environ:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = os.environ["DLTS_JOB_ID"]
                 else:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = "unknown-job-id"
 
                 csv_monitor_dir_name = os.path.join(infra_job_id, "logs")
@@ -44,9 +44,9 @@ class csvMonitor(Monitor):
             return log_dir
 
     def write_events(self, event_list):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.enabled and dist.get_rank() == 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             import csv
             # We assume each event_list element is a tensorboard-style tuple in the format: (log_name: String, value, step: Int)
             for event in event_list:

@@ -11,7 +11,7 @@ try:
 except ImportError:
     from deepspeed.ops.op_builder.builder import OpBuilder
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class CPUOpBuilder(OpBuilder):
 
     def builder(self):
@@ -29,9 +29,9 @@ class CPUOpBuilder(OpBuilder):
         return cpp_ext
 
     def cxx_args(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['-O3', '-g', '-Wno-reorder']
 
     def libraries_args(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return []

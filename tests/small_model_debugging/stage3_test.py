@@ -10,7 +10,7 @@ import deepspeed
 ###################################
 # Setup
 ###################################
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class VerboseLinear(torch.nn.Linear):
 

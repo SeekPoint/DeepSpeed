@@ -9,7 +9,7 @@ from unit.simple_model import UnusedParametersModel, random_dataloader
 from deepspeed.ops.op_builder import CPUAdamBuilder
 
 import deepspeed
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 @pytest.mark.parametrize('ignore_unused_parameters', [False, True])
 class TestStage2IgnoreUnusedParameters(DistributedTest):

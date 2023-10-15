@@ -5,7 +5,7 @@
 
 import torch
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def is_torch_elastic_compatible():
     '''
         Helper to lookup torch version. Elastic training is

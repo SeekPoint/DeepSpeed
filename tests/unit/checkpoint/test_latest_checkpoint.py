@@ -9,12 +9,13 @@ from unit.common import DistributedTest
 from unit.simple_model import *
 
 from unit.checkpoint.common import checkpoint_correctness_verification
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class TestLatestCheckpoint(DistributedTest):
     world_size = 1
 
     def test_existing_latest(self, tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -37,6 +38,7 @@ class TestLatestCheckpoint(DistributedTest):
                                             empty_tag=True)
 
     def test_missing_latest(self, tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,

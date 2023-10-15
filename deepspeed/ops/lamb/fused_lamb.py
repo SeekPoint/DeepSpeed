@@ -9,7 +9,7 @@ This file is adapted from NVIDIA/apex/optimizer/fused_adam and implements the LA
 import types
 import torch
 from deepspeed.ops.op_builder import FusedLambBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class FusedLamb(torch.optim.Optimizer):
     """Implements the LAMB algorithm. Currently GPU-only.
@@ -50,7 +50,7 @@ class FusedLamb(torch.optim.Optimizer):
                  max_coeff=10.0,
                  min_coeff=0.01,
                  amsgrad=False):
-        debuginfo(prj='ds', info='FusedLamb init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.fused_lamb_cuda = FusedLambBuilder().load()
 
         if amsgrad:
@@ -82,41 +82,43 @@ class FusedLamb(torch.optim.Optimizer):
             scale (float, optional): factor to divide gradient tensor values
                 by before applying to weights. (default: 1)
         """
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        
         loss = None
         if closure is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             loss = closure()
 
         if grads is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         elif type(grads[0]) != list:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = grads
 
         if output_params is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_params_group = [None] * len(self.param_groups)
         elif isinstance(output_params, types.GeneratorType):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_params_group = [output_params]
         elif type(output_params[0]) != list:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_params_group = [output_params]
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output_params_group = output_params
 
         if grad_norms is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_norms = [None] * len(self.param_groups)
 
         #remove the previous coeffs
@@ -181,6 +183,6 @@ class FusedLamb(torch.optim.Optimizer):
         return loss
 
     def get_lamb_coeffs(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         lamb_coeffs = [lamb_coeff.item() for lamb_coeff in self.lamb_coeffs]
         return lamb_coeffs

@@ -22,7 +22,7 @@ import pytest
 from _pytest.outcomes import Skipped
 from _pytest.fixtures import FixtureLookupError, FixtureFunctionMarker
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 # Worker timeout *after* the first worker has completed.
 DEEPSPEED_UNIT_WORKER_TIMEOUT = 120

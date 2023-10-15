@@ -16,7 +16,7 @@ from deepspeed.utils import safe_get_full_fp32_param, safe_get_full_grad, safe_g
 from deepspeed.runtime.zero.offload_config import OffloadDeviceEnum
 from deepspeed.ops.aio import AsyncIOBuilder
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def validate_full_tensors(model):
     for _, lp in model.named_parameters():
         hp = safe_get_full_fp32_param(lp)

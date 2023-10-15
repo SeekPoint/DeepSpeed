@@ -4,17 +4,19 @@
 # DeepSpeed Team
 
 import torch
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class MultiOutputModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, weight_value):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(MultiOutputModel, self).__init__()
         self.linear = torch.nn.Linear(hidden_dim, hidden_dim, bias=False)
         self.linear.weight.data.fill_(weight_value)
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self, inputs, targets):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         losses = []
         for x, y in zip(inputs, targets):
             hidden_dim = self.linear(x)
@@ -24,6 +26,8 @@ class MultiOutputModel(torch.nn.Module):
 
 
 def multi_output_dataloader(model, total_samples, hidden_dim, device, inputs, targets):
+    debuginfo(prj='dsUT')
+
     assert len(inputs) == len(targets)
     batch_size = model.train_micro_batch_size_per_gpu()
 

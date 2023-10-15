@@ -9,7 +9,7 @@ from math import isclose
 import sys
 import pytest
 import json
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 sys.path.append("../../../DeepSpeedExamples/BingBertSquad")
 import evaluate as eval
 

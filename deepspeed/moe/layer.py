@@ -11,7 +11,7 @@ from deepspeed.utils import groups
 from .sharded_moe import MOELayer, TopKGate
 from .experts import Experts
 import typing
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class MoE(torch.nn.Module):
     """Initialize an MoE layer.
@@ -48,7 +48,7 @@ class MoE(torch.nn.Module):
                  use_rts=True,
                  use_tutel: bool = False,
                  enable_expert_tensor_parallelism: bool = False):
-        debuginfo(prj='ds', info='MoE init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super(MoE, self).__init__()
 
         self.use_residual = use_residual
@@ -80,21 +80,21 @@ class MoE(torch.nn.Module):
             self.coefficient = torch.nn.Linear(hidden_size, 2)
 
     def set_deepspeed_parallelism(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._create_process_groups()
 
     def _create_process_groups(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Create process group for a layer if needed
         if self.expert_group_name not in groups._get_expert_parallel_group_dict():
             print(f"No existing process group found, creating a new group named: {self.expert_group_name}")
             if (groups.mpu is None) or (not self.enable_expert_tensor_parallelism):
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # Condition 1 - no groups.mpu means no tensor parallelism
                 # Condition 2 - disabling expert tensor parallelism on purpose
                 groups._create_expert_and_data_parallel(self.ep_size)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # expert tensor parallelism is enabled
                 groups._create_expert_data_and_model_parallel(self.ep_size, mpu=groups.mpu)
         # Set the group handle for the MOELayer (deepspeed_moe) object
@@ -117,13 +117,13 @@ class MoE(torch.nn.Module):
             * exp_counts (int): expert count
         """
         output = self.deepspeed_moe(hidden_states, used_token)
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.use_residual:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # Residual MoE
             output_mlp = self.mlp(hidden_states)
             if type(output_mlp) is tuple:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 output_mlp = output_mlp[0]  # Ignore the bias term for now
             coef = self.coefficient(hidden_states)
             coef = torch.nn.functional.softmax(coef, dim=-1)

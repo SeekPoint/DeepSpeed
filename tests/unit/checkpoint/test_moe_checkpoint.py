@@ -13,12 +13,13 @@ from unit.checkpoint.common import checkpoint_correctness_verification
 
 import pytest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class TestMoECheckpoint(DistributedTest):
     world_size = 4
 
     @pytest.mark.parametrize("ep_size", [4])
     def test_checkpoint_moe(self, tmpdir, ep_size):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if not required_torch_version():
             pytest.skip("DeepSpeed MoE tests need torch 1.8 or higher to run correctly")
 
@@ -40,6 +41,7 @@ class TestMoECheckpoint(DistributedTest):
 
     @pytest.mark.parametrize("ep_size, load_optim_states", [(4, True), (4, False), (2, True), (2, False)])
     def test_checkpoint_moe_and_zero(self, tmpdir, ep_size, load_optim_states):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if not required_torch_version():
             pytest.skip("DeepSpeed MoE tests need torch 1.8 or higher to run correctly")
 

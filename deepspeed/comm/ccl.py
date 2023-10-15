@@ -10,10 +10,10 @@ import torch
 from deepspeed.accelerator import get_accelerator
 from .reduce_op import ReduceOp
 from .torch import TorchBackend
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def build_ccl_op():
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     builder = get_accelerator().create_op_builder("CCLCommBuilder")
     if builder is None:
         return None
@@ -25,7 +25,7 @@ def build_ccl_op():
 class CCLBackend(TorchBackend):
 
     def __init__(self, name='ccl', rank=-1, world_size=-1, mpu=None, timeout=None, init_method=None):
-        debuginfo(prj='ds', info='CCLBackend init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.ccl_comm_op = build_ccl_op()
         if self.ccl_comm_op is None:
             # set CCLBackend to uninitialized state if CCLCommBuilder cannot be loaded
@@ -50,19 +50,19 @@ class CCLBackend(TorchBackend):
         return self.initialized
 
     def broadcast(self, tensor, src, group=None, async_op=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.ccl_comm_op.broadcast(tensor, src, group, async_op)
 
     def all_reduce(self, tensor, op=ReduceOp.SUM, group=None, async_op=False):
         use_caching = False
         if use_caching:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             match_id = f"{tensor.size()}-{op}"
             self.ccl_comm_op.all_reduce_caching(tensor, op, match_id, group, async_op)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.ccl_comm_op.all_reduce(tensor, op, group, async_op)
 
     def barrier(self, group=None, async_op=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.ccl_comm_op.barrier(group, async_op)

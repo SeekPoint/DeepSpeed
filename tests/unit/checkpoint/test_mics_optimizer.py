@@ -14,12 +14,13 @@ from unit.simple_model import *
 from unit.checkpoint.common import *
 
 import pytest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class TestMiCSCheckpoint(DistributedTest):
     world_size = 4
 
     def _toy_model_config(self, shard_size):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_micro_batch_size_per_gpu": 2,
@@ -52,15 +53,18 @@ class TestMiCSCheckpoint(DistributedTest):
 
     @pytest.mark.parametrize('shard_size', [1, 2, 4])
     def test_load_optimizer_state(self, tmpdir, shard_size):
+        debuginfo(prj='dsUT')
         config_dict, hidden_dim, models = self._toy_model_config(shard_size)
         checkpoint_correctness_verification(config_dict, models, hidden_dim, tmpdir, load_optimizer_states=True)
 
     @pytest.mark.parametrize('shard_size', [1, 2, 4])
     def test_not_load_optimizer_state(self, tmpdir, shard_size):
+        debuginfo(prj='dsUT')
         config_dict, hidden_dim, models = self._toy_model_config(shard_size)
         checkpoint_correctness_verification(config_dict, models, hidden_dim, tmpdir, load_optimizer_states=False)
 
     @pytest.mark.parametrize('shard_size', [1, 2, 4])
     def test_load_module_only(self, tmpdir, shard_size):
+        debuginfo(prj='dsUT')
         config_dict, hidden_dim, models = self._toy_model_config(shard_size)
         checkpoint_correctness_verification(config_dict, models, hidden_dim, tmpdir, load_module_only=True)

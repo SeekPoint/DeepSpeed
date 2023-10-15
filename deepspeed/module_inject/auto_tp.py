@@ -8,19 +8,19 @@ import re
 
 from torch import nn
 from .replace_policy import replace_policies
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class AutoTP():
 
     def in_module_list(module, module_list):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for item in module_list:
             if type(item).__name__ == type(module).__name__:
                 return True
         return False
 
     def get_module_list(model):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         mlist = []
         for child in model.children():
             if isinstance(child, nn.ModuleList):
@@ -35,7 +35,7 @@ class AutoTP():
         return mlist
 
     def supported(model):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         unsupported = ['codegen', 'deberta', 'flaubert', 'fsmt', 'gpt2', 'led', 'longformer', 'xlm', 'xlnet']
         model = str(model)
         key = re.search(r": (.*?)Model", model)
@@ -49,7 +49,7 @@ class AutoTP():
         return True
 
     def get_layers(parent, module):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         layer_list = []
         for key, submodule in module._modules.items():
             if isinstance(submodule, nn.Linear):
@@ -62,7 +62,7 @@ class AutoTP():
         return layer_list
 
     def update_policy_list(policy_list, new_module, new_gems):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if len(policy_list):
             for i, policy in enumerate(policy_list):
                 # if module already exists in policy, combine gems and remove duplicates
@@ -75,7 +75,7 @@ class AutoTP():
         return policy_list
 
     def kernel_supported(module_list):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         policy = []
         for plcy in replace_policies:
             # instantiate a throw-away policy in order to populate the _orig_layer_class
@@ -91,7 +91,7 @@ class AutoTP():
         return False
 
     def tp_parser(model):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         policy_list = []
         module_list = []
         layer_list = []

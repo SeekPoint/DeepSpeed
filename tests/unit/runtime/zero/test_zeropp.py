@@ -15,7 +15,7 @@ from deepspeed.runtime.zero.config import DeepSpeedZeroConfig
 
 import torch.nn as nn
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 # 首先，定义一个神经网络模型 NNModel，它是由多个全连接层和一个交叉熵损失函数组成。
 class NNModel(nn.Module):
 

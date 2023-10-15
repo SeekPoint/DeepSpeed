@@ -31,3 +31,14 @@ deepspeed 详解-源码分析
 
 https://zhuanlan.zhihu.com/p/650824387
 关于Deepspeed的一些总结与心得
+
+
+
+unittest框架下运行print无返回结果解决
+https://blog.csdn.net/Annie20180423/article/details/108020703
+
+pytest中print的坑
+pytest确实不会输出print的信息到控制台，如果要想打印所有内容，需要运行时加上"-s"参数，即pytest -s xxx.py。
+ex
+(ds_py10) amd00@MZ32-00:~/yk_repo/ds/DeepSpeed/tests/accelerator$ pytest -s test_ds_init.py > test_ds_init.log
+Using /home/amd00/.cache/torch_extensions/py310_cu121 as PyTorch extensions root...

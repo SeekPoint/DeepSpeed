@@ -10,7 +10,7 @@ import unittest
 import os
 import re
 from test_common import BaseTestCase
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 '''
 fail
 '''
@@ -23,6 +23,7 @@ MASTER_PORT = 29700
 
 
 def grep_loss_from_file(file_name):
+    debuginfo(prj='dsUT')
     loss = 0.0
     print(f'grepping {file_name}')
     with open(file_name, 'r') as f:
@@ -44,18 +45,22 @@ def grep_loss_from_file(file_name):
 class GPT2FuncTestCase(BaseTestCase):
 
     def __init__(self, methodName="DeepSpeed function test on GPT2 model"):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(GPT2FuncTestCase, self).__init__(methodName)
 
     def setUp(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.save_dir = os.getcwd()
         new_dir = os.path.dirname(__file__)
         if new_dir:
             os.chdir(new_dir)
 
     def tearDown(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         os.chdir(self.save_dir)
 
     def test_mp1_gpu2_node1_fp16(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -74,6 +79,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu1_node1_zero1(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 1,
@@ -92,6 +98,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_node1_zero1(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -110,6 +117,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_zero1(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -128,6 +136,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp4_gpu4_node1_zero1(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 4,
             "gpus": 4,
@@ -146,6 +155,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu1_node1_zero2(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 1,
@@ -164,6 +174,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_node1_zero2(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -182,6 +193,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_zero2(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -205,6 +217,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp4_gpu4_node1_zero2(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 4,
             "gpus": 4,
@@ -228,6 +241,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu1_node1_zero2_ds_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 1,
@@ -246,6 +260,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_node1_zero2_ds_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -264,6 +279,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_zero2_gas(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -286,6 +302,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_zero2_ds_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -310,6 +327,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp4_gpu4_node1_zero2_ds_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 4,
             "gpus": 4,
@@ -334,6 +352,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu1_node1_zero2_torch_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 1,
@@ -354,6 +373,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_node1_zero2_torch_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -374,6 +394,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_zero2_torch_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -399,6 +420,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp4_gpu4_node1_zero2_torch_offload(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 4,
             "gpus": 4,
@@ -423,6 +445,7 @@ class GPT2FuncTestCase(BaseTestCase):
         succ = self.run_partition_activations_test(partition_activation_config, 0.01)
 
     def test_optimizer_scheduler(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 1,
@@ -442,6 +465,7 @@ class GPT2FuncTestCase(BaseTestCase):
         self.assertTrue(True)
 
     def run_partition_activations_test(self, test_config, r_tol):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         print("\n")
         print("{0}: starting......".format(self.id()))
 
@@ -485,6 +509,7 @@ class GPT2FuncTestCase(BaseTestCase):
         return self.check_parity(base_file, test_file, r_tol)
 
     def run_test(self, test_config, r_tol):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         print("\n")
         print("{0}: starting......".format(self.id()))
 
@@ -529,6 +554,7 @@ class GPT2FuncTestCase(BaseTestCase):
         return self.check_parity(base_file, test_file, r_tol)
 
     def has_loss_data(self, file_name):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         has_loss = False
         if os.path.exists(file_name):
             loss = grep_loss_from_file(file_name)
@@ -538,6 +564,7 @@ class GPT2FuncTestCase(BaseTestCase):
         return has_loss
 
     def check_parity(self, base_file, test_file, r_tol):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         base_loss = grep_loss_from_file(base_file)
         test_loss = grep_loss_from_file(test_file)
 
@@ -552,6 +579,7 @@ class GPT2FuncTestCase(BaseTestCase):
         return True
 
     def gen_cpu_optimizer_flag(self, test_config, is_baseline):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if 'cpu_optimizer' in test_config and test_config['cpu_optimizer']:
             cpu_optimizer_flag = "--cpu-optimizer"
             if is_baseline:
@@ -567,6 +595,7 @@ class GPT2FuncTestCase(BaseTestCase):
 
 
 def suite():
+    debuginfo(prj='dsUT')
     suite = unittest.TestSuite()
 
     suite.addTest(GPT2FuncTestCase('test_mp1_gpu2_node1_fp16'))
@@ -603,5 +632,6 @@ def suite():
 
 
 if __name__ == '__main__':
+    debuginfo(prj='dsUT')
     runner = unittest.TextTestRunner(failfast=True)
     runner.run(suite())

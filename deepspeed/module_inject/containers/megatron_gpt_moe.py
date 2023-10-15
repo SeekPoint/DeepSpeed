@@ -10,12 +10,12 @@ from deepspeed.model_implementations.transformers.ds_megatron_gpt import DeepSpe
 import torch
 from .megatron_gpt import MegatronLayerPolicy
 from packaging import version as pkg_version
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DS_MegatronGPTMoEContainer(MegatronContainer, BaseTransformerMoEContainer):
 
     def __init__(self, policy, config, model_config, layer_id):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(policy, config, model_config, layer_id)
 
         # All model specific things should be defined here instead of the base class.
@@ -39,29 +39,29 @@ class MegatronMoELayerPolicy(MegatronLayerPolicy):
     version = 0
     moe_type = 'standard'
     num_experts = 1
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     def __init__(self, client_module, inference=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(inference)
         self.client_module = client_module
         # we use megatron version to differentiate between the old and new
         # megatron-lm source code
         if MegatronMoELayerPolicy._orig_layer_class is None:
             if pkg_version.parse(torch.__version__) <= pkg_version.parse("1.2"):
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 MegatronMoELayerPolicy._orig_layer_class = None
             else:
                 try:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     from megatron.model.transformer import ParallelTransformerLayer
                     MegatronMoELayerPolicy._orig_layer_class = ParallelTransformerLayer
                 except ImportError:
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     MegatronMoELayerPolicy._orig_layer_class = None
 
     def get_num_experts(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.num_experts
 
     def mlp(self, moe_type='standard', enable_training=False):
@@ -77,13 +77,13 @@ class MegatronMoELayerPolicy(MegatronLayerPolicy):
         self.num_experts = num_experts
 
         if moe_type == 'standard':
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return [moe_experts[i].dense_h_to_4h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_h_to_4h.bias for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.bias for i in range(num_experts)]
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return [moe_experts[i].dense_h_to_4h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_h_to_4h.bias for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.weight for i in range(num_experts)], \

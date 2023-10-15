@@ -64,7 +64,7 @@ from .swap_tensor.aio_config import get_aio_config
 from .data_pipeline.config import get_data_efficiency_enabled, get_data_efficiency_config, get_curriculum_enabled_legacy, get_curriculum_params_legacy
 from .data_pipeline.constants import *
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 TENSOR_CORE_ALIGN_SIZE = 8
 
@@ -121,50 +121,50 @@ class DtypeEnum(Enum):
 
 def get_pld_enabled(param_dict):
     if PROGRESSIVE_LAYER_DROP in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[PROGRESSIVE_LAYER_DROP], PLD_ENABLED, PLD_ENABLED_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_pld_params(param_dict):
     if PROGRESSIVE_LAYER_DROP in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         pld_params = copy.copy(param_dict[PROGRESSIVE_LAYER_DROP])
         pld_params.pop(PLD_ENABLED)
         return pld_params
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_amp_enabled(param_dict):
     if AMP in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[AMP], AMP_ENABLED, AMP_ENABLED_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_amp_params(param_dict):
     if AMP in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         amp_params = copy.copy(param_dict[AMP])
         amp_params.pop(AMP_ENABLED)
         return amp_params
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_fp16_enabled(param_dict):
     if FP16 in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[FP16], FP16_ENABLED, FP16_ENABLED_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
@@ -172,58 +172,58 @@ def get_bfloat16_enabled(param_dict):
     for key in [BFLOAT16, BFLOAT16_OLD]:
         if key in param_dict.keys():
             return get_scalar_param(param_dict[key], BFLOAT16_ENABLED, BFLOAT16_ENABLED_DEFAULT)
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return False
 
 
 def get_fp16_master_weights_and_grads_enabled(param_dict):
     if get_fp16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[FP16], FP16_MASTER_WEIGHTS_AND_GRADS, FP16_MASTER_WEIGHTS_AND_GRADS_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_fp16_auto_cast(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if get_fp16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[FP16], FP16_AUTO_CAST, FP16_AUTO_CAST_DEFAULT)
 
 
 def get_loss_scale(param_dict):
     if get_fp16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[FP16], FP16_LOSS_SCALE, FP16_LOSS_SCALE_DEFAULT)
     elif get_bfloat16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return 1.0
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return FP16_LOSS_SCALE_DEFAULT
 
 
 def get_initial_dynamic_scale(param_dict):
     if get_fp16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         initial_scale_power = get_scalar_param(param_dict[FP16], FP16_INITIAL_SCALE_POWER,
                                                FP16_INITIAL_SCALE_POWER_DEFAULT)
     elif get_bfloat16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         initial_scale_power = 0
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         initial_scale_power = FP16_INITIAL_SCALE_POWER_DEFAULT
 
     return 2**initial_scale_power
 
 
 def get_dynamic_loss_scale_args(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     loss_scale_args = None
     if get_fp16_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         fp16_dict = param_dict[FP16]
         dynamic_loss_args = [
             FP16_INITIAL_SCALE_POWER,
@@ -233,7 +233,7 @@ def get_dynamic_loss_scale_args(param_dict):
             FP16_CONSECUTIVE_HYSTERESIS,
         ]
         if any(arg in list(fp16_dict.keys()) for arg in dynamic_loss_args):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             init_scale = get_scalar_param(fp16_dict, FP16_INITIAL_SCALE_POWER, FP16_INITIAL_SCALE_POWER_DEFAULT)
             scale_window = get_scalar_param(fp16_dict, FP16_LOSS_SCALE_WINDOW, FP16_LOSS_SCALE_WINDOW_DEFAULT)
             delayed_shift = get_scalar_param(fp16_dict, FP16_HYSTERESIS, FP16_HYSTERESIS_DEFAULT)
@@ -252,12 +252,12 @@ def get_dynamic_loss_scale_args(param_dict):
 
 
 def get_gradient_accumulation_steps(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, GRADIENT_ACCUMULATION_STEPS, GRADIENT_ACCUMULATION_STEPS_DEFAULT)
 
 
 def get_sparse_gradients_enabled(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, SPARSE_GRADIENTS, SPARSE_GRADIENTS_DEFAULT)
 
 
@@ -265,48 +265,48 @@ def get_communication_data_type(param_dict):
     val = get_scalar_param(param_dict, COMMUNICATION_DATA_TYPE, COMMUNICATION_DATA_TYPE_DEFAULT)
     val = val.lower() if val is not None else val
     if val is None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return val  # we must determine it by other parameters
     elif val == "fp32":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return torch.float32
     elif val == "fp16":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return torch.float16
     elif val == "bfp16":
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return torch.bfloat16
 
     raise ValueError(f"Invalid communication_data_type. Supported data types: ['fp16', 'bfp16', 'fp32']. Got: {val}")
 
 
 def get_prescale_gradients(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, PRESCALE_GRADIENTS, PRESCALE_GRADIENTS_DEFAULT)
 
 
 def get_gradient_predivide_factor(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, GRADIENT_PREDIVIDE_FACTOR, GRADIENT_PREDIVIDE_FACTOR_DEFAULT)
 
 
 def get_steps_per_print(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, STEPS_PER_PRINT, STEPS_PER_PRINT_DEFAULT)
 
 
 def get_disable_allgather(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, DISABLE_ALLGATHER, DISABLE_ALLGATHER_DEFAULT)
 
 
 def get_dump_state(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, DUMP_STATE, DUMP_STATE_DEFAULT)
 
 
 def get_gradient_clipping(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, GRADIENT_CLIPPING, GRADIENT_CLIPPING_DEFAULT)
 
 
@@ -316,36 +316,36 @@ def get_sparse_attention(param_dict):
         mode = get_sparse_attention_mode(sparsity)
 
         if mode == SPARSE_DENSE_MODE:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return get_sparse_dense_config(sparsity)
         elif mode == SPARSE_FIXED_MODE:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return get_sparse_fixed_config(sparsity)
         elif mode == SPARSE_VARIABLE_MODE:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return get_sparse_variable_config(sparsity)
         elif mode == SPARSE_BIGBIRD_MODE:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return get_sparse_bigbird_config(sparsity)
         elif mode == SPARSE_BSLONGFORMER_MODE:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return get_sparse_bslongformer_config(sparsity)
         else:
             raise NotImplementedError(f"Given sparsity mode, {mode}, has not been implemented yet!")
 
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return None
 
 
 def get_sparse_dense_config(sparsity):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     block = get_scalar_param(sparsity, SPARSE_BLOCK, SPARSE_BLOCK_DEFAULT)
     return {SPARSE_MODE: SPARSE_DENSE_MODE, SPARSE_BLOCK: block}
 
 
 def get_sparse_fixed_config(sparsity):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     block = get_scalar_param(sparsity, SPARSE_BLOCK, SPARSE_BLOCK_DEFAULT)
     different_layout_per_head = get_scalar_param(
         sparsity,
@@ -379,7 +379,7 @@ def get_sparse_fixed_config(sparsity):
 
 
 def get_sparse_variable_config(sparsity):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     block = get_scalar_param(sparsity, SPARSE_BLOCK, SPARSE_BLOCK_DEFAULT)
     different_layout_per_head = get_scalar_param(
         sparsity,
@@ -415,7 +415,7 @@ def get_sparse_variable_config(sparsity):
 
 
 def get_sparse_bigbird_config(sparsity):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     block = get_scalar_param(sparsity, SPARSE_BLOCK, SPARSE_BLOCK_DEFAULT)
     different_layout_per_head = get_scalar_param(
         sparsity,
@@ -441,7 +441,7 @@ def get_sparse_bigbird_config(sparsity):
 
 
 def get_sparse_bslongformer_config(sparsity):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     block = get_scalar_param(sparsity, SPARSE_BLOCK, SPARSE_BLOCK_DEFAULT)
     different_layout_per_head = get_scalar_param(
         sparsity,
@@ -472,24 +472,24 @@ def get_sparse_bslongformer_config(sparsity):
 
 def get_sparse_attention_mode(param_dict):
     if SPARSE_MODE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[SPARSE_MODE]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return SPARSE_MODE_DEFAULT
 
 
 def get_sparse_attention_type(param_dict):
     if SPARSE_ATTENTION_TYPE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[SPARSE_ATTENTION_TYPE]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return SPARSE_ATTENTION_TYPE_DEFAULT
 
 
 def get_pipeline_config(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Parses pipeline engine configuration. """
     default_pipeline = {
         "stages": "auto",
@@ -505,76 +505,76 @@ def get_pipeline_config(param_dict):
 
 def get_optimizer_name(param_dict):
     if OPTIMIZER in param_dict.keys() and TYPE in param_dict[OPTIMIZER].keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[OPTIMIZER][TYPE]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return OPTIMIZER_TYPE_DEFAULT
 
 
 def get_optimizer_params(param_dict):
     if (get_optimizer_name(param_dict) is not None and OPTIMIZER_PARAMS in param_dict[OPTIMIZER].keys()):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[OPTIMIZER][OPTIMIZER_PARAMS]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return None
 
 
 def get_optimizer_gradient_clipping(param_dict):
     optimizer_params = get_optimizer_params(param_dict)
     if optimizer_params is not None and MAX_GRAD_NORM in optimizer_params.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return optimizer_params[MAX_GRAD_NORM]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return None
 
 
 def get_optimizer_legacy_fusion(param_dict):
     if OPTIMIZER in param_dict.keys() and LEGACY_FUSION in param_dict[OPTIMIZER].keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[OPTIMIZER][LEGACY_FUSION]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return LEGACY_FUSION_DEFAULT
 
 
 def get_zero_allow_untested_optimizer(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, ZERO_ALLOW_UNTESTED_OPTIMIZER, ZERO_ALLOW_UNTESTED_OPTIMIZER_DEFAULT)
 
 
 def get_zero_force_ds_cpu_optimizer(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, ZERO_FORCE_DS_CPU_OPTIMIZER, ZERO_FORCE_DS_CPU_OPTIMIZER_DEFAULT)
 
 
 def get_scheduler_name(param_dict):
     if SCHEDULER in param_dict.keys() and TYPE in param_dict[SCHEDULER].keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[SCHEDULER][TYPE]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return SCHEDULER_TYPE_DEFAULT
 
 
 def get_scheduler_params(param_dict):
     if (get_scheduler_name(param_dict) is not None and SCHEDULER_PARAMS in param_dict[SCHEDULER].keys()):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param_dict[SCHEDULER][SCHEDULER_PARAMS]
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return None
 
 
 def get_train_batch_size(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, TRAIN_BATCH_SIZE, TRAIN_BATCH_SIZE_DEFAULT)
 
 
 def get_train_micro_batch_size_per_gpu(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(
         param_dict,
         TRAIN_MICRO_BATCH_SIZE_PER_GPU,
@@ -583,12 +583,12 @@ def get_train_micro_batch_size_per_gpu(param_dict):
 
 
 def get_wall_clock_breakdown(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, WALL_CLOCK_BREAKDOWN, WALL_CLOCK_BREAKDOWN_DEFAULT)
 
 
 def get_memory_breakdown(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, MEMORY_BREAKDOWN, MEMORY_BREAKDOWN_DEFAULT)
 
 
@@ -602,7 +602,7 @@ class HybridEngineConfig(DeepSpeedConfigModel):
 
 
 def get_hybrid_engine_config(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     hybrid_engine_config_dict = param_dict.get("hybrid_engine", {})
     hybrid_engine_config = HybridEngineConfig(**hybrid_engine_config_dict)
     return hybrid_engine_config
@@ -610,7 +610,7 @@ def get_hybrid_engine_config(param_dict):
 
 def get_eigenvalue_config(param_dict):
     if get_quantize_enabled(param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict = param_dict[QUANTIZE_TRAINING]
         assert not get_eigenvalue_enabled(param_dict), "Eigenvalue based MoQ is temporarily disabled"
         return (
@@ -624,7 +624,7 @@ def get_eigenvalue_config(param_dict):
             get_eigenvalue_layer_num(param_dict),
         )
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return (
             EIGENVALUE_ENABLED_DEFAULT,
             EIGENVALUE_VERBOSE_DEFAULT,
@@ -639,87 +639,87 @@ def get_eigenvalue_config(param_dict):
 
 def get_eigenvalue_enabled(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_ENABLED, EIGENVALUE_ENABLED_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_ENABLED_DEFAULT
 
 
 def get_eigenvalue_verbose(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_VERBOSE, EIGENVALUE_VERBOSE_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_VERBOSE_DEFAULT
 
 
 def get_eigenvalue_max_iter(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_MAX_ITER, EIGENVALUE_MAX_ITER_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_MAX_ITER_DEFAULT
 
 
 def get_eigenvalue_tol(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_TOL, EIGENVALUE_TOL_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_TOL_DEFAULT
 
 
 def get_eigenvalue_stability(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_STABILITY, EIGENVALUE_STABILITY_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_STABILITY_DEFAULT
 
 
 def get_eigenvalue_gas_boundary_resolution(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(
             param_dict[EIGENVALUE],
             EIGENVALUE_GAS_BOUNDARY_RESOLUTION,
             EIGENVALUE_GAS_BOUNDARY_RESOLUTION_DEFAULT,
         )
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_GAS_BOUNDARY_RESOLUTION_DEFAULT
 
 
 def get_eigenvalue_layer_name(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_LAYER_NAME, EIGENVALUE_LAYER_NAME_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_LAYER_NAME_DEFAULT
 
 
 def get_eigenvalue_layer_num(param_dict):
     if EIGENVALUE in param_dict.keys():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[EIGENVALUE], EIGENVALUE_LAYER_NUM, EIGENVALUE_LAYER_NUM_DEFAULT)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return EIGENVALUE_LAYER_NUM_DEFAULT
 
 
 def get_checkpoint_params(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return param_dict.get(CHECKPOINT, {})
 
 
 def get_data_types_params(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return param_dict.get(DATA_TYPES, {})
 
 
@@ -727,7 +727,7 @@ def get_checkpoint_tag_validation_mode(checkpoint_params):
     tag_validation_mode = checkpoint_params.get(CHECKPOINT_TAG_VALIDATION, CHECKPOINT_TAG_VALIDATION_DEFAULT)
     tag_validation_mode = tag_validation_mode.upper()
     if tag_validation_mode in CHECKPOINT_TAG_VALIDATION_MODES:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return tag_validation_mode
     else:
         raise DeepSpeedConfigError(
@@ -740,7 +740,7 @@ def get_checkpoint_parallel_write_pipeline(checkpoint_params):
     par_write_pipeline = par_write_params.get(CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE,
                                               CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE_DEFAULT)
     if par_write_pipeline in [True, False]:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return par_write_pipeline
     else:
         raise DeepSpeedConfigError("checkpoint::parallel_write::pipeline_stage "
@@ -748,7 +748,7 @@ def get_checkpoint_parallel_write_pipeline(checkpoint_params):
 
 
 def get_dataloader_drop_last(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return get_scalar_param(param_dict, DATALOADER_DROP_LAST, DATALOADER_DROP_LAST_DEFAULT)
 
 
@@ -759,19 +759,19 @@ Can be used for quickly changing parameters via command line parameters.'''
 class DeepSpeedConfigWriter:
 
     def __init__(self, data=None):
-        debuginfo(prj='ds', info='DeepSpeedConfigWriter init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         self.data = data if data is not None else {}
 
     def add_config(self, key, value):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.data[key] = value
 
     def load_config(self, filename):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.data = json.load(open(filename, "r"), object_pairs_hook=dict_raise_error_on_duplicate_keys)
 
     def write_config(self, filename):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         with open(filename, "w") as outfile:
             json.dump(self.data, outfile)
 
@@ -781,14 +781,14 @@ class DeepSpeedConfig(object):
     def __init__(self, config: Union[str, dict], mpu=None):
         super(DeepSpeedConfig, self).__init__()
         if isinstance(config, dict):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._param_dict = config
         elif os.path.exists(config):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._param_dict = hjson.load(open(config, "r"), object_pairs_hook=dict_raise_error_on_duplicate_keys)
         else:
             try:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 config_decoded = base64.urlsafe_b64decode(config).decode('utf-8')
                 self._param_dict = hjson.loads(config_decoded)
             except (UnicodeDecodeError, AttributeError):
@@ -798,13 +798,13 @@ class DeepSpeedConfig(object):
         try:
             self.global_rank = dist.get_rank()
             if mpu is None:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.world_size = dist.get_world_size()
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.world_size = mpu.get_data_parallel_world_size()
         except:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.global_rank = 0
             self.world_size = 1
 
@@ -876,7 +876,7 @@ class DeepSpeedConfig(object):
         self._do_sanity_check()
 
     def _initialize_params(self, param_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.train_batch_size = get_train_batch_size(param_dict)
         #print(f"beginning get_train_batch_size = {get_train_batch_size}")
         self.train_micro_batch_size_per_gpu = get_train_micro_batch_size_per_gpu(param_dict)
@@ -918,7 +918,7 @@ class DeepSpeedConfig(object):
 
         self.optimizer_name = get_optimizer_name(param_dict)
         if (self.optimizer_name is not None and self.optimizer_name.lower() in DEEPSPEED_OPTIMIZERS):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_name = self.optimizer_name.lower()
 
         self.optimizer_params = get_optimizer_params(param_dict)
@@ -984,7 +984,7 @@ class DeepSpeedConfig(object):
         self.nebula_config = DeepSpeedNebulaConfig(param_dict)
 
     def _batch_assertion(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         train_batch = self.train_batch_size
         micro_batch = self.train_micro_batch_size_per_gpu
@@ -1010,55 +1010,55 @@ class DeepSpeedConfig(object):
 
         # all values are provided nothing needs to be set
         if train_batch is not None and micro_batch is not None and grad_acc is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
 
         # global_accumulation_steps needs to be set
         elif train_batch is not None and micro_batch is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_acc = train_batch // micro_batch
             grad_acc //= self.world_size
             self.gradient_accumulation_steps = grad_acc
 
         # micro_batch_per_gpu needs to be set
         elif train_batch is not None and grad_acc is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             micro_batch = train_batch // self.world_size
             micro_batch //= grad_acc
             self.train_micro_batch_size_per_gpu = micro_batch
 
         # train_batch_size needs to be set
         elif micro_batch is not None and grad_acc is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             train_batch_size = micro_batch * grad_acc
             train_batch_size *= self.world_size
             self.train_batch_size = train_batch_size
 
         # gradient_accumulation_steps and micro_batch_per_gpus is set
         elif train_batch is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.gradient_accumulation_steps = 1
             self.train_micro_batch_size_per_gpu = train_batch // self.world_size
 
         # train_batch_size and gradient_accumulation_step is set
         elif micro_batch is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.train_batch_size = micro_batch * self.world_size
             self.gradient_accumulation_steps = 1
 
         # either none of the three parameters are provided or just gradient_accumulation_step is provided
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert False, \
                 'Either train_batch_size or train_micro_batch_size_per_gpu needs to be provided'
 
     def _configure_train_batch_size(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._set_batch_related_parameters()
         self._batch_assertion()
 
     def _do_sanity_check(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._do_error_check()
 
         self._do_warning_check()
@@ -1083,7 +1083,7 @@ class DeepSpeedConfig(object):
         self.print_user_config()
 
     def _do_error_check(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert (self.train_micro_batch_size_per_gpu
                 ), "DeepSpeedConfig: {} is not defined".format(TRAIN_MICRO_BATCH_SIZE_PER_GPU)
 
@@ -1099,7 +1099,7 @@ class DeepSpeedConfig(object):
             assert self.zero_enabled and self.zero_optimization_stage == ZeroStageEnum.gradients, "Fp16_master_weights_and_grads is only supported with ZeRO Stage 2 for now."
 
     def _do_warning_check(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         fp16_enabled = self.fp16_enabled
 
         vocabulary_size = self._param_dict.get(VOCABULARY_SIZE, VOCABULARY_SIZE_DEFAULT)

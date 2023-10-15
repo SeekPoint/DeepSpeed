@@ -17,7 +17,7 @@ from ....moe.sharded_moe import TopKGate
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import InferenceBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
     """Initialize the DeepSpeed Transformer Config.
@@ -75,7 +75,7 @@ class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
                  use_rts=False,
                  mlp_type='standard',
                  scale_attn_by_inverse_layer_idx=False):
-        debuginfo(prj='ds', info='DeepSpeedMoEInferenceConfig init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(DeepSpeedMoEInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers, layer_norm_eps, local_rank, mp_size, fp16, bf16, q_int8,
@@ -95,7 +95,7 @@ class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
 
     @classmethod
     def from_dict(cls, json_object):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         config = DeepSpeedInferenceConfig()
         for key, value in json_object.items():
             config.__dict__[key] = value
@@ -103,7 +103,7 @@ class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
 
     @classmethod
     def from_json_file(cls, json_file):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         with open(json_file, "r", encoding='utf-8') as reader:
             text = reader.read()
         return cls.from_dict(json.loads(text))
@@ -115,18 +115,18 @@ class DeepSpeedMLPFunction(Function):
     def forward(ctx, input, inter_w, inter_b, config, output_b, output_w, q_scales, q_groups, merge_count, mp_group,
                 async_op):
         if config.q_int8:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             intermediate = inference_module.fused_gemm_gelu_int8(input, inter_w, inter_b, config.epsilon, q_scales[2],
                                                                  (q_groups * (2**merge_count)), config.pre_layer_norm)
             output = inference_module.vector_matmul_int8(intermediate, output_w, q_scales[3], q_groups, (merge_count))
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             mlp_gemm_func = inference_module.fused_gemm_gelu_fp16 if config.fp16 else \
                                     inference_module.fused_gemm_gelu_fp32
 
             output = mlp_gemm_func(input, inter_w, inter_b, output_w, config.epsilon, config.pre_layer_norm, async_op)
         if mp_group is not None and dist.get_world_size(group=mp_group) > 1:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(output, group=mp_group, async_op=async_op)
 
         return output + output_b
@@ -140,7 +140,7 @@ class DeepSpeedMLPFunction(Function):
 class DeepSpeedMoEMLP(nn.Module):
 
     def __init__(self, config, q_scales=None, q_groups=1, merge_count=1, mlp_extra_grouping=False, mp_group=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super(DeepSpeedMoEMLP, self).__init__()
 
         self.config = config
@@ -159,7 +159,7 @@ class DeepSpeedMoEMLP(nn.Module):
         self.mp_group = mp_group
 
     def forward(self, input, async_op=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return DeepSpeedMLPFunction.apply(input, self.inter_w, self.inter_b, self.config, self.output_b, self.output_w,
                                           self.q_scales, self.q_groups, self.merge_count, self.mp_group, async_op)
 

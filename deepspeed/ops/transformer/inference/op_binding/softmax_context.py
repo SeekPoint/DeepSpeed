@@ -7,12 +7,12 @@ import torch
 from deepspeed import comm as dist
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class SoftmaxContextOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        debuginfo(prj='ds', info='SoftmaxContextOp init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(SoftmaxContextOp, self).__init__(config)
         try:
             if self.config.dtype in [torch.float16, torch.int8]:
@@ -33,12 +33,12 @@ class SoftmaxContextOp(BaseOp):
                 no_masking: bool, layer_id: int, num_layers: int, alibi: torch.Tensor):
 
         if alibi is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             batch_heads = query_key_value.shape[0] * heads
             offset = dist.get_rank() * batch_heads if dist.is_initialized() else 0
             alibi = alibi[offset:batch_heads + offset, :, :]
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             alibi = torch.empty(1)
 
         output = self.softmax_context_func(query_key_value, attn_mask, self.config.rotary_dim, self.config.rotate_half,

@@ -3,10 +3,10 @@
 
 # DeepSpeed Team
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class Diffusers2DTransformerConfig():
 
     def __init__(self, int8_quantization=False):
-        debuginfo(prj='ds', info='Diffusers2DTransformerConfig init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         self.int8_quantization = int8_quantization

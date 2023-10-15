@@ -17,7 +17,7 @@ from torch import Tensor
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils import logger
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 
 def _log_rank0(msg):
@@ -27,7 +27,7 @@ def _log_rank0(msg):
 
 @torch.jit.script
 def scale_tensors(tensors: List[Tensor], scale: int):
-    # yknote 会涉及jit，必须屏蔽 !!! debuginfo(prj='ds')
+    # yknote 会涉及jit，必须屏蔽 !!! debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     '''
     yknote==
         File "/home/ub2004/yk_fork/DeepSpeed/deepspeed/runtime/zero/mics.py", line 15, in <module>
@@ -77,7 +77,7 @@ def create_mics_comm_groups(
     hierarchical_allgather=False,
     mpu=None,
 ):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """
     create shard-group, replicate-group from config_file
     TODO: consider broadcast the config from rank0
@@ -102,7 +102,7 @@ def create_mics_comm_groups(
     ranks_of_shard_group = config['shard_groups']
     ranks_of_repli_group = config['replicate_groups']
     if len(ranks_of_repli_group) == 0:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert len(ranks_of_shard_group) == 1, "replicate groups are empty only for single shard group"
         for r in ranks_of_shard_group[0]:
             ranks_of_repli_group.append([r])
@@ -147,7 +147,7 @@ def create_mics_comm_groups(
     assert groups.param_shard_size == len(ranks_of_shard_group[0])
 
     if hierarchical_allgather:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # create hierarchy inter-node, intra-node groups
         # n_span_nodes = config['shard_span']
         n_span_nodes = config['span_nodes']
@@ -203,7 +203,7 @@ def _generate_mics_config(world_size, ndev_per_node, shard_size, pp_size=1):
         pipeline parallelism + zero
 
     """
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     assert world_size % pp_size == 0
     assert (world_size // pp_size) % shard_size == 0, \
         f"dp group size is not dividable by dp_shard_size, "\
@@ -225,7 +225,7 @@ def _generate_mics_config(world_size, ndev_per_node, shard_size, pp_size=1):
 
 
 def _sizes_all_same(groups):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """all groups have same length"""
     all_same = True
     for g in groups:

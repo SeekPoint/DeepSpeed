@@ -9,16 +9,18 @@ from deepspeed.runtime.zero.linear import LinearModuleForZeroStage3
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 @pytest.mark.parametrize('half_op', [False, True])
 class TestAutoCastDisable(DistributedTest):
 
     def test_missing_amp_autocast(self, half_op):
         hidden_dim = 4
         if half_op:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             input = torch.randn(hidden_dim).to(get_accelerator().device_name()).half()
             ds_linear = LinearModuleForZeroStage3(hidden_dim, hidden_dim).to(get_accelerator().device_name()).half()
         else:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             input = torch.randn(hidden_dim).to(get_accelerator().device_name())
             ds_linear = LinearModuleForZeroStage3(hidden_dim, hidden_dim).to(get_accelerator().device_name())
 
@@ -30,9 +32,11 @@ class TestAutoCastDisable(DistributedTest):
 
         hidden_dim = 4
         if half_op:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             input = torch.randn(hidden_dim).to(get_accelerator().device_name()).half()
             ds_linear = LinearModuleForZeroStage3(hidden_dim, hidden_dim).to(get_accelerator().device_name()).half()
         else:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             input = torch.randn(hidden_dim).to(get_accelerator().device_name())
             ds_linear = LinearModuleForZeroStage3(hidden_dim, hidden_dim).to(get_accelerator().device_name())
 
@@ -46,6 +50,7 @@ class TestAutoCastDisable(DistributedTest):
 class TestAutoCastEnable(DistributedTest):
 
     def test_autocast_linear(self, tmpdir, half_input, half_weight):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         amp = get_accelerator().amp()
 
         hidden_dim = 4

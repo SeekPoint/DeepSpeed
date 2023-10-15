@@ -11,7 +11,7 @@ from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 from unit.simple_model import SimpleModel, random_dataset
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def test_repeating_loader():
     loader = [1, 2, 3]
     loader = RepeatingLoader(loader)
@@ -27,6 +27,7 @@ class TestDataLoaderDropLast(DistributedTest):
     world_size = 1
 
     def test(self, train_batch_size, drop_last):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {"train_batch_size": train_batch_size, "dataloader_drop_last": drop_last, "steps_per_print": 1}
         hidden_dim = 10
 

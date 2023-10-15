@@ -20,7 +20,7 @@ from huggingface_hub import HfApi
 from deepspeed.model_implementations import DeepSpeedTransformerInference
 from torch import nn
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 rocm_version = OpBuilder.installed_rocm_version()
 if rocm_version != (0, 0):
     pytest.skip("skip inference tests on rocm for now", allow_module_level=True)
@@ -271,6 +271,7 @@ class TestModelTask(DistributedTest):
         assert_fn,
         perf_meas=True,
     ):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         invalid_test_msg = validate_test(model_w_task, dtype, enable_cuda_graph, enable_triton)
         if invalid_test_msg:
             pytest.skip(invalid_test_msg)

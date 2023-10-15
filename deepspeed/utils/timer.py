@@ -8,7 +8,7 @@ from numpy import mean
 from deepspeed.utils.logging import log_dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 try:
     import psutil
 
@@ -21,7 +21,7 @@ except ImportError:
 class CudaEventTimer(object):
 
     def __init__(self, start_event: get_accelerator().Event, end_event: get_accelerator().Event):
-        debuginfo(prj='ds', info='CudaEventTimer init:')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         #yk==CudaEventTimer init: <torch.cuda.Event 0x52c1b0c0> <torch.cuda.Event 0x629e64d0>
         self.start_event = start_event
         self.end_event = end_event
@@ -39,7 +39,7 @@ class SynchronizedWallClockTimer:
         """Timer."""
 
         def __init__(self, name):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.name_ = name
             self.started_ = False
             self.event_timers = []
@@ -163,7 +163,7 @@ class ThroughputTimer:
         monitor_memory=False,
         logging_fn=None,
     ):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from deepspeed.utils import logger
         self.start_time = 0
         self.end_time = 0

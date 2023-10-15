@@ -4,23 +4,23 @@
 # DeepSpeed Team
 
 from .builder import CUDAOpBuilder, installed_cuda_version
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class InferenceBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_TRANSFORMER_INFERENCE"
     NAME = "transformer_inference"
 
     def __init__(self, name=None):
-        debuginfo(prj='ds', info='InferenceBuilder init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.transformer.inference.{self.NAME}_op'
 
     def is_compatible(self, verbose=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         try:
             import torch
         except ImportError:
@@ -42,7 +42,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return super().is_compatible(verbose) and cuda_okay
 
     def filter_ccs(self, ccs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         ccs_retained = []
         ccs_pruned = []
         for cc in ccs:
@@ -55,7 +55,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return ccs_retained
 
     def sources(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [
             'csrc/transformer/inference/csrc/pt_binding.cpp',
             'csrc/transformer/inference/csrc/gelu.cu',
@@ -71,12 +71,12 @@ class InferenceBuilder(CUDAOpBuilder):
 
     def extra_ldflags(self):
         if not self.is_rocm_pytorch():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return ['-lcurand']
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return []
 
     def include_paths(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/transformer/inference/includes', 'csrc/includes']

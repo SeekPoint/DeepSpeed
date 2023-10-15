@@ -5,7 +5,7 @@
 
 import numpy as np
 from deepspeed.utils import log_dist
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class ProgressiveLayerDrop(object):
     r""" Progressive Layer Dropping (PLD) for model training.
@@ -18,7 +18,7 @@ class ProgressiveLayerDrop(object):
     """
 
     def __init__(self, theta=0.5, gamma=0.001):
-        debuginfo(prj='ds', info='ProgressiveLayerDrop init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__()
 
         self.theta = theta
@@ -27,16 +27,16 @@ class ProgressiveLayerDrop(object):
         log_dist(f'Enabled progressive layer dropping (theta = {self.theta})', ranks=[0])
 
     def get_state(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         kwargs = {'progressive_layer_drop': True, 'pld_theta': self.get_theta()}
         return kwargs
 
     def get_theta(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.current_theta
 
     def update_state(self, global_step):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def _prob(x, gamma, p):
             return (1. - p) * np.exp(-gamma * x) + p

@@ -9,7 +9,7 @@ import pkgutil
 import importlib
 
 from .builder import get_default_compute_capabilities, OpBuilder
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 # Do not remove, required for abstract accelerator to detect if we have a deepspeed or 3p op_builder
 __deepspeed__ = True
 
@@ -40,7 +40,7 @@ def builder_closure(member_name):
 
         return _builder
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # during runtime, return op builder class directly
         from deepspeed.accelerator import get_accelerator
         builder = get_accelerator().get_op_builder(member_name)

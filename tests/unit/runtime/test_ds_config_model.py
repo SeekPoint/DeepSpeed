@@ -11,8 +11,9 @@ from typing import List
 from deepspeed.runtime import config as ds_config
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class SimpleConf(DeepSpeedConfigModel):
+    debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
     param_1: int = 0
     param_2_old: str = Field(None, deprecated=True, new_param="param_2", new_param_fn=(lambda x: [x]))
     param_2: List[str] = None
@@ -20,6 +21,7 @@ class SimpleConf(DeepSpeedConfigModel):
 
 
 def test_only_required_fields(tmpdir):
+    debuginfo(prj='dsUT')
     '''Ensure that config containing only the required fields is accepted. '''
     cfg_json = tmpdir.mkdir('ds_config_unit_test').join('minimal.json')
 
@@ -35,6 +37,7 @@ def test_only_required_fields(tmpdir):
 
 
 def test_config_duplicate_key(tmpdir):
+    debuginfo(prj='dsUT')
     config_dict = '''
     {
         "train_batch_size": 24,
@@ -51,16 +54,19 @@ def test_config_duplicate_key(tmpdir):
 
 
 def test_config_base():
+    debuginfo(prj='dsUT')
     config = SimpleConf(**{"param_1": 42})
     assert config.param_1 == 42
 
 
 def test_config_base_deprecatedfield():
+    debuginfo(prj='dsUT')
     config = SimpleConf(**{"param_2_old": "DS"})
     assert config.param_2 == ["DS"]
 
 
 def test_config_base_aliasfield():
+    debuginfo(prj='dsUT')
     config = SimpleConf(**{"param_3": 10})
     assert config.param_3 == 10
 
@@ -70,10 +76,12 @@ def test_config_base_aliasfield():
 
 @pytest.mark.parametrize("config_dict", [{"param_1": "DS"}, {"param_2": "DS"}, {"param_1_typo": 0}])
 def test_config_base_literalfail(config_dict):
+    debuginfo(prj='dsUT')
     with pytest.raises(ValidationError):
         config = SimpleConf(**config_dict)
 
 
 def test_config_base_deprecatedfail():
+    debuginfo(prj='dsUT')
     with pytest.raises(AssertionError):
         config = SimpleConf(**{"param_2": ["DS"], "param_2_old": "DS"})

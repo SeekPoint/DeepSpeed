@@ -10,7 +10,7 @@ from deepspeed.runtime.zero.tiling import TiledLinear, TiledLinearReturnBias
 
 import pytest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 @pytest.mark.parametrize('in_splits,out_splits', [(1, 1), (2, 2), (5, 5), (32, 32)])
 def test_tiled_init(in_splits, out_splits):
     in_f = 32

@@ -10,12 +10,12 @@ from torch.nn import functional as F
 
 from torch.nn.parameter import Parameter
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class LinearAllreduce(nn.Module):
 
     def __init__(self, weight, bias=None, mp_group=None):
-        debuginfo(prj='ds', info='LinearAllreduce init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(LinearAllreduce, self).__init__()
         self.weight = weight
         self.bias = bias
@@ -24,10 +24,10 @@ class LinearAllreduce(nn.Module):
     def forward(self, input):
         output = torch.matmul(input, self.weight.transpose(-1, -2))
         if self.mp_group is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(output, group=self.mp_group)
         if self.bias is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output += self.bias
         return output
 
@@ -37,11 +37,11 @@ class LinearLayer(nn.Module):
     def __init__(self, weight_shape=None, dtype=torch.half, weight=None, bias=None):
         super(LinearLayer, self).__init__()
         if weight is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = weight
             self.bias = bias
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = Parameter(
                 torch.empty(weight_shape, dtype=dtype, device=get_accelerator().current_device_name()))
 
@@ -52,10 +52,10 @@ class LinearLayer(nn.Module):
                 if bias is not None else None
 
     def forward(self, input):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output = torch.matmul(input, self.weight.transpose(-1, -2))
         if self.bias is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output += self.bias
         return output
 
@@ -65,11 +65,11 @@ class Normalize(nn.Module):
     def __init__(self, dim=None, dtype=torch.float, eps=1e-5, weight=None, bias=None):
         super(Normalize, self).__init__()
         if weight is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = weight
             self.bias = bias
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.norm = nn.LayerNorm(dim, eps=eps).to(dtype).to(get_accelerator().current_device_name())
             self.weight = self.norm.weight
             self.bias = self.norm.bias
@@ -77,7 +77,7 @@ class Normalize(nn.Module):
         self.eps = eps
 
     def forward(self, input):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return nn.functional.layer_norm(input, input.shape[-1:], self.weight, self.bias, eps=self.eps)
 
 
@@ -86,18 +86,18 @@ class EmbeddingLayer(nn.Module):
     def __init__(self, weight_shape=None, dtype=torch.half, weight=None, bias=None):
         super(EmbeddingLayer, self).__init__()
         if weight is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = Parameter(
                 torch.empty(weight_shape[0],
                             weight_shape[1],
                             dtype=dtype,
                             device=get_accelerator().current_device_name()))
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = weight
 
     def forward(self, input):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return F.embedding(input, self.weight)
 
 
@@ -107,14 +107,14 @@ class OPTEmbedding(EmbeddingLayer):
     """
 
     def __init__(self, weight_shape=None, weight=None, bias=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # OPT is set up so that if padding_idx is specified then offset the embedding ids by 2
         # and adjust num_embeddings appropriately. Other models don't have this hack
         self.offset = 2
         super().__init__(weight_shape, weight=weight)
 
     def forward(self, attention_mask: torch.LongTensor, past_key_values_length: int = 0):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         attention_mask = attention_mask.long()
 
@@ -132,16 +132,16 @@ class RMSNormalize(nn.Module):
     def __init__(self, dim=None, dtype=torch.float, eps=1e-5, weight=None):
         super(RMSNormalize, self).__init__()
         if weight is not None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = weight
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.weight = nn.Parameter(torch.ones(dim, dtype=dtype, device=get_accelerator().current_device_name()))
 
         self.eps = eps
 
     def forward(self, hidden_states):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.eps)
         print(self.weight)

@@ -10,10 +10,10 @@ import torch
 
 import triton
 import triton.language as tl
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def next_power_of_2(n):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     n -= 1
     n |= n >> 1
     n |= n >> 2
@@ -37,7 +37,7 @@ def num_warps(n):
 @triton.jit
 def _forward(X, scale, LUT, RPE, KP_M, ATTN_M, sizemax, stride_zx, stride_zrpe, stride_hrpe, stride_srpe, stride_zkpm,
              stride_zattnm, **meta):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     TN = meta['TN']
     BLOCK = meta['BLOCK']
     pidhm = tl.program_id(0)
@@ -64,17 +64,17 @@ def _forward(X, scale, LUT, RPE, KP_M, ATTN_M, sizemax, stride_zx, stride_zrpe, 
     x = x.to(tl.float32)
     # apply scale
     if meta['APPLY_SCALE']:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         x = x * scale
     # apply RPE
     if meta['APPLY_RPE']:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         prpe = RPE + pidz * stride_zrpe + headid * stride_hrpe + columnid * BLOCK + rowid * BLOCK * stride_srpe + rxm * stride_srpe + rxn
         rpe = tl.load(prpe, mask=check, other=0)
         x = x + rpe
     # apply key-padding mask
     if meta['APPLY_KP_MASK']:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         pkp_m = KP_M + pidz * stride_zkpm + columnid * BLOCK + rxn
         kp_m = tl.load(pkp_m, mask=check, other=-float('inf'))
         if meta['KP_MASK_MUL']:
@@ -82,11 +82,11 @@ def _forward(X, scale, LUT, RPE, KP_M, ATTN_M, sizemax, stride_zx, stride_zrpe, 
         x = x + kp_m
     # apply attention mask
     if meta['APPLY_ATTN_MASK']:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         pattn_m = ATTN_M + columnid * BLOCK + rowid * BLOCK * stride_zattnm + rxm * stride_zattnm + rxn
         attn_m = tl.load(pattn_m, mask=check, other=-float('inf'))
         if meta['ATTN_MASK_MUL']:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             attn_m = tl.where(attn_m == 0, -float('inf'), 0.)
         x = x + attn_m
     # computation
@@ -98,7 +98,7 @@ def _forward(X, scale, LUT, RPE, KP_M, ATTN_M, sizemax, stride_zx, stride_zrpe, 
 @triton.heuristics({'TN': lambda *args, **meta: next_power_of_2(args[4]) * meta['BLOCK']})
 @triton.jit
 def _backward(X, scale, DX, LUT, sizemax, stride_zx, stride_zdx, **meta):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     pidhm = tl.program_id(0)
     pidz = tl.program_id(1)
     TN = meta['TN']
@@ -134,7 +134,7 @@ class _sparse_softmax(torch.autograd.Function):
 
     @staticmethod
     def make_lut(layout, block, device):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         _empty = torch.tensor([], dtype=torch.int64, device=layout.device)
         sizes = _empty.clone()
         # sizes along rows
@@ -158,40 +158,40 @@ class _sparse_softmax(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, scale, rpe, key_padding_mask, attn_mask, kp_mask_mode, attn_mask_mode, spdims, block, lut,
                 num_blocks, maxlut, bench, time):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         apply_scale = False if scale == 1.0 else True
 
         # handle None rpe
         if rpe is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_rpe = False
             stride_zrpe, stride_hrpe, stride_srpe = 0, 0, 0
             rpe = torch.empty(0, dtype=x.dtype, device=x.device)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_rpe = True
             stride_zrpe, stride_hrpe, stride_srpe = rpe.stride(0), rpe.stride(1), rpe.stride(2)
 
         # handle None key_padding_mask
         if key_padding_mask is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_kp_mask = False
             stride_zkpm = 0
             key_padding_mask = torch.empty(0, dtype=x.dtype, device=x.device)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_kp_mask = True
             stride_zkpm = key_padding_mask.stride(0)
 
         # handle None attention_mask
         if attn_mask is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_attn_mask = False
             stride_zattnm = 0
             attn_mask = torch.empty(0, dtype=x.dtype, device=x.device)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             apply_attn_mask = True
             stride_zattnm = attn_mask.stride(0)
 
@@ -227,7 +227,7 @@ class _sparse_softmax(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, dx):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         # retrieve from context
         x, lut = ctx.saved_tensors
@@ -248,11 +248,11 @@ class Softmax:
     """
 
     def sparse_softmax(*args, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return _sparse_softmax.apply(*args, **kwargs)
 
     def make_lut(self, device):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Generates the sparsity layout used in block-sparse softmax
         """
         key = (device, )
@@ -268,7 +268,7 @@ class Softmax:
              block: required: an integer determining the block size.
              bench: optional: set if you want to do benchmarking
         """
-        debuginfo(prj='ds', info='Softmax init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
 
         self.num_blocks = layout.sum().item()
         self.spdims = layout.shape
@@ -301,7 +301,7 @@ class Softmax:
         Return:
              x: a block-sparse tensor contains normalized input x using softmax; and masks applied if given
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         time_y = [None]
         if rpe is not None and rpe.dtype != x.dtype:

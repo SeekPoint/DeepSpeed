@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import torch
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class HybridEngineContainer(ABC):
     """
@@ -27,7 +27,7 @@ class HybridEngineContainer(ABC):
         it's best to augment the specific `set_[component]` itself rather than modifying
         the `initialize_tensors` method. See the `HybridSplitQKVContainer` for an example.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().initialize_tensors(enable_training=enable_training)
         self.set_lora_params()
 
@@ -63,7 +63,7 @@ class HybridEngineContainer(ABC):
 
     def fuse_lora(self):
         """Fuse the LoRA parameters for the inference mode."""
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for maybe_lora_param, param in self.get_lora_matched_pair():
             if len(maybe_lora_param) == 3:
                 lora_right_weight, \
@@ -73,7 +73,7 @@ class HybridEngineContainer(ABC):
 
     def unfuse_lora(self):
         """Unfuse the LoRA parameters for the training mode."""
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for maybe_lora_param, param in self.get_lora_matched_pair():
             if len(maybe_lora_param) == 3:
                 lora_right_weight, \
@@ -89,7 +89,7 @@ class HybridEngineContainer(ABC):
         be safe to use the default implementation.
         """
         # Setup the new Attention module
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.attention_qkv_mp(mp_replace, reversed_dim=reversed_dim)
         self.attention_o_mp(mp_replace, reversed_dim=reversed_dim)
 
@@ -107,7 +107,7 @@ class HybridEngineContainer(ABC):
         element is the module param that needs to be deleted, and the second is the reassignment
         from the container.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for module_param, container_param in param_pairs:
             if module_param is not None:
                 del module_param
@@ -119,7 +119,7 @@ class HybridEngineContainer(ABC):
         purpose of this is for TP-inference with ZeRO-3. In this scenario, we need to delete the
         parameters we've created for inference to free their memory.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         general_params = [
             (self.module.attention.attn_ow, self.dense_w),
             (self.module.attention.attn_ob, self.dense_b),
@@ -138,7 +138,7 @@ class HybridEngineContainer(ABC):
         """
         Release for QKV parameters (as well as any aliases).
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         qkv_params = [
             (self.module.attention.attn_qkvw, self.qkvw),
             (self.module.attention.attn_qkvb, self.qkvb),
@@ -150,7 +150,7 @@ class HybridEngineContainer(ABC):
         """
         Release for MLP parameters (as well as any aliases).
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         mlp_params = [
             (self.module.mlp.inter_w, self._h4h_w),
             (self.module.mlp.inter_b, self._h4h_b),
@@ -166,7 +166,7 @@ class HybridEngineContainer(ABC):
         copy of the model and copy to them to contiguous inference view. This only needs
         to be performed when the container parameters cannot be used directly for inference.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.reset_qkv()
         self.reset_mlp()
 
@@ -186,7 +186,7 @@ class HybridEngineContainer(ABC):
         """
         Return a list of all parameters that would have LoRA for the module.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not hasattr(self, "lora_params"):
             self.set_lora_params()
         return self.lora_params
@@ -196,7 +196,7 @@ class HybridEngineContainer(ABC):
         Rather than copying into, set the parameters directly. This is necessary to provide
         an inexpensive (low-memory-overhead) view onto the FP16 forward weights.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.mlp.attn_nw = self.attn_nw
         self.module.mlp.attn_nb = self.attn_nb
         self.module.norm_w = self.input_nw
@@ -208,7 +208,7 @@ class HybridEngineContainer(ABC):
         """
         Narrower sub-method for finer grained overriding.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.attention.attn_ow = self.dense_w
         self.module.attention.attn_ob = self.dense_b
         self.module.attention.attn_qkvw = self.qkvw
@@ -218,7 +218,7 @@ class HybridEngineContainer(ABC):
         """
         Narrower sub-method for finer grained overriding.
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.mlp.inter_w = self._h4h_w
         self.module.mlp.inter_b = self._h4h_b
         self.module.mlp.output_w = self._4hh_w

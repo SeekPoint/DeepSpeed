@@ -31,7 +31,7 @@ from ..constants import *
 from ..curriculum_scheduler import CurriculumScheduler
 from .indexed_dataset import MMapIndexedDataset
 from .utils import create_mmap_dataset_builder, close_mmap_dataset_builder, find_fit_int_dtype
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedDataSampler(object):
 
@@ -66,10 +66,10 @@ class DeepSpeedDataSampler(object):
         self.batch = []
         self.consumed_samples = 0
 
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][CURRICULUM_LEARNING_ENABLED]:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.curriculum_step = 0
             self.current_difficulties = {}
             self.data_cluster_paths = []
@@ -81,13 +81,13 @@ class DeepSpeedDataSampler(object):
             self.clustering_type = {}
             self.data_1epoch_size = None
             if self.global_rank == 0:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.data_clusters = []
                 self.data_cluster_sizes = []
                 cluster_path = self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][
                     CURRICULUM_LEARNING_CLUSTER_PATH]
                 if not os.path.exists(cluster_path):
-                    debuginfo(prj='ds')
+                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     os.makedirs(cluster_path)
             for metric in self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][CURRICULUM_LEARNING_METRICS]:
                 self.curriculum_schedulers[metric] = CurriculumScheduler(
@@ -118,23 +118,23 @@ class DeepSpeedDataSampler(object):
             '{}'.format(self.data_parallel_rank, data_parallel_size)
 
     def __len__(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.total_samples
 
     def set_custom_curriculum_learning_schedule(self, schedule_func_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for metric in self.curriculum_schedulers:
             if metric in schedule_func_dict:
                 self.curriculum_schedulers[metric].set_custom_get_difficulty(schedule_func_dict[metric])
 
     def get_start_end_idx(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         start_idx = self.data_parallel_rank * self.micro_batch_size
         end_idx = start_idx + self.micro_batch_size
         return start_idx, end_idx
 
     def get_sample_based_on_metric_value(self, metric, value_start, value_end):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_samples = None
         for row in range(len(self.curriculum_index_to_sample[metric])):
             if self.curriculum_index_to_metric[metric][row] <= value_end and self.curriculum_index_to_metric[metric][
@@ -145,10 +145,10 @@ class DeepSpeedDataSampler(object):
         return new_samples
 
     def get_sample_based_on_metric_percentile(self, metric, percentile_start, percentile_end):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_samples = None
         if self.data_1epoch_size is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.data_1epoch_size = sum(len(x) for x in self.curriculum_index_to_sample[metric])
         max_percentile = self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][CURRICULUM_LEARNING_METRICS][
             metric][CURRICULUM_LEARNING_MAX_DIFFICULTY]
@@ -156,7 +156,7 @@ class DeepSpeedDataSampler(object):
         start_count = sample_per_percentile * percentile_start
         end_count = sample_per_percentile * percentile_end
         if percentile_end == max_percentile:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             end_count = self.data_1epoch_size
         current_count = 0
         for row in range(len(self.curriculum_index_to_sample[metric])):
@@ -176,7 +176,7 @@ class DeepSpeedDataSampler(object):
         return new_samples
 
     def get_new_cluster(self, previous_difficulties):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         cluster_fname = CURRICULUM_LEARNING_CLUSTER_PREFIX
         for metric in self.curriculum_schedulers:
             cluster_fname = f"{cluster_fname}_{metric}{self.current_difficulties[metric]}"
@@ -234,12 +234,12 @@ class DeepSpeedDataSampler(object):
                 )
         dist.barrier(group=self.data_parallel_group)
         if os.path.isfile(f"{cluster_path}.bin"):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.data_cluster_paths.append(cluster_fname)
             self.data_cluster_current_position.append(0)
 
     def sample_from_clusters(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         num_clusters = len(self.data_clusters)
         weight_sum = sum(self.data_cluster_sizes)
         weights = [x / weight_sum for x in self.data_cluster_sizes]
@@ -248,7 +248,7 @@ class DeepSpeedDataSampler(object):
         return samples
 
     def reshuffle_clusters(self, cidx):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         cluster_fname = self.data_cluster_paths[cidx]
         cluster_path = self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][
             CURRICULUM_LEARNING_CLUSTER_PATH]
@@ -261,12 +261,12 @@ class DeepSpeedDataSampler(object):
         self.data_clusters[cidx] = MMapIndexedDataset(cluster_path, skip_warmup=True)
 
     def get_sample_from_cluster(self, cidx, num_samples):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         start_idx = self.data_cluster_current_position[cidx]
         samples = list(np.copy(self.data_clusters[cidx][0][start_idx:(start_idx + num_samples)]))
         self.data_cluster_current_position[cidx] += num_samples
         if len(samples) < num_samples:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             num_samples_remained = num_samples - len(samples)
             logger.info(f"reshuffling cluster {cidx}.")
             self.reshuffle_clusters(cidx)
@@ -275,9 +275,9 @@ class DeepSpeedDataSampler(object):
         return samples
 
     def get_next_global_batch(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.data_efficiency_config[DATA_SAMPLING][CURRICULUM_LEARNING][CURRICULUM_LEARNING_ENABLED]:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.curriculum_step += 1
             new_cluster = False
             previous_difficulties = {}
@@ -295,10 +295,10 @@ class DeepSpeedDataSampler(object):
                         previous_difficulties[metric] = 0
                 self.current_difficulties[metric] = next_difficulty
             if new_cluster:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.get_new_cluster(previous_difficulties)
             if self.global_rank == 0:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 samples_per_cluster = self.sample_from_clusters()
                 batch = []
                 for cidx in range(len(samples_per_cluster)):
@@ -306,7 +306,7 @@ class DeepSpeedDataSampler(object):
                 self.np_rng.shuffle(batch)
                 batch = torch.tensor(batch, device=get_accelerator().current_device_name(), dtype=torch.long).view(-1)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 batch = torch.empty(self.global_batch_size,
                                     device=get_accelerator().current_device_name(),
                                     dtype=torch.long)
@@ -314,7 +314,7 @@ class DeepSpeedDataSampler(object):
             self.batch = batch.tolist()
 
     def __iter__(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         while self.consumed_samples <= self.total_samples:
             if len(self.batch) == 0:
                 self.get_next_global_batch()
@@ -328,7 +328,7 @@ class DeepSpeedDataSampler(object):
                 current_batch = []
 
     def state_dict(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return {
             CURRICULUM_LEARNING_BATCH: self.batch,
             CURRICULUM_LEARNING_CONSUMED_SAMPLES: self.consumed_samples,
@@ -340,7 +340,7 @@ class DeepSpeedDataSampler(object):
         }
 
     def load_state_dict(self, state_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.batch = state_dict[CURRICULUM_LEARNING_BATCH]
         self.consumed_samples = state_dict[CURRICULUM_LEARNING_CONSUMED_SAMPLES]
         self.curriculum_step = state_dict[CURRICULUM_LEARNING_STEP]
@@ -359,7 +359,7 @@ class DeepSpeedDataSampler(object):
             if '/' in self.data_cluster_paths[idx]:
                 self.data_cluster_paths[idx] = self.data_cluster_paths[idx].split('/')[-1]
         if self.global_rank == 0:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for cluster_fname in self.data_cluster_paths:
                 cluster_path = f"{cluster_root_path}/{cluster_fname}"
                 self.data_clusters.append(MMapIndexedDataset(cluster_path, skip_warmup=True))

@@ -9,12 +9,12 @@ import torch.nn as nn
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
 from ..op_binding import MLPGemmOp, VectorMatMulOp, GELUGemmOp, ResidualAddOp
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class TritonMLP(nn.Module):
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, mlp_extra_grouping=False):
-        debuginfo(prj='ds', info='TritonMLP init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super(TritonMLP, self).__init__()
 
         self.config = config
@@ -55,13 +55,13 @@ class TritonMLP(nn.Module):
     def forward(self, input, residual, residual_norm, bias):
         residual_add = None
         if self.attn_nw is None:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = self.fused_gemm_gelu(input=residual_norm,
                                           weight=self.inter_w,
                                           bias=self.inter_b,
                                           weight_out=self.output_w)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output, residual_add = self.mlp_gemm_func(input=input,
                                                       residual=residual,
                                                       input_bias=bias,
@@ -79,7 +79,7 @@ class TritonMLP(nn.Module):
                                           residual_add=residual_add)
 
         if self.mp_group is not None and dist.get_world_size(group=self.mp_group) > 1:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(residual, group=self.mp_group)
 
         return residual

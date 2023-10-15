@@ -9,7 +9,7 @@ import pytest
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import InferenceBuilder
 from .inference_test_utils import allclose, get_dtypes
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 try:
     import triton  # noqa: F401
     from deepspeed.ops.transformer.inference.triton import (

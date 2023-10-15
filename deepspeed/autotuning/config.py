@@ -5,12 +5,12 @@
 
 from deepspeed.runtime.config_utils import get_scalar_param, get_dict_param, DeepSpeedConfigObject
 from deepspeed.autotuning.constants import *
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
-        debuginfo(prj='ds', info='DeepSpeedAutotuningConfig init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super(DeepSpeedAutotuningConfig, self).__init__()
 
         self.enabled = None
@@ -32,7 +32,7 @@ class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
         self._initialize(autotuning_dict)
 
     def _initialize(self, autotuning_dict):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.enabled = get_scalar_param(autotuning_dict, AUTOTUNING_ENABLED, AUTOTUNING_ENABLED_DEFAULT)
 
         self.fast = get_scalar_param(autotuning_dict, AUTOTUNING_FAST, AUTOTUNING_FAST_DEFAULT)
@@ -88,7 +88,7 @@ class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
 
 
 def get_model_info_config(param_dict):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if MODEL_INFO in param_dict and param_dict[MODEL_INFO] is not None:
         model_info_config = {}
         for key, default_value in MODEL_INFO_KEY_DEFAULT_DICT.items():
@@ -98,5 +98,5 @@ def get_model_info_config(param_dict):
 
 
 def get_default_model_info_config():
-    debuginfo(prj='ds')
+    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return MODEL_INFO_KEY_DEFAULT_DICT

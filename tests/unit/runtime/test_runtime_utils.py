@@ -14,7 +14,7 @@ from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def test_call_to_str():
     c2s = ds_utils.call_to_str
@@ -31,6 +31,7 @@ class TestClibGradNorm(DistributedTest):
     world_size = 2
 
     def test(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         param1 = torch.nn.Parameter(torch.Tensor([0]))
         param1.grad = torch.Tensor([1])
         param2 = torch.nn.Parameter(torch.Tensor([0]))
@@ -57,6 +58,7 @@ class TestCheckOverflow(DistributedTest):
     world_size = 2
 
     def test(self, check_using_norm):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         groups._create_expert_and_data_parallel(2)
 
         param1 = torch.nn.Parameter(torch.Tensor([0]))

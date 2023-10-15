@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from deepspeed.utils.groups import _get_expert_parallel_ranks
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def test_get_expert_parallel_ranks():
     """

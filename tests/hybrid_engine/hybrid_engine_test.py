@@ -9,7 +9,7 @@ from transformers import AutoModelForCausalLM
 import deepspeed
 import argparse
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 deepspeed.runtime.utils.see_memory_usage('pre test', force=True)
 
 model = AutoModelForCausalLM.from_pretrained('/home/amd00/hf_model/opt-350m/').half().to(get_accelerator().device_name())

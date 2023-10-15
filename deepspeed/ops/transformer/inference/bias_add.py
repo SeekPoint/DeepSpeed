@@ -16,15 +16,15 @@ def nhwc_bias_add(activation: torch.Tensor,
                   other_bias: Optional[torch.Tensor] = None) -> torch.Tensor:
     global spatial_cuda_module
     if spatial_cuda_module is None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         spatial_cuda_module = SpatialInferenceBuilder().load()
 
     if other is None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return spatial_cuda_module.nhwc_bias_add(activation, bias)
     elif other_bias is None:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return spatial_cuda_module.nhwc_bias_add_add(activation, bias, other)
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return spatial_cuda_module.nhwc_bias_add_bias_add(activation, bias, other, other_bias)

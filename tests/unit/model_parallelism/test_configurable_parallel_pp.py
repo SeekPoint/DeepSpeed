@@ -16,7 +16,7 @@ from unit.megatron_model import MockGPT2ModelPipe as GPT2ModelPipe
 from deepspeed.utils import RepeatingLoader
 from deepspeed.accelerator import get_accelerator
 from unit.util import required_minimum_torch_version, required_maximum_torch_version
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=5),
                                 reason='Megatron-LM package requires Pytorch version 1.5 or above')
 pytestmark = pytest.mark.skipif(not required_maximum_torch_version(major_version=1, minor_version=13),
@@ -52,6 +52,7 @@ class ConfigurablePP(DistributedTest):
 
     @pytest.fixture(autouse=True)
     def reset_random(self, seed=1234):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -59,6 +60,7 @@ class ConfigurablePP(DistributedTest):
 
     @pytest.fixture
     def inputs(self, bs=1, seq_len=1, hidden_size=128):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         hidden_states = torch.randn(bs, seq_len, hidden_size)
         attention_mask = torch.randint(low=0, high=2, size=(bs, seq_len), dtype=torch.bool)
         return (hidden_states, attention_mask)
@@ -71,6 +73,7 @@ class TestConfigurablePP(ConfigurablePP):
 
     @pytest.mark.skip(reason="megatron-lm is currently broken so this test cannot be run.")
     def test_pp_basic(self, inputs, tmpdir):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         # basic test case, mp_size=2, pp_size=2, verify ckpt saving/loading.
         args_defaults = {
             'num_layers': 8,
@@ -133,6 +136,7 @@ class _baseline(DistributedFixture):
     world_size = None
 
     def run(self, inputs, class_tmpdir, checkpoint_tag, mp_size, pp_size):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert int(os.environ["WORLD_SIZE"]) == (pp_size *
                                                  mp_size), "world size does not match provided pp_size and mp_size"
         args_defaults = {
@@ -191,6 +195,8 @@ class baseline_ws4(_baseline):
 class TestConfigurableResizePP(ConfigurablePP):
 
     def _test(self, inputs, class_tmpdir, checkpoint_tag, mp_size, pp_size, mp_resize, pp_resize):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         args_defaults = {
             'num_layers': 8,
             'hidden_size': 128,

@@ -13,12 +13,14 @@ from unit.simple_model import SimpleModel
 from deepspeed.accelerator import get_accelerator
 
 import pytest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class TestInit(DistributedTest):
+    debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
     world_size = 3
 
     def test(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert dist.is_initialized()
         assert dist.get_world_size() == 3
         assert dist.get_rank() < 3
@@ -27,6 +29,7 @@ class TestInit(DistributedTest):
 # Demonstration of pytest's parameterization and fixtures
 @pytest.fixture(params=["hello"])
 def greeting(request):
+    debuginfo(prj='dsUT')
     return request.param
 
 
@@ -37,6 +40,8 @@ class TestDistArgs(DistributedTest):
 
     @pytest.mark.parametrize("shape", ["icosahedron"])
     def test(self, number, color, shape, greeting):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         """Ensure that we can parse args to DistributedTest methods. """
         assert dist.get_world_size() == 2
         assert number == 1138
@@ -51,10 +56,12 @@ class TestGroupedDistTest(DistributedTest):
     world_size = 2
 
     def test_one(self, number):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert dist.get_world_size() == 2
         assert number == 1138
 
     def test_two(self, number, color="purple"):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert dist.get_world_size() == 2
         assert number == 1138
         assert color == "purple"
@@ -65,10 +72,12 @@ class TestWorldSizeOverrideDistTest(DistributedTest):
     world_size = 2
 
     def test_world_size_2(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert dist.get_world_size() == 2
 
     @pytest.mark.world_size(1)
     def test_world_size_1(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert dist.get_world_size() == 1
 
 
@@ -87,6 +96,7 @@ class distributed_fixture(DistributedFixture):
     world_size = 2
 
     def run(self, class_tmpdir, val1, val2):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         assert int(os.environ["WORLD_SIZE"]) == self.world_size
         local_rank = os.environ["LOCAL_RANK"]
         file_path = os.path.join(class_tmpdir, f"checkpoint-{local_rank}.pt")
@@ -98,6 +108,7 @@ class TestDistributedFixture(DistributedTest):
     world_size = 1
 
     def test(self, distributed_fixture, class_tmpdir, val1, val2):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         for rank in range(2):
             file_path = os.path.join(class_tmpdir, f"checkpoint-{rank}.pt")
             with open(file_path, "r") as f:
@@ -107,6 +118,8 @@ class TestDistributedFixture(DistributedTest):
 
 
 class TestDistAllReduce(DistributedTest):
+    debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
     device_count = get_accelerator().device_count()
     if device_count >= 4:
         world_size = [1, 2, 4]
@@ -116,6 +129,7 @@ class TestDistAllReduce(DistributedTest):
         world_size = [1]
 
     def test(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         x = torch.ones(1, 3).to(get_accelerator().device_name()) * (dist.get_rank() + 1)
         sum_of_ranks = (dist.get_world_size() * (dist.get_world_size() + 1)) // 2
         result = torch.ones(1, 3).to(get_accelerator().device_name()) * sum_of_ranks
@@ -125,9 +139,11 @@ class TestDistAllReduce(DistributedTest):
 
 @pytest.mark.parametrize("dist_init_required", [True, False, None])
 class TestDistInit(DistributedTest):
+    debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
     init_distributed = False
 
     def test_already_init(self, dist_init_required):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         torch.distributed.init_process_group(get_accelerator().communication_backend_name())
         deepspeed.init_distributed(get_accelerator().communication_backend_name(),
                                    dist_init_required=dist_init_required)
@@ -136,7 +152,9 @@ class TestDistInit(DistributedTest):
         if dist_init_required or dist_init_required is None:
             deepspeed.init_distributed(get_accelerator().communication_backend_name(),
                                        dist_init_required=dist_init_required)
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         else:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             # torch.dist is not done and for some reason the user says they don't want it done
             with pytest.raises(Exception):
                 deepspeed.init_distributed(get_accelerator().communication_backend_name(),
@@ -149,6 +167,7 @@ class TestDistInitNoEnv(DistributedTest):
     set_dist_env = False
 
     def test(self):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         torch.distributed.init_process_group(backend=get_accelerator().communication_backend_name(),
                                              init_method=f"tcp://127.0.0.1:{get_master_port()}",
                                              world_size=1,
@@ -162,6 +181,7 @@ class TestDistInitWithModel(DistributedTest):
     init_distributed = False
 
     def test_already_init(self, dist_init_required):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         torch.distributed.init_process_group(get_accelerator().communication_backend_name())
         model = SimpleModel(4)
         config_dict = {"train_micro_batch_size_per_gpu": 1, "optimizer": {"type": "Adam", "params": {}}}
@@ -171,14 +191,17 @@ class TestDistInitWithModel(DistributedTest):
                                           dist_init_required=dist_init_required)
 
     def test_no_init(self, dist_init_required):
+
         model = SimpleModel(4)
         config_dict = {"train_micro_batch_size_per_gpu": 1, "optimizer": {"type": "Adam", "params": {}}}
         if dist_init_required:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             engine, *_ = deepspeed.initialize(model=model,
                                               config=config_dict,
                                               model_parameters=model.parameters(),
                                               dist_init_required=dist_init_required)
         else:
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             # torch.dist is not done and for some reason the user says they don't want it done
             with pytest.raises(Exception):
                 engine, *_ = deepspeed.initialize(model=model,

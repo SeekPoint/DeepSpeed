@@ -10,7 +10,7 @@ from deepspeed.accelerator import get_accelerator
 
 from utils import setup_serial_env
 from unit.common import DistributedTest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 config = {
     "train_batch_size": 1,
     "steps_per_print": 1,

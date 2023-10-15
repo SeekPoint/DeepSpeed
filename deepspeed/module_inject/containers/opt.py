@@ -14,18 +14,18 @@ from ..policy import maybe_copy
 from ..policy import maybe_copy_qkv
 from ..policy import maybe_get_lora
 from deepspeed.utils.types import ActivationFuncType
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        debuginfo(prj='ds', info='DS_OPTContainer init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
 
     def create_module(self, config=None):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedOPTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
@@ -35,7 +35,7 @@ class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfor
         """
         Necessary to implement for `HybridEngineContainer`
         """
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.lora_params = [
             maybe_get_lora(p) for p in [
                 self.policy.client_module.fc1,
@@ -48,7 +48,7 @@ class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfor
         ]
 
     def set_q_k_v(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Necessary to implement for `HybridSplitQKVContainer`
         """
@@ -60,14 +60,14 @@ class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfor
         self.vb = self.policy.client_module.self_attn.v_proj.bias
 
     def get_lora_matched_pair(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         fc1_lora, fc2_lora, q_lora, k_lora, v_lora, out_lora = self.get_lora_params()
         ret = [(fc1_lora, self._h4h_w), (fc2_lora, self._4hh_w), (out_lora, self.dense_w), (q_lora, self.qw),
                (k_lora, self.kw), (v_lora, self.vw)]
         return ret
 
     def load_params(self, module, sd, weight_quantizer, mp_replace, prefix):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_names = (
             'self_attn.q_proj.weight', \
             'self_attn.k_proj.weight', \
@@ -108,44 +108,44 @@ class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransfor
 
 class HFOPTLayerPolicy(TransformerPolicy):
     _orig_layer_class = None
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     def __init__(self, client_module, inference=True, use_load_prefix=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(inference, linear_layer=True, pre_attn_norm=True, use_load_prefix=use_load_prefix)
         self.client_module = client_module
         try:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             import transformers
             HFOPTLayerPolicy._orig_layer_class = transformers.models.opt.modeling_opt.OPTDecoderLayer
         except:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             HFOPTLayerPolicy._orig_layer_class = None
 
         if hasattr(TransformerPolicy, "hf_model_config") and hasattr(TransformerPolicy.hf_model_config,
                                                                      "activation_function"):
             if TransformerPolicy.hf_model_config.activation_function == "relu":
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.mlp_act_func_type = ActivationFuncType.ReLU
             elif TransformerPolicy.hf_model_config.activation_function in ["gelu", "gelu_new"]:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.mlp_act_func_type = ActivationFuncType.GELU
             else:
                 raise ValueError("Unsupported activation function: {}".format(
                     TransformerPolicy.hf_model_config.activation_function))
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.mlp_act_func_type = ActivationFuncType.ReLU  # default
 
     def get_hidden_heads(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.self_attn.embed_dim, \
                 self.client_module.self_attn.num_heads, \
                 self.client_module.self_attn_layer_norm.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         qw = self.client_module.self_attn.q_proj.weight
         qb = self.client_module.self_attn.q_proj.bias
 
@@ -163,14 +163,14 @@ class HFOPTLayerPolicy(TransformerPolicy):
                self.client_module.self_attn.out_proj.bias
 
     def mlp(self, enable_training=False):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.fc1.weight, \
                self.client_module.fc1.bias, \
                self.client_module.fc2.weight, \
                self.client_module.fc2.bias
 
     def layernorm(self):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.final_layer_norm.weight, \
                self.client_module.final_layer_norm.bias, \
                self.client_module.self_attn_layer_norm.weight, \

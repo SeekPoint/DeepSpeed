@@ -11,7 +11,7 @@ import deepspeed
 from transformers import pipeline
 from unit.common import DistributedTest
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 @pytest.mark.inference
 @pytest.mark.parametrize("use_cuda_events", [True, False])
@@ -20,6 +20,8 @@ class TestModelProfiling(DistributedTest):
     world_size = 1
 
     def test(self, enable_cuda_graph, use_cuda_events):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         task = "fill-mask"
         model = "bert-base-cased"
         dtype = torch.float16

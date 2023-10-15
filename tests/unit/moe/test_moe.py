@@ -11,7 +11,7 @@ from unit.simple_model import SimplePRMoEModel, SimpleMoEModel, sequence_dataloa
 from deepspeed.moe.utils import split_params_into_different_moe_groups_for_optimizer, is_moe_param
 from unit.util import required_torch_version
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 @pytest.mark.parametrize("ep_size", [2, 4])
 @pytest.mark.parametrize("zero_stage", [0, 1, 2])
 @pytest.mark.parametrize("use_residual", [True, False])
@@ -19,6 +19,7 @@ class TestMoE(DistributedTest):
     world_size = 4
 
     def test(self, ep_size, zero_stage, use_residual):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if not required_torch_version():
             pytest.skip("DeepSpeed MoE tests need torch 1.8 or higher to run correctly")
 
@@ -49,6 +50,7 @@ class TestMoE(DistributedTest):
         data_loader = sequence_dataloader(model=model, total_samples=50, hidden_dim=hidden_dim, device=model.device)
 
         def strict_average_tensor(tensor):
+            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             process_group = optimizer.dp_process_group
             curr_size = 0
             pg_offsets = []
@@ -109,6 +111,7 @@ class TestPRMoE(DistributedTest):
     world_size = 4
 
     def test(self, ep_size, use_residual):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         if not required_torch_version():
             pytest.skip("DeepSpeed MoE tests need torch 1.8 or higher to run correctly")
 

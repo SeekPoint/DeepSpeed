@@ -5,7 +5,7 @@
 
 from deepspeed.checkpoint import model_3d_desc
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def _do_reshape(src_3d, tgt_3d):
     assert src_3d.can_reshape(tgt_3d)
     new_3d_map = src_3d.reshape(tgt_3d)

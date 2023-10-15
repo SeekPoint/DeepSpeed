@@ -11,9 +11,9 @@ import deepspeed
 from deepspeed.accelerator import get_accelerator
 from copy import deepcopy
 from unit.common import DistributedTest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 ckpt = deepspeed.checkpointing.checkpoint
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 def _compute(module, *inputs, do_checkpoint=False):
     if do_checkpoint:
@@ -150,7 +150,7 @@ class LinearNonTensorInput(torch.nn.Linear):
 class LinearNonTensorOutput(torch.nn.Linear):
 
     def __init__(self, non_tensor_output):
-        debuginfo(prj='ds', info='LinearNonTensorOutput init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(HIDDEN_DIM, HIDDEN_DIM)
         self.non_tensor_output = non_tensor_output
 

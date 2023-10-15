@@ -12,7 +12,7 @@ from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
 from utils import setup_serial_env
 from unit.common import DistributedTest
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class DanglingBias(torch.nn.Linear):
 
     def forward(self, *inputs):

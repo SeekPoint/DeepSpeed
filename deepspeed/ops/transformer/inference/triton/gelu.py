@@ -11,7 +11,7 @@ from deepspeed.accelerator import get_accelerator
 
 @triton.jit
 def gelu_functor(x):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # Using approximation introduces greater parity errors.
     # return tl.sigmoid(1.702 * x) * x
     return x * 0.5 * (1.0 + tl.libdevice.erf(x / 1.41421356237))
@@ -19,7 +19,7 @@ def gelu_functor(x):
 
 @triton.jit
 def gelu_kernel(x_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     pid = tl.program_id(axis=0)
     block_start = pid * BLOCK_SIZE
     offsets = block_start + tl.arange(0, BLOCK_SIZE)
@@ -30,7 +30,7 @@ def gelu_kernel(x_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
 
 
 def gelu(activations: torch.Tensor) -> torch.Tensor:
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     assert activations.is_contiguous()
     assert get_accelerator().on_accelerator(activations)
 

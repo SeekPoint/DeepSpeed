@@ -9,7 +9,7 @@ import numpy as np
 from unit.common import DistributedTest
 from unit.simple_model import SimpleModel
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 def run_model_step(model, gradient_list):
     for value in gradient_list:
         for p in model.parameters():

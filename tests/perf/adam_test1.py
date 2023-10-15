@@ -7,7 +7,7 @@ import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 import time
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 device = 'cpu'
 model_size = 1 * 1024**3
 param = torch.nn.Parameter(torch.ones(model_size, device=device))

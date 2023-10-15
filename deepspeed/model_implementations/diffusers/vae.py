@@ -5,12 +5,12 @@
 
 import torch
 from ..features.cuda_graph import CUDAGraph
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 class DSVAE(CUDAGraph, torch.nn.Module):
 
     def __init__(self, vae, enable_cuda_graph=True):
-        debuginfo(prj='ds', info='DSVAE init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         self.vae = vae
         self.config = vae.config
@@ -22,7 +22,7 @@ class DSVAE(CUDAGraph, torch.nn.Module):
         self.all_cuda_graph_created = False
 
     def _graph_replay_decoder(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_decoder_inputs[i].copy_(inputs[i])
@@ -33,11 +33,11 @@ class DSVAE(CUDAGraph, torch.nn.Module):
         return self.static_decoder_output
 
     def _decode(self, x, return_dict=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.vae.decode(x, return_dict=return_dict)
 
     def _create_cuda_graph_decoder(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # warmup to create the workspace and cublas handle
         cuda_stream = torch.cuda.Stream()
         cuda_stream.wait_stream(torch.cuda.current_stream())
@@ -59,19 +59,19 @@ class DSVAE(CUDAGraph, torch.nn.Module):
     def decode(self, *inputs, **kwargs):
         if self.enable_cuda_graph:
             if self.decoder_cuda_graph_created:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 outputs = self._graph_replay_decoder(*inputs, **kwargs)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._create_cuda_graph_decoder(*inputs, **kwargs)
                 outputs = self._graph_replay_decoder(*inputs, **kwargs)
             return outputs
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self._decode(*inputs, **kwargs)
 
     def _graph_replay_encoder(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_encoder_inputs[i].copy_(inputs[i])
@@ -82,11 +82,11 @@ class DSVAE(CUDAGraph, torch.nn.Module):
         return self.static_encoder_output
 
     def _encode(self, x, return_dict=True):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.vae.encode(x, return_dict=return_dict)
 
     def _create_cuda_graph_encoder(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # warmup to create the workspace and cublas handle
         cuda_stream = torch.cuda.Stream()
         cuda_stream.wait_stream(torch.cuda.current_stream())
@@ -108,19 +108,19 @@ class DSVAE(CUDAGraph, torch.nn.Module):
     def encode(self, *inputs, **kwargs):
         if self.enable_cuda_graph:
             if self.encoder_cuda_graph_created:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 outputs = self._graph_replay_encoder(*inputs, **kwargs)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._create_cuda_graph_encoder(*inputs, **kwargs)
                 outputs = self._graph_replay_encoder(*inputs, **kwargs)
             return outputs
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self._encode(*inputs, **kwargs)
 
     def _graph_replay(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_inputs[i].copy_(inputs[i])
@@ -133,19 +133,19 @@ class DSVAE(CUDAGraph, torch.nn.Module):
     def forward(self, *inputs, **kwargs):
         if self.enable_cuda_graph:
             if self.cuda_graph_created:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 outputs = self._graph_replay(*inputs, **kwargs)
             else:
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._create_cuda_graph(*inputs, **kwargs)
                 outputs = self._graph_replay(*inputs, **kwargs)
             return outputs
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self._forward(*inputs, **kwargs)
 
     def _create_cuda_graph(self, *inputs, **kwargs):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # warmup to create the workspace and cublas handle
         cuda_stream = torch.cuda.Stream()
         cuda_stream.wait_stream(torch.cuda.current_stream())

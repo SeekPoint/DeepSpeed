@@ -10,13 +10,15 @@ from deepspeed import OnDevice
 from packaging import version as pkg_version
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 
 @pytest.mark.parametrize('device', ['meta', get_accelerator().device_name(0)])
 class TestOnDevice(DistributedTest):
     world_size = 1
 
     def test_on_device(self, device):
+        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+
         if device == "meta" and pkg_version.parse(torch.__version__) < pkg_version.parse("1.10"):
             pytest.skip("meta tensors only became stable after torch 1.10")
 

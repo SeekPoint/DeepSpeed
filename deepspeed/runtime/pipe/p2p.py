@@ -13,7 +13,7 @@ from deepspeed import comm as dist
 from packaging.version import Version
 from deepspeed.git_version_info import torch_info
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 _groups = None
 _grid = None
 
@@ -21,7 +21,7 @@ _async = []
 
 
 def can_send_recv() -> bool:
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     torch_version = Version(torch_info['version'])
     sendrecv_min = Version('1.8')
     return torch_version >= sendrecv_min
@@ -30,19 +30,19 @@ def can_send_recv() -> bool:
 #initializes adjacent process groups
 #run this only after deepspeed.init_distributed() has been called
 def init_process_groups(grid):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     global _groups, _grid
     _grid = grid
 
     assert _grid.pipe_parallel_size > 1, "There is no pipeline parallelism"
 
     if not can_send_recv():
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         _groups = [dist.new_group(ranks=group) for group in _grid.p2p_groups]
 
 
 def _is_valid_send_recv(src_stage, dest_stage):
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     first_stage = 0
     last_stage = _grid.pipe_parallel_size - 1
     assert abs(src_stage-dest_stage) == 1 or \
@@ -59,17 +59,17 @@ def send(tensor, dest_stage, async_op=False):
 
     dest_rank = _grid.stage_to_global(stage_id=dest_stage)
     if async_op:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         global _async
         op = dist.isend(tensor, dest_rank)
         _async.append(op)
     else:
 
         if can_send_recv():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return dist.send(tensor, dest_rank)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             group = _get_send_recv_group(src_stage, dest_stage)
             src_rank = _grid.stage_to_global(stage_id=src_stage)
             return dist.broadcast(tensor, src_rank, group=group, async_op=async_op)
@@ -84,22 +84,22 @@ def recv(tensor, src_stage, async_op=False):
     src_rank = _grid.stage_to_global(stage_id=src_stage)
 
     if async_op:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         global _async
         op = dist.irecv(tensor, src_rank)
         _async.append(op)
     else:
         if can_send_recv():
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return dist.recv(tensor, src_rank)
         else:
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             group = _get_send_recv_group(src_stage, dest_stage)
             return dist.broadcast(tensor, src_rank, group=group, async_op=async_op)
 
 
 def wait():
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     global _async
     for op in _async:
         op.wait()
@@ -132,7 +132,7 @@ def send_obj(msg: typing.Any, dest: int):
 
 
 def recv_obj(sender: int) -> typing.Any:
-    debuginfo(prj='ds')
+    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Receive an arbitrary python object from ``sender``.
 
     WARN: This incur a CPU <-> GPU transfers and should be used sparingly
@@ -154,18 +154,18 @@ def recv_obj(sender: int) -> typing.Any:
     def _to(x):
         """Recursively move to the current device."""
         if torch.is_tensor(x):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return x.to(get_accelerator().device_name())
         if isinstance(x, (tuple, list)):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             ret = [_to(x_) for x_ in x]
             if isinstance(x, tuple):
-                debuginfo(prj='ds')
+                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 ret = tuple(ret)
             return ret
         # handle kwargs
         if isinstance(x, dict):
-            debuginfo(prj='ds')
+            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             ret = dict()
             for key, val in x.items():
                 ret[_to(key)] = _to(val)
@@ -188,13 +188,13 @@ def _get_send_recv_group(src_stage, dest_stage):
 
     if (src_stage == first_stage and dest_stage == last_stage
             or dest_stage == first_stage and src_stage == last_stage):
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         stage_id = last_stage
     elif src_stage > dest_stage:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         stage_id = dest_stage
     else:
-        debuginfo(prj='ds')
+        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         stage_id = src_stage
     '''group_id corresponds to group of [group_id, group_id+1]
      unless group_id is the rank of the last stage

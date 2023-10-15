@@ -5,8 +5,8 @@
 
 import math
 from deepspeed.utils import log_dist
-from pydebug import debuginfo
-debuginfo(prj='ds')
+from pydebug import debuginfo, infoTensor
+debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 def get_caller_func(frame=3):
     import sys
@@ -70,7 +70,7 @@ def calc_bw_log(comm_op, size, duration):
 class CommsLogger:
 
     def __init__(self):
-        debuginfo(prj='ds', info='CommsLogger init')
+        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from deepspeed.comm.constants import COMMS_LOGGER_VERBOSE_DEFAULT, COMMS_LOGGER_DEBUG_DEFAULT, COMMS_LOGGER_PROF_OPS_DEFAULT, COMMS_LOGGER_PROF_ALL_DEFAULT, COMMS_LOGGER_ENABLED_DEFAULT
         self.comms_dict = {}
         self.verbose = COMMS_LOGGER_VERBOSE_DEFAULT

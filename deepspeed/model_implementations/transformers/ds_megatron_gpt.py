@@ -5,7 +5,7 @@
 
 from deepspeed.model_implementations.transformers.ds_transformer import DeepSpeedTransformerInference
 
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 class DeepSpeedMegatronGPTInference(DeepSpeedTransformerInference):
     """Initialize the DeepSpeed Megatron GPT Transformer Layer.
     """
@@ -17,5 +17,5 @@ class DeepSpeedMegatronGPTInference(DeepSpeedTransformerInference):
                  quantize_groups=1,
                  merge_count=1,
                  mlp_extra_grouping=False):
-        debuginfo(prj='ds', info='DeepSpeedMegatronGPTInference init')
+        debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(config, mp_group, quantize_scales, quantize_groups, merge_count, mlp_extra_grouping)

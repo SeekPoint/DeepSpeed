@@ -18,7 +18,7 @@ except ImportError:
 op_builder_dir = get_accelerator().op_builder_dir()
 op_builder_module = importlib.import_module(op_builder_dir)
 __op_builders__ = []
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(op_builder_module.__file__)]):
     # avoid self references
     debuginfo(prj='ds', info='2-module_name:' + str(module_name))

@@ -13,7 +13,7 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.adam import FusedAdam
 from deepspeed.ops.op_builder import CPUAdamBuilder
 from unit.common import DistributedTest
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 if not deepspeed.ops.__compatible_ops__[CPUAdamBuilder.NAME]:
     pytest.skip("cpu-adam is not compatible", allow_module_level=True)
 

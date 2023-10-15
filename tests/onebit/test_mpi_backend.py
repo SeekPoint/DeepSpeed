@@ -11,7 +11,7 @@ import deepspeed
 
 from deepspeed.runtime.comm.mpi import MpiBackend
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo
+from pydebug import debuginfo, infoTensor
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
