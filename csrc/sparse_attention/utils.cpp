@@ -7,7 +7,7 @@
 DeepSpeed note, code taken & adapted from commit 9aa94789f13ada713af36cfd8cca2fc9a7f6b79a
  https:github.com/ptillet/torch-blocksparse/blob/master/csrc/utils.cpp
 */
-
+#include "../cppdebug.h"
 #include <torch/extension.h>
 #include <string>
 #include <tuple>
@@ -24,6 +24,7 @@ void segment_blocks(torch::Tensor layout,
                     int max_width,
                     ret_t& ret)
 {
+    debuginfo();
     size_t H = layout.size(0);
     size_t M = layout.size(1);
     size_t N = layout.size(2);
@@ -96,6 +97,7 @@ void segment_blocks(torch::Tensor layout,
 
 ret_t sdd_segment(torch::Tensor layout, int start_width)
 {
+    debuginfo();
     ret_t ret;
 
     // block index

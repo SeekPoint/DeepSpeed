@@ -6,7 +6,7 @@
 /*
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +47,7 @@ static void _report_aio_statistics(const char* tag,
 static void _report_aio_statistics(const char* tag,
                                    const std::vector<std::chrono::duration<double>>& latencies)
 {
+    debuginfo();
     std::vector<double> lat_usec;
     for (auto& lat : latencies) { lat_usec.push_back(lat.count() * 1e6); }
     const auto min_lat = *(std::min_element(lat_usec.begin(), lat_usec.end()));
@@ -60,6 +61,7 @@ static void _report_aio_statistics(const char* tag,
 static void _get_aio_latencies(std::vector<std::chrono::duration<double>>& raw_latencies,
                                struct deepspeed_aio_latency_t& summary_latencies)
 {
+    debuginfo();
     std::vector<double> lat_usec;
     for (auto& lat : raw_latencies) { lat_usec.push_back(lat.count() * 1e6); }
     summary_latencies._min_usec = *(std::min_element(lat_usec.begin(), lat_usec.end()));
@@ -73,6 +75,7 @@ static void _do_io_submit_singles(const long long int n_iocbs,
                                   std::unique_ptr<aio_context>& aio_ctxt,
                                   std::vector<std::chrono::duration<double>>& submit_times)
 {
+    debuginfo();
     for (auto i = 0; i < n_iocbs; ++i) {
         const auto st = std::chrono::high_resolution_clock::now();
         const auto submit_ret = io_submit(aio_ctxt->_io_ctxt, 1, aio_ctxt->_iocbs.data() + i);
@@ -94,6 +97,7 @@ static void _do_io_submit_block(const long long int n_iocbs,
                                 std::unique_ptr<aio_context>& aio_ctxt,
                                 std::vector<std::chrono::duration<double>>& submit_times)
 {
+    debuginfo();
     const auto st = std::chrono::high_resolution_clock::now();
     const auto submit_ret = io_submit(aio_ctxt->_io_ctxt, n_iocbs, aio_ctxt->_iocbs.data());
     submit_times.push_back(std::chrono::high_resolution_clock::now() - st);
@@ -114,6 +118,7 @@ static int _do_io_complete(const long long int min_completes,
                            std::unique_ptr<aio_context>& aio_ctxt,
                            std::vector<std::chrono::duration<double>>& reap_times)
 {
+    debuginfo();
     const auto start_time = std::chrono::high_resolution_clock::now();
     const auto n_completes = io_getevents(
         aio_ctxt->_io_ctxt, min_completes, max_completes, aio_ctxt->_io_events.data(), nullptr);
@@ -129,6 +134,7 @@ void do_aio_operation_sequential(const bool read_op,
                                  deepspeed_aio_config_t* config,
                                  deepspeed_aio_perf_t* perf)
 {
+    debuginfo();
     struct io_prep_context prep_ctxt(read_op, xfer_ctxt, aio_ctxt->_block_size, &aio_ctxt->_iocbs);
 
     const auto num_io_blocks = static_cast<long long int>(
@@ -193,6 +199,7 @@ void do_aio_operation_overlap(const bool read_op,
                               deepspeed_aio_config_t* config,
                               deepspeed_aio_perf_t* perf)
 {
+    debuginfo();
     struct io_prep_generator io_gen(read_op, xfer_ctxt, aio_ctxt->_block_size);
 
 #if DEBUG_DS_AIO_PERF
@@ -257,6 +264,7 @@ void do_aio_operation_overlap(const bool read_op,
 
 void report_file_error(const char* filename, const std::string file_op, const int error_code)
 {
+    debuginfo();
     std::string err_msg = file_op + std::string(" failed on ") + std::string(filename) +
                           " error = " + std::to_string(error_code);
     std::cerr << c_library_name << ":  " << err_msg << std::endl;
@@ -264,6 +272,7 @@ void report_file_error(const char* filename, const std::string file_op, const in
 
 int open_file(const char* filename, const bool read_op)
 {
+    debuginfo();
     const int flags = read_op ? (O_RDONLY | O_DIRECT) : (O_WRONLY | O_CREAT | O_DIRECT);
     const int mode = 0600;
     const auto fd = open(filename, flags, mode);
@@ -278,6 +287,7 @@ int open_file(const char* filename, const bool read_op)
 
 int regular_read(const char* filename, std::vector<char>& buffer)
 {
+    debuginfo();
     long long int num_bytes;
     const auto f_size = get_file_size(filename, num_bytes);
     assert(f_size != -1);
@@ -305,6 +315,7 @@ int regular_read(const char* filename, std::vector<char>& buffer)
 
 static bool _validate_buffer(const char* filename, void* aio_buffer, const long long int num_bytes)
 {
+    debuginfo();
     std::vector<char> regular_buffer;
     const auto reg_ret = regular_read(filename, regular_buffer);
     assert(0 == reg_ret);
@@ -321,6 +332,7 @@ bool validate_aio_operation(const bool read_op,
                             void* aio_buffer,
                             const long long int num_bytes)
 {
+    debuginfo();
     const auto msg_suffix = std::string("deepspeed_aio_") +
                             std::string(read_op ? "read()" : "write()") +
                             std::string("using read()");

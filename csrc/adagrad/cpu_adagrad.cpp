@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 #include "cpu_adagrad.h"
 #include <torch/extension.h>
 #include <iostream>
@@ -28,6 +28,7 @@ void Adagrad_Optimizer::Step_1(float* _params,
                                ds_half_precision_t* dev_params,
                                bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<1>(
@@ -91,6 +92,7 @@ void Adagrad_Optimizer::Step_4(float* _params,
                                ds_half_precision_t* dev_params,
                                bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<4>(
@@ -111,6 +113,7 @@ int create_adagrad_optimizer(int optimizer_id,
                              float weight_decay = 0,
                              bool should_log = false)
 {
+    debuginfo();
     auto opt = std::make_shared<Adagrad_Optimizer>(alpha, eps, weight_decay);
 
     s_optimizers[optimizer_id] = opt;
@@ -143,6 +146,7 @@ void Adagrad_Optimizer::Step_8(float* _params,
                                ds_half_precision_t* dev_params,
                                bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<8>(
@@ -166,6 +170,7 @@ int ds_adagrad_step(int optimizer_id,
                     torch::Tensor& grads,
                     torch::Tensor& exp_avg_sq)
 {
+    debuginfo();
     auto params_c = params.contiguous();
     auto grads_c = grads.contiguous();
     auto exp_avg_sq_c = exp_avg_sq.contiguous();
@@ -196,6 +201,7 @@ int ds_adagrad_step_plus_copy(int optimizer_id,
                               torch::Tensor& exp_avg_sq,
                               torch::Tensor& gpu_params)
 {
+    debuginfo();
 #if defined(__ENABLE_CUDA__)
     auto params_c = params.contiguous();
     auto gpu_params_c = gpu_params.contiguous();

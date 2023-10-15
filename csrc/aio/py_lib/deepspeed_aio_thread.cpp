@@ -6,7 +6,7 @@
 /*
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include "deepspeed_aio_thread.h"
 
 using namespace std;
@@ -24,6 +24,7 @@ io_op_desc_t::io_op_desc_t(const bool read_op,
       _num_bytes(num_bytes),
       _validate(validate)
 {
+    debuginfo();
     _cpu_buffer = _buffer.is_cuda() ? _buffer.to(torch::kCPU).pin_memory() : _buffer;
     _contiguous_buffer = _cpu_buffer.contiguous();
 }
@@ -32,6 +33,7 @@ char* io_op_desc_t::data_ptr() const { return (char*)_contiguous_buffer.data_ptr
 
 void io_op_desc_t::fini()
 {
+    debuginfo();
     if (_read_op && _buffer.is_cuda()) { _buffer.copy_(_cpu_buffer.to(torch::kCUDA)); }
 }
 
@@ -47,6 +49,7 @@ deepspeed_aio_thread_t::~deepspeed_aio_thread_t() {}
 
 void deepspeed_aio_thread_t::run()
 {
+    debuginfo();
     while (true) {
         std::shared_ptr<struct io_op_desc_t> next_io_op = nullptr;
 

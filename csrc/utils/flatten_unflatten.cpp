@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 /*
 Copyright NVIDIA/apex
 This file is adapted from fused adam in NVIDIA/apex, commit a109f85
@@ -14,11 +14,13 @@ This file is adapted from fused adam in NVIDIA/apex, commit a109f85
 
 at::Tensor flatten(std::vector<at::Tensor> tensors)
 {
+    debuginfo()
     return torch::utils::flatten_dense_tensors(tensors);
 }
 
 std::vector<at::Tensor> unflatten(at::Tensor flat, std::vector<at::Tensor> tensors)
 {
+    debuginfo();
     return torch::utils::unflatten_dense_tensors(flat, tensors);
 }
 

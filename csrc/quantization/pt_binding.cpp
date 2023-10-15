@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
 #include <cassert>
@@ -12,6 +12,7 @@
 template <typename T>
 at::Tensor ds_quantize(at::Tensor& vals, int groups, int bits)
 {
+    debuginfo();
     auto t_size = vals.sizes();
     int size = 1;
     for (auto dim : t_size) size *= dim;
@@ -26,6 +27,7 @@ at::Tensor ds_quantize(at::Tensor& vals, int groups, int bits)
 template <typename T>
 at::Tensor ds_sr_quantize(at::Tensor& vals, int groups, int bits)
 {
+    debuginfo();
     auto t_size = vals.sizes();
     int size = 1;
     for (auto dim : t_size) size *= dim;
@@ -40,6 +42,7 @@ at::Tensor ds_sr_quantize(at::Tensor& vals, int groups, int bits)
 template <typename T>
 at::Tensor ds_quantize_asym(at::Tensor& vals, int groups, int bits)
 {
+    debuginfo();
     auto t_size = vals.sizes();
     int size = 1;
     for (auto dim : t_size) size *= dim;
@@ -54,6 +57,7 @@ at::Tensor ds_quantize_asym(at::Tensor& vals, int groups, int bits)
 template <typename T>
 at::Tensor ds_sr_quantize_asym(at::Tensor& vals, int groups, int bits)
 {
+    debuginfo();
     auto t_size = vals.sizes();
     int size = 1;
     for (auto dim : t_size) size *= dim;
@@ -70,6 +74,7 @@ std::vector<at::Tensor> quantize_kernel(at::Tensor& input_vals,
                                         int numBits,
                                         quantize::Type quantType)
 {
+    debuginfo();
     auto dtype = at::kFloat;
     auto params_options = at::TensorOptions()
                               .dtype(dtype)
@@ -110,6 +115,7 @@ at::Tensor dequantize(at::Tensor& quantized_data,
                       int num_bits,
                       quantize::Type quant_type)
 {
+    debuginfo();
     auto dtype = (std::is_same<T, float>::value) ? torch::kFloat32 : torch::kFloat16;
     auto output_options = at::TensorOptions()
                               .dtype(dtype)
@@ -145,6 +151,7 @@ std::vector<at::Tensor> ds_swizzle_quant(at::Tensor& input_vals,
                                          int nodes,
                                          int devices_per_node)
 {
+    debuginfo();
     // 定义了一个at::TensorOptions对象，它描述了接下来要创建的张量的属性。
     // 这个张量的数据类型是float，布局是strided，设备是CUDA设备，且不需要计算梯度。
     auto scales_options = at::TensorOptions()
@@ -205,6 +212,7 @@ std::vector<at::Tensor> quantized_reduction(at::Tensor& input_vals,
                                             int num_bits,
                                             quantize::Type quant_type)
 {
+    debuginfo();
     // 定义一个TensorOptions对象scales_options，表示接下来要创建的张量的属性，
     // 这个张量的数据类型是float，布局是strided，设备是CUDA设备，并且不需要计算梯度。
     auto scales_options = at::TensorOptions()

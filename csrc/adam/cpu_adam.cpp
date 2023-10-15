@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 #include "cpu_adam.h"
 #include <torch/extension.h>
 #include <cassert>
@@ -31,6 +31,7 @@ void Adam_Optimizer::Step_1(float* _params,
                             ds_half_precision_t* dev_params,
                             bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<1>(&rounded_size,
@@ -111,6 +112,7 @@ void Adam_Optimizer::Step_4(float* _params,
                             ds_half_precision_t* dev_params,
                             bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<4>(&rounded_size,
@@ -141,6 +143,7 @@ int create_adam_optimizer(int optimizer_id,
                           bool adamw_mode = true,
                           bool should_log = false)
 {
+    debuginfo();
     auto opt =
         std::make_shared<Adam_Optimizer>(alpha, betta1, betta2, eps, weight_decay, adamw_mode);
 
@@ -180,6 +183,7 @@ void Adam_Optimizer::Step_8(float* _params,
                             ds_half_precision_t* dev_params,
                             bool half_precision)
 {
+    debuginfo();
     size_t rounded_size = 0;
 #if defined(__AVX512__) or defined(__AVX256__)
     Step_AVX<8>(&rounded_size,
@@ -214,6 +218,7 @@ int ds_adam_step(int optimizer_id,
                  torch::Tensor& exp_avg,
                  torch::Tensor& exp_avg_sq)
 {
+    debuginfo();
     auto params_c = params.contiguous();
     auto grads_c = grads.contiguous();
     auto exp_avg_c = exp_avg.contiguous();
@@ -259,6 +264,7 @@ int ds_adam_step_plus_copy(int optimizer_id,
                            torch::Tensor& exp_avg_sq,
                            torch::Tensor& gpu_params)
 {
+    debuginfo();
 #if defined(__ENABLE_CUDA__)
     auto params_c = params.contiguous();
     auto gpu_params_c = gpu_params.contiguous();
@@ -293,6 +299,7 @@ int ds_adam_step_plus_copy(int optimizer_id,
 
 int destroy_adam_optimizer(int optimizer_id)
 {
+    debuginfo();
     s_optimizers.erase(optimizer_id);
 
     return 0;

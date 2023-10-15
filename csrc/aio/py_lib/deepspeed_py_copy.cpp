@@ -6,7 +6,7 @@
 /*
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include "deepspeed_py_copy.h"
 #include <omp.h>
 
@@ -24,6 +24,7 @@ union AVX_Data {
 
 static void helper_memcpy_1(float* dest, float* src, size_t param_size)
 {
+    debuginfo();
     size_t rounded_size = 0;
 
 #if defined(__AVX512__) or defined(__AVX256__)
@@ -53,6 +54,7 @@ static void helper_memcpy_1(float* dest, float* src, size_t param_size)
 
 static void helper_memcpy_4(float* dest, float* src, size_t param_size)
 {
+    debuginfo();
     size_t rounded_size = 0;
 
 #if defined(__AVX512__) or defined(__AVX256__)
@@ -84,6 +86,7 @@ static void helper_memcpy_4(float* dest, float* src, size_t param_size)
 
 static void helper_mempcy_8(float* dest, float* src, size_t param_size)
 {
+    debuginfo();
     size_t rounded_size = 0;
 
 #if defined(__AVX512__) or defined(__AVX256__)
@@ -123,6 +126,7 @@ static void helper_mempcy_8(float* dest, float* src, size_t param_size)
 
 int deepspeed_py_memcpy(torch::Tensor& dest, const torch::Tensor& src)
 {
+    debuginfo();
     auto dest_c = dest.contiguous();
     auto src_c = src.contiguous();
 

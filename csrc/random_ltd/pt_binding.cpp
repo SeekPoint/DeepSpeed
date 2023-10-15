@@ -6,9 +6,10 @@
 #include <torch/extension.h>
 #include <vector>
 #include "custom_cuda_layers.h"
-
+#include "../cppdebug.h"
 torch::Tensor token_sort_(torch::Tensor& unsorted_token_ids, int64_t original_tokens)
 {
+    debuginfo();
     const int layers = unsorted_token_ids.size(0);
     const int batch_size = unsorted_token_ids.size(1);
     const int reserved_tokens = unsorted_token_ids.size(2);
@@ -27,6 +28,7 @@ torch::Tensor token_gather(torch::Tensor& activations,
                            torch::Tensor& sorted_indices,
                            bool batch_first)
 {
+    debuginfo();
     // Activations may be in either [N, S, C] or [S, N, C] while sorted_indices is
     // always in [N, retained]
     /*
@@ -86,6 +88,7 @@ torch::Tensor token_scatter_(torch::Tensor& all_activations,
                              torch::Tensor& sorted_indices,
                              bool batch_first)
 {
+    debuginfo();
     // Activations may be in either [N, S, C] or [S, N, C] while sorted_indices is
     // always in [N, retained]
     /*
@@ -140,6 +143,7 @@ torch::Tensor token_scatter_(torch::Tensor& all_activations,
 
 torch::Tensor mask_gather_bert(torch::Tensor& dense_mask, torch::Tensor& sorted_indices)
 {
+    debuginfo();
     // TORCH_CHECK(dense_mask.dim() == 4)
 
     const int batch_size = dense_mask.size(0);
@@ -179,6 +183,7 @@ torch::Tensor mask_gather_bert(torch::Tensor& dense_mask, torch::Tensor& sorted_
 
 torch::Tensor mask_gather_gpt(torch::Tensor dense_mask, int truncated_seq_len)
 {
+    debuginfo();
     // TORCH_CHECK(dense_mask.dim() == 4)
 
     const int batch_size = dense_mask.size(0);

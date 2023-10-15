@@ -10,7 +10,7 @@ Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 #include <torch/extension.h>
 #include "deepspeed_py_aio_handle.h"
 #include "deepspeed_py_copy.h"
-
+#include "../cppdebug.h"
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
     m.def("aio_read", &deepspeed_py_aio_read, "DeepSpeed Asynchronous I/O Read");

@@ -9,7 +9,7 @@ Licensed under the MIT license.
 
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include "deepspeed_py_aio_handle.h"
 
 using namespace std;
@@ -29,6 +29,7 @@ deepspeed_aio_handle_t::deepspeed_aio_handle_t(const int block_size,
       _num_pending_ops(0),
       _pinned_tensor_mgr(new deepspeed_pin_tensor_t())
 {
+    debuginfo();
     for (auto i = 0; i < num_threads; ++i) {
         _thread_contexts.push_back(std::make_shared<deepspeed_aio_thread_t>(i, _aio_config));
     }
@@ -40,6 +41,7 @@ deepspeed_aio_handle_t::deepspeed_aio_handle_t(const int block_size,
 
 deepspeed_aio_handle_t::~deepspeed_aio_handle_t()
 {
+    debuginfo();
     _stop_threads();
     for (auto& thr : _threads) { thr.join(); }
 }
@@ -62,6 +64,7 @@ const int deepspeed_aio_handle_t::get_thread_count() const { return _num_threads
 
 int deepspeed_aio_handle_t::read(torch::Tensor& buffer, const char* filename, const bool validate)
 {
+    debuginfo();
     const auto start_time = std::chrono::high_resolution_clock::now();
 
     assert(_aio_ctxt);
@@ -103,6 +106,7 @@ int deepspeed_aio_handle_t::write(const torch::Tensor& buffer,
                                   const char* filename,
                                   const bool validate)
 {
+    debuginfo();
     assert(_aio_ctxt);
 
     const auto start_time = std::chrono::high_resolution_clock::now();
@@ -136,6 +140,7 @@ int deepspeed_aio_handle_t::write(const torch::Tensor& buffer,
 
 void deepspeed_aio_handle_t::_schedule_aio_work(std::shared_ptr<struct io_op_desc_t> scheduled_op)
 {
+    debuginfo();
     for (auto& ctxt : _thread_contexts) {
         {
             std::lock_guard<std::mutex> lock(ctxt->_work_sync._mutex);
@@ -148,6 +153,7 @@ void deepspeed_aio_handle_t::_schedule_aio_work(std::shared_ptr<struct io_op_des
 
 std::shared_ptr<struct io_op_desc_t> deepspeed_aio_handle_t::_wait_for_aio_work()
 {
+    debuginfo();
     std::shared_ptr<struct io_op_desc_t> completed_op = nullptr;
     for (auto& ctxt : _thread_contexts) {
         std::unique_lock<std::mutex> lock(ctxt->_complete_sync._mutex);
@@ -161,6 +167,7 @@ std::shared_ptr<struct io_op_desc_t> deepspeed_aio_handle_t::_wait_for_aio_work(
 
 void deepspeed_aio_handle_t::_stop_threads()
 {
+    debuginfo();
     assert(0 == _num_pending_ops);
     for (auto& ctxt : _thread_contexts) {
         {
@@ -173,6 +180,7 @@ void deepspeed_aio_handle_t::_stop_threads()
 
 int deepspeed_aio_handle_t::wait()
 {
+    debuginfo();
     assert(_num_pending_ops > 0);
     auto num_completed_ops = 0;
 
@@ -199,6 +207,7 @@ int deepspeed_aio_handle_t::wait()
 bool deepspeed_aio_handle_t::_is_valid_parallel_aio_op(const bool read_op,
                                                        const long long int num_bytes)
 {
+    debuginfo();
     const auto op_string = read_op ? "Read" : "Write";
     if (num_bytes % get_thread_count()) {
         std::cout << "deepspeed_aio failure: parallel " << op_string << " num_bytes = " << num_bytes
@@ -214,6 +223,7 @@ int deepspeed_aio_handle_t::pread(const torch::Tensor& buffer,
                                   const bool validate,
                                   const bool async)
 {
+    debuginfo();
     long long num_file_bytes;
     if (-1 == get_file_size(filename, num_file_bytes)) {
         const auto error_code = errno;
@@ -248,6 +258,7 @@ int deepspeed_aio_handle_t::pwrite(const torch::Tensor& buffer,
                                    const bool validate,
                                    const bool async)
 {
+    debuginfo();
     const auto num_write_bytes = static_cast<long long int>(buffer.nbytes());
     assert((num_write_bytes % _num_threads) == 0);
 

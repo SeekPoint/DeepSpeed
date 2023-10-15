@@ -6,7 +6,7 @@
 /*
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include <cmath>
 #include <iostream>
 
@@ -38,6 +38,7 @@ void io_prep_context::prep_iocbs(const int n_iocbs,
                                  const void* start_buffer,
                                  const long long int start_offset)
 {
+    debuginfo();
     assert(static_cast<size_t>(n_iocbs) <= _iocbs->size());
     for (auto i = 0; i < n_iocbs; ++i) {
         const auto shift = i * _block_size;
@@ -63,6 +64,7 @@ io_prep_generator::io_prep_generator(const bool read_op,
       _remaining_bytes(xfer_ctxt->_num_bytes),
       _next_iocb_index(0)
 {
+    debuginfo();
     _num_io_blocks =
         static_cast<long long int>(ceil(static_cast<double>(xfer_ctxt->_num_bytes) / block_size));
     _remaining_io_blocks = _num_io_blocks;
@@ -70,6 +72,7 @@ io_prep_generator::io_prep_generator(const bool read_op,
 
 int io_prep_generator::prep_iocbs(const int n_iocbs, std::vector<struct iocb*>* iocbs)
 {
+    debuginfo();
     if ((_remaining_bytes) == 0 || (_remaining_io_blocks == 0)) {
         assert(static_cast<long long int>(_remaining_bytes) == _remaining_io_blocks);
         return 0;
@@ -97,6 +100,7 @@ int io_prep_generator::prep_iocbs(const int n_iocbs, std::vector<struct iocb*>* 
 
 int get_file_size(const char* filename, long long int& size)
 {
+    debuginfo();
     struct stat st;
     if (stat(filename, &st) == -1) { return -1; }
     size = st.st_size;
@@ -105,6 +109,7 @@ int get_file_size(const char* filename, long long int& size)
 
 void* ds_page_aligned_alloc(const size_t size, const bool lock)
 {
+    debuginfo();
     void* ptr;
     int retval;
 

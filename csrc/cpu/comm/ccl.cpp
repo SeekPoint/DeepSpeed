@@ -10,7 +10,7 @@
 std::set<int> _comm_ids;
 std::set<int> _colors;
 ccl::vector_class<ccl::communicator> _ccl_comms;
-
+#include "../../cppdebug.h"
 #define CCLCHECK(cmd) \
     do {              \
         cmd;          \
@@ -28,6 +28,7 @@ ccl::shared_ptr_class<ccl::kvs> kvs;
 
 void initialize(int size, int rank, torch::Tensor& kvs_data)
 {
+    debuginfo()
     if (is_initialized) return;
     world_size = size;
     world_rank = rank;
@@ -49,6 +50,7 @@ void initialize(int size, int rank, torch::Tensor& kvs_data)
 */
 std::vector<uint8_t> get_kvs_addr(int rank)
 {
+    debuginfo();
     if (rank == 0) {
         kvs = ccl::create_main_kvs();
         ccl::kvs::address_type main_addr = kvs->get_address();
@@ -68,6 +70,7 @@ int get_world_size(int group = 0) { return world_size; }
 // Find the next ordered, unique value to a set. E.g. <0,1,2,7> --> 3
 int next_unique_val(std::set<int> s)
 {
+    debuginfo();
     std::set<int>::iterator itr;
     // Base case. Add 0 to start of set.
     if (s.empty() || *s.begin() != 0) {
@@ -87,6 +90,7 @@ int next_unique_val(std::set<int> s)
 
 py::object new_group(std::vector<int> ranks)
 {
+    debuginfo();
     int comm_id = next_unique_val(_comm_ids);
     int color = next_unique_val(_colors);
     std::cout << "RANK: " << get_rank() << " COMM_ID: " << comm_id << " COLOR: " << color
@@ -95,6 +99,7 @@ py::object new_group(std::vector<int> ranks)
 
 ccl::datatype get_ccl_datatype(c10::ScalarType type)
 {
+    debuginfo();
     ccl::datatype ccl_type;
     switch (type) {
         case c10::ScalarType::Int: ccl_type = ccl::datatype::int32; break;
@@ -109,6 +114,7 @@ ccl::datatype get_ccl_datatype(c10::ScalarType type)
 
 ccl::reduction get_ccl_reduce_op(py::object op, at::Tensor& input)
 {
+    debuginfo();
     py::object ReduceOp = py::module_::import("deepspeed.comm").attr("ReduceOp");
     if (!py::isinstance(op, ReduceOp)) {
         throw std::runtime_error("Error: Op must be of type ReduceOp");
@@ -148,6 +154,7 @@ ccl::communicator& _get_comm_from_group(py::object group) { return _ccl_comms[0]
 
 void broadcast(torch::Tensor& data, int src, py::object group, bool async_op)
 {
+    debuginfo();
     CCLCHECK(ccl::broadcast(data.data_ptr(),
                             data.numel(),
                             get_ccl_datatype(data.scalar_type()),
@@ -159,6 +166,7 @@ void broadcast(torch::Tensor& data, int src, py::object group, bool async_op)
 // TODO: implement torch's async_op behavior, document it.
 void all_reduce(torch::Tensor& data, py::object op, py::object group, bool async_op)
 {
+    debuginfo();
     CCLCHECK(ccl::allreduce(data.data_ptr(),
                             data.data_ptr(),
                             data.numel(),
@@ -174,6 +182,7 @@ void all_reduce_caching(torch::Tensor& data,
                         py::object group,
                         bool async_op)
 {
+    debuginfo();
     ccl::allreduce_attr attr = ccl::default_allreduce_attr;
     auto match_str = ccl::v1::string(match_id);
     attr.template set<ccl::operation_attr_id::to_cache>(true);

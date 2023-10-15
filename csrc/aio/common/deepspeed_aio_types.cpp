@@ -8,7 +8,7 @@ Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
 
 #include <cmath>
-
+#include "../../cppdebug.h"
 #include "deepspeed_aio_utils.h"
 
 using namespace std;
@@ -45,6 +45,7 @@ void deepspeed_aio_latency_t::dump(const std::string tag)
 
 void deepspeed_aio_latency_t::accumulate(const struct deepspeed_aio_latency_t& other)
 {
+    debuginfo();
     _min_usec += other._min_usec;
     _max_usec += other._max_usec;
     _avg_usec += other._avg_usec;
@@ -52,6 +53,7 @@ void deepspeed_aio_latency_t::accumulate(const struct deepspeed_aio_latency_t& o
 
 void deepspeed_aio_latency_t::scale(const float scaler)
 {
+    debuginfo();
     _min_usec *= scaler;
     _max_usec *= scaler;
     _avg_usec *= scaler;
@@ -59,6 +61,7 @@ void deepspeed_aio_latency_t::scale(const float scaler)
 
 aio_context::aio_context(const int block_size, const int queue_depth)
 {
+    debuginfo();
     _block_size = block_size;
     _queue_depth = queue_depth;
     for (auto i = 0; i < queue_depth; ++i) {
@@ -70,6 +73,7 @@ aio_context::aio_context(const int block_size, const int queue_depth)
 
 aio_context::~aio_context()
 {
+    debuginfo();
     for (auto& iocb : _iocbs) { free(iocb); }
     _io_events.resize(0);
     io_queue_release(_io_ctxt);

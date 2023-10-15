@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../../cppdebug.h"
 #include <c10/cuda/CUDAStream.h>
 #include <torch/extension.h>
 #include <stdexcept>
@@ -26,6 +26,7 @@ enum class TransformerType : uint8_t { UNKNOWN = 0, GPTType = 1, BERTType = 2 };
 // based on the dimensions of the corresponding attention mask.
 inline auto infer_transformer_type(at::Tensor& attn_mask) -> TransformerType
 {
+    debuginfo();
     auto attn_mask_num_dims = attn_mask.sizes().size();
 
     if (attn_mask_num_dims > 2) {
@@ -40,6 +41,7 @@ inline auto infer_transformer_type(at::Tensor& attn_mask) -> TransformerType
 // infer stride of attention mask memory layout based on the model type.
 inline auto get_attn_mask_stride(at::Tensor& attn_mask) -> int
 {
+    debuginfo();
     auto trnsfrmr_type = infer_transformer_type(attn_mask);
 
     if (trnsfrmr_type == TransformerType::GPTType) {
@@ -68,6 +70,7 @@ at::Tensor ds_softmax(at::Tensor& attn_scores,
                       int head_offset,
                       int mp_size)
 {
+    debuginfo();
     auto attn_scores_c = attn_scores.contiguous();
     int bsz = attn_scores_c.size(0);
 
@@ -115,6 +118,7 @@ void allocate_workspace(unsigned hidden_dim,
                         unsigned max_out_tokens = 1024,
                         unsigned min_out_tokens = 1)
 {
+    debuginfo();
     InferenceContext::Instance().GenWorkSpace(num_layers,
                                               num_heads,
                                               batch_size,
@@ -131,6 +135,7 @@ void allocate_workspace(unsigned hidden_dim,
 template <typename T>
 at::Tensor einsum_sec_sm_ecm(at::Tensor& Q, at::Tensor& W)
 {
+    debuginfo();
     auto options = at::TensorOptions()
                        .dtype(Q.options().dtype())
                        .layout(at::kStrided)
@@ -187,6 +192,7 @@ void attention_unfused(at::Tensor& prev_key_cont,
                        bool local_attention,
                        int window_size)
 {
+    debuginfo();
     auto options = at::TensorOptions()
                        .dtype(query_cont.options().dtype())
                        .layout(at::kStrided)
@@ -275,6 +281,7 @@ std::vector<at::Tensor> ds_softmax_context1(at::Tensor& query,
                                             int window_size,
                                             bool no_masking)
 {
+    debuginfo();
     auto query_cont = query.contiguous();
     auto prev_key_cont = prev_key.contiguous();
     auto prev_value_cont = prev_value.contiguous();
@@ -327,6 +334,7 @@ void ds_softmax_internal(T* attn_scores,
                          int soft_len,
                          int heads)
 {
+    debuginfo();
     auto mask_stride = get_attn_mask_stride(attn_mask);
 
     launch_attn_softmax_v2((T*)attn_scores,
@@ -366,6 +374,7 @@ void attention_unfused(T* prev_key_cont,
                        at::Tensor& alibi,
                        int layer_id)
 {
+    debuginfo();
     float layer_scale = alibi.sizes().size() > 1 ? std::max(1, layer_id) : 1.0;
     float alpha = norm_factor * norm_factor / layer_scale;
     float gemm_beta = 0.0;
@@ -446,6 +455,7 @@ std::vector<at::Tensor> ds_softmax_context(at::Tensor& query_key_value,
                                            unsigned num_layers,
                                            at::Tensor& alibi)
 {
+    debuginfo();
     unsigned bsz = query_key_value.size(0);
     unsigned seq_len = query_key_value.size(1);
     unsigned hidden_dim = query_key_value.size(2) / 3;
@@ -554,6 +564,7 @@ std::vector<at::Tensor> ds_softmax_context(at::Tensor& query_key_value,
 template <typename T>
 at::Tensor ds_bias_gelu(at::Tensor& input, at::Tensor& bias)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
 
     int bsz = input_cont.size(0) * input_cont.size(1);
@@ -581,6 +592,7 @@ at::Tensor ds_bias_gelu(at::Tensor& input, at::Tensor& bias)
 
 at::Tensor ds_gated_activation(at::Tensor& activation, at::Tensor& bias, int actFun)
 {
+    debuginfo();
     /*
     Used in FF of Stable diffusion
     */
@@ -612,6 +624,7 @@ at::Tensor ds_gated_activation(at::Tensor& activation, at::Tensor& bias, int act
 template <typename T>
 at::Tensor ds_bias_relu(at::Tensor& input, at::Tensor& bias)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
 
     int bsz = input_cont.size(0) * input_cont.size(1);
@@ -628,6 +641,7 @@ at::Tensor ds_bias_relu(at::Tensor& input, at::Tensor& bias)
 template <typename T>
 at::Tensor ds_bias_add(at::Tensor& input, at::Tensor& bias)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
 
     int bsz = input_cont.size(0) * input_cont.size(1);
@@ -644,6 +658,7 @@ at::Tensor ds_bias_add(at::Tensor& input, at::Tensor& bias)
 template <typename T>
 at::Tensor ds_bias_residual(at::Tensor& input, at::Tensor& residual, at::Tensor& bias)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
     auto residual_cont = residual.contiguous();
 
@@ -672,6 +687,7 @@ at::Tensor ds_bias_residual(at::Tensor& input, at::Tensor& residual, at::Tensor&
 
 at::Tensor ds_layer_norm(at::Tensor& input, at::Tensor& gamma, at::Tensor& beta, float epsilon)
 {
+    debuginfo();
     const int rows = input.size(0) * input.size(1);
     const int elems_per_row = input.size(2);
     auto output = at::empty_like(input);
@@ -700,6 +716,7 @@ at::Tensor ds_layer_norm(at::Tensor& input, at::Tensor& gamma, at::Tensor& beta,
 
 at::Tensor ds_rms_norm(at::Tensor& input, at::Tensor& gamma, float epsilon)
 {
+    debuginfo();
     // Get number of dims of tensor
     int num_dims = input.dim();
     const int rows = (num_dims == 2) ? input.size(0) : input.size(0) * input.size(1);
@@ -734,6 +751,7 @@ std::vector<at::Tensor> ds_pre_rms_norm(at::Tensor& input,
                                         at::Tensor& gamma,
                                         float epsilon)
 {
+    debuginfo();
     // Get number of dims of tensor
     int num_dims = input.dim();
     const int rows = (num_dims == 2) ? input.size(0) : input.size(0) * input.size(1);
@@ -758,6 +776,7 @@ void ds_layer_norm_internal(T* workspace,
                             at::Tensor& beta,
                             float epsilon)
 {
+    debuginfo();
     int bsz = input.size(0) * input.size(1);
     launch_fused_ln(workspace,
                     (const T*)input.data_ptr(),
@@ -791,6 +810,7 @@ at::Tensor ds_layer_norm_residual(at::Tensor& input,
                                   at::Tensor& beta,
                                   float epsilon)
 {
+    debuginfo();
     const int rows = input.size(0) * input.size(1);
     const int elems_per_row = input.size(2);
     auto output = at::empty_like(input);
@@ -828,6 +848,7 @@ std::vector<at::Tensor> ds_layer_norm_residual_store_pre_ln_res(at::Tensor& inpu
                                                                 at::Tensor& beta,
                                                                 float epsilon)
 {
+    debuginfo();
     const int rows = input.size(0) * input.size(1);
     const int elems_per_row = input.size(2);
     auto norm_output = at::empty_like(input);
@@ -851,6 +872,7 @@ void quantized_gemm(void* output,
                     int bsz,
                     int hidden_size)
 {
+    debuginfo();
     // T* weight16 = (T*)InferenceContext::Instance().GetWorkSpace() + 12 * hidden_size * bsz;
 
     auto options = at::TensorOptions()
@@ -901,6 +923,7 @@ at::Tensor qkv_unfused_cublas(at::Tensor& output,
                               bool q_int8,
                               bool transposed_mode)
 {
+    debuginfo();
     int bsz = input.size(0) * input.size(1);
     T* workspace = (T*)InferenceContext::Instance().GetWorkSpace();
     workspace += (3 * bsz * input.size(2));
@@ -950,6 +973,7 @@ std::vector<at::Tensor> ds_rms_qkv(at::Tensor& input,
                                    bool q_int8,
                                    bool transposed_mode)
 {
+    debuginfo();
     const int bsz = input.size(0) * input.size(1);
     T* workspace = (T*)InferenceContext::Instance().GetWorkSpace();
     T* rms_norm_ptr = workspace + (3 * bsz * input.size(2));
@@ -1020,6 +1044,7 @@ std::vector<at::Tensor> ds_qkv_gemm(at::Tensor& input,
                                     bool q_int8,
                                     bool transposed_mode)
 {
+    debuginfo();
     int bsz = input.size(0) * input.size(1);
     T* workspace = (T*)InferenceContext::Instance().GetWorkSpace();
     int out_size = (transposed_mode || q_int8) ? weight.size(0) : weight.size(1);
@@ -1054,6 +1079,7 @@ void quantized_gemm(at::Tensor& output,
                     int groups,
                     int merge_count)
 {
+    debuginfo();
     int bsz = input.size(0) * input.size(1);
     auto options = at::TensorOptions()
                        .dtype(input.options().dtype())
@@ -1100,6 +1126,7 @@ at::Tensor ds_linear_layer(at::Tensor& input,
                            int num_heads,
                            bool transposed_mode)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
     auto options = at::TensorOptions()
                        .dtype(input_cont.options().dtype())
@@ -1210,6 +1237,7 @@ at::Tensor ds_linear_layer(at::Tensor& input,
 template <typename T>
 std::vector<at::Tensor> add_padding(at::Tensor& query, at::Tensor& key, at::Tensor& value)
 {
+    debuginfo();
     int head_size = query.size(3);
     int padded_head_size = head_size < 32 ? 32 : (head_size < 64 ? 64 : 128);
     T* workspace = (T*)InferenceContext::Instance().GetWorkSpace();
@@ -1256,6 +1284,7 @@ std::vector<at::Tensor> padd_add_transform(at::Tensor& query,
                                            int heads,
                                            bool add_padding)
 {
+    debuginfo();
     int head_size = query.size(2) / heads;
     int key_value_length = add_padding ? 128 : key.size(1);
     int padded_head_size = add_padding ? (head_size < 32 ? 32 : (head_size < 64 ? 64 : 128))
@@ -1309,6 +1338,7 @@ at::Tensor ds_vector_matmul(at::Tensor& input,
                             bool q_int8,
                             bool transposed_mode)
 {
+    debuginfo();
     auto options = at::TensorOptions()
                        .dtype(input.options().dtype())
                        .layout(at::kStrided)
@@ -1359,6 +1389,7 @@ at::Tensor ds_vector_matmul_int8(at::Tensor& input,
                                  int groups,
                                  int merge_count)
 {
+    debuginfo();
     auto input_cont = input.contiguous();
     auto options = at::TensorOptions()
                        .dtype(input_cont.options().dtype())
@@ -1391,6 +1422,7 @@ at::Tensor mlp_unfused_cublas(at::Tensor& output,
                               ActivationFuncType act_func_type,
                               bool transposed_mode)
 {
+    debuginfo();
     int bsz = input.size(0) * input.size(1);
     T* inp_norm = (T*)InferenceContext::Instance().GetWorkSpace() + torch::numel(input) +
                   torch::numel(output);
@@ -1501,6 +1533,7 @@ std::vector<at::Tensor> ds_mlp_gemm(at::Tensor& input,
                                     int activation_type,
                                     bool transposed_mode)
 {
+    debuginfo();
     auto options = at::TensorOptions()
                        .dtype(input.options().dtype())
                        .layout(at::kStrided)
@@ -1549,6 +1582,7 @@ std::vector<at::Tensor> ds_rms_mlp_gemm(at::Tensor& input,
                                         int activation_type,
                                         bool transposed_mode)
 {
+    debuginfo();
     const int bsz = input.size(0) * input.size(1);
     const size_t input_neurons = input.size(2);
     const size_t mlp_1_out_neurons = transposed_mode ? weight_interm.size(0)
@@ -1691,6 +1725,7 @@ at::Tensor fused_gemm_gelu(at::Tensor& input,
                            bool q_int8,
                            bool transposed_mode)
 {
+    debuginfo();
     auto options = at::TensorOptions()
                        .dtype(input.options().dtype())
                        .layout(at::kStrided)
@@ -1788,6 +1823,7 @@ at::Tensor& residual_add_bias(at::Tensor& hidden_state,
                               const bool add_bias,
                               const bool preln)
 {
+    debuginfo();
     int bsz = residual.size(0) * residual.size(1);
     int hidden_size = residual.size(2);
     if (mlp_after_attn)
@@ -1827,6 +1863,7 @@ at::Tensor& residual_add_bias(at::Tensor& hidden_state,
 
 at::Tensor& _vector_add(at::Tensor& a, at::Tensor& b, float gamma)
 {
+    debuginfo();
     const int total_elems = a.numel();
 
     DISPATCH_VECTOR_ADD(Float, float)
@@ -1845,6 +1882,7 @@ std::vector<at::Tensor> apply_rotary_pos_emb(at::Tensor& mixed_query,
                                              unsigned num_heads,
                                              bool rotate_half)
 {
+    debuginfo();
     auto query_cont = mixed_query.contiguous();
     auto key_cont = key_layer.contiguous();
 
@@ -1889,6 +1927,7 @@ std::vector<at::Tensor> apply_rotary_pos_emb(at::Tensor& mixed_query,
 
 at::Tensor moe_res_matmul(at::Tensor& moe_res, at::Tensor& coef, at::Tensor& output)
 {
+    debuginfo();
     int M = moe_res.size(0) * moe_res.size(1);
     int N = moe_res.size(2);
     InferenceContext::Instance().SynchComm();

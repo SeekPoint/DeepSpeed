@@ -4,7 +4,7 @@
 // DeepSpeed Team
 
 #include <torch/extension.h>
-
+#include "../cppdebug.h"
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
@@ -32,6 +32,7 @@ unsigned get_workspace_size(unsigned maxBatchSize,
                             bool training,
                             bool gelu_checkpoint)
 {
+    debuginfo();
     unsigned workSpacesize = 4 * (size_t(maxBatchSize) * seq_len * hidden_size);
     if (training) {
         workSpacesize += 2 * (size_t(maxBatchSize) * seq_len * hidden_size);
@@ -133,7 +134,7 @@ BertTransformerLayer<T>::BertTransformerLayer(unsigned layer_id,
                                                          gemm_algos[4]))
 {
     assert(_hidden_size % _heads == 0);
-
+    debuginfo();
     Initialize();
 }
 
@@ -179,6 +180,7 @@ void BertTransformerLayer<T>::Forward(unsigned bsz,
                                       T* gelu_inp_ptr,
                                       T* ff2_inp_ptr)
 {
+    debuginfo();
     cublasSetStream(_cublasHandle, _stream);
 
     if (!_stochastic_mode) cudaStreamSynchronize(_stream);
@@ -339,6 +341,7 @@ void BertTransformerLayer<T>::Backward(unsigned bsz,
                                        T* grad_norm_w_ptr,
                                        T* grad_norm_b_ptr)
 {
+    debuginfo();
     cublasSetStream(_cublasHandle, _stream);
 
     if (!_stochastic_mode) cudaStreamSynchronize(_stream);
@@ -556,6 +559,7 @@ void BertTransformerLayer<T>::Backward(unsigned bsz,
 template <typename T>
 void BertTransformerLayer<T>::SetTrainingMode(bool training)
 {
+    debuginfo();
     // Dropout will be skipped when not in training model.
     _attn_prob_dropout.SetTrainingMode(training);
     _attn_output_dropout.SetTrainingMode(training);
@@ -571,6 +575,7 @@ void BertTransformerLayer<T>::SetIntermediateBuffers(uint8_t* attn_prob_dropout_
                                                      T* layer_norm_var,
                                                      T* layer_norm_mean)
 {
+    debuginfo();
     _attn_prob_dropout.SetMask(attn_prob_dropout_mask_ptr);
     _attn_output_dropout.SetMask(attn_output_dropout_mask_ptr);
     _layer_output_dropout.SetMask(layer_output_dropout_mask_ptr);
@@ -584,6 +589,7 @@ void BertTransformerLayer<T>::SetIntermediateBuffers(uint8_t* attn_prob_dropout_
 template <typename T>
 void BertTransformerLayer<T>::SetSeqLength(unsigned seq_len)
 {
+    debuginfo();
     _seq_length = seq_len;
 
     _softmax.SetSeqLength(_seq_length);
@@ -609,6 +615,7 @@ int create_transformer_layer(unsigned layer_id,
                              bool gelu_checkpoint,
                              bool stochastic_mode)
 {
+    debuginfo();
     TrainingContext::Instance().SetSeed(seed);
     TrainingContext::Instance().TestGemmFP16(
         test_gemm, batch_size, init_seq_length, num_heads, hidden_dim / num_heads);
@@ -662,6 +669,7 @@ std::vector<torch::Tensor> ds_transformer_forward(unsigned layer_id,
                                                   bool normalize_invertible,
                                                   bool gelu_checkpoint)
 {
+    debuginfo();
     CHECK_INPUT(input);
     CHECK_INPUT(input_mask);
     CHECK_INPUT(attn_qkvw);
@@ -860,6 +868,7 @@ std::vector<torch::Tensor> ds_transformer_backward(unsigned layer_id,
                                                    const torch::Tensor& norm_w,
                                                    const torch::Tensor& norm_b)
 {
+    debuginfo();
     auto g_output = grad_output.contiguous();
     CHECK_INPUT(g_output);
     CHECK_INPUT(output);

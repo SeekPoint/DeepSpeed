@@ -8,9 +8,10 @@
 #include <cstdio>
 #include <vector>
 #include "spatial_cuda_layers.h"
-
+#include "../../cppdebug.h"
 ChannelsLastProblem dimension_problem(at::Tensor& input)
 {
+    debuginfo();
     ChannelsLastProblem dims;
 
     if (input.dim() == 4) {
@@ -34,6 +35,7 @@ ChannelsLastProblem dimension_problem(at::Tensor& input)
 
 at::Tensor seq_unroll_bias_add(at::Tensor& input, at::Tensor& bias)
 {
+    debuginfo();
     assert(input.dtype() == at::kHalf);
 
     // TODO(cmikeh2): Should probably refactor this into a more portable
@@ -57,6 +59,7 @@ at::Tensor seq_unroll_bias_add(at::Tensor& input, at::Tensor& bias)
 
 at::Tensor seq_bias_add_add(at::Tensor& input, at::Tensor& bias, at::Tensor& other)
 {
+    debuginfo();
     assert(input.dtype() == at::kHalf);
 
     // TODO(cmikeh2): Should probably refactor this into a more portable
@@ -83,6 +86,7 @@ at::Tensor seq_bias_add_bias_add(at::Tensor& input,
                                  at::Tensor& other,
                                  at::Tensor& other_bias)
 {
+    debuginfo();
     assert(input.dtype() == at::kHalf);
 
     // TODO(cmikeh2): Should probably refactor this into a more portable

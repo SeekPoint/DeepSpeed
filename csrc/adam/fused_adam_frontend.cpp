@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 #include <torch/extension.h>
 
 void multi_tensor_adam_cuda(int chunk_size,

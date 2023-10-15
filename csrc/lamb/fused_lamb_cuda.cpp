@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
 #include <torch/extension.h>
 
 // CUDA forward declaration
@@ -50,6 +50,7 @@ at::Tensor lamb(at::Tensor& p,
                 int bias_correction,
                 float decay)
 {
+    debuginfo();
     CHECK_INPUT(p);
     if (p_copy.numel() > 0) CHECK_INPUT(p_copy);
     CHECK_INPUT(m);

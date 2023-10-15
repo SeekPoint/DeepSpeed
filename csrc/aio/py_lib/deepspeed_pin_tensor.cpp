@@ -6,13 +6,14 @@
 /*
 Functionality for managing CPU tensors occupying page-locked memory.
 */
-
+#include "../../cppdebug.h"
 #include "deepspeed_pin_tensor.h"
 
 using namespace std;
 
 deepspeed_pin_tensor_t::~deepspeed_pin_tensor_t()
 {
+    debuginfo()
     for (auto iter = _locked_tensors.begin(); iter != _locked_tensors.end(); ++iter) {
         munlock(iter->first, iter->second);
     }
@@ -21,6 +22,7 @@ deepspeed_pin_tensor_t::~deepspeed_pin_tensor_t()
 
 torch::Tensor deepspeed_pin_tensor_t::alloc(const size_t num_elem, const at::ScalarType& elem_type)
 {
+    debuginfo();
     const auto num_bytes = num_elem * elementSize(elem_type);
     auto pinned_buffer = ds_page_aligned_alloc(num_bytes, true);
     assert(nullptr != pinned_buffer);
@@ -34,6 +36,7 @@ torch::Tensor deepspeed_pin_tensor_t::alloc(const size_t num_elem, const at::Sca
 
 bool deepspeed_pin_tensor_t::free(torch::Tensor& locked_tensor)
 {
+    debuginfo();
     auto addr = locked_tensor.data_ptr();
     if (_locked_tensors.find(addr) != _locked_tensors.end()) {
         munlock(addr, _locked_tensors[addr]);

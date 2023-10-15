@@ -9,7 +9,7 @@ Licensed under the MIT license.
 
 Functionality for swapping optimizer tensors to/from (NVMe) storage devices.
 */
-
+#include "../../cppdebug.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +47,7 @@ int deepspeed_py_aio_write(const torch::Tensor& buffer,
                            const bool overlap_events,
                            const bool validate)
 {
+    debuginfo();
     const auto start_time = std::chrono::high_resolution_clock::now();
     deepspeed_aio_config_t config(block_size, queue_depth, single_submit, overlap_events, false);
 
@@ -86,6 +87,7 @@ int deepspeed_py_aio_read(torch::Tensor& buffer,
                           const bool overlap_events,
                           const bool validate)
 {
+    debuginfo();
     const auto start_time = std::chrono::high_resolution_clock::now();
     long long num_file_bytes;
     if (-1 == get_file_size(filename, num_file_bytes)) {
