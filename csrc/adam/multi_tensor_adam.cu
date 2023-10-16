@@ -45,7 +45,8 @@ struct AdamFunctor {
                                                adamMode_t mode,
                                                const float decay)
     {
-        debuginfo();
+        //debuginfo(); ///home/amd00/yk_repo/ds/DeepSpeed/csrc/adam/multi_tensor_adam.cu(48)-<operator()>:
+
         // I'd like this kernel to propagate infs/nans.
         // if(*noop_gmem == 1)
         //   return;
