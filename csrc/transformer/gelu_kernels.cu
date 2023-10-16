@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 
 inline __device__ float gelu(const float x)
 {
+    debuginfo();
     const float sqrt_param = 0.79788456080286535587989211986876f;
     const float mul_param = 0.044715;
     return x * 0.5f * (1.0f + tanhf(sqrt_param * (x + mul_param * x * x * x)));
@@ -14,6 +16,7 @@ inline __device__ float gelu(const float x)
 
 inline __device__ float d_gelu(const float x)
 {
+    debuginfo();
     const float sqrt_param = 0.79788456080286535587989211986876f;
     const float mul_param = 0.044715;
 
@@ -42,6 +45,7 @@ that computes it directly.
 
 __global__ void gelu_kernel(const float* input, float* vals, int row_stride, int iterations)
 {
+    debuginfo();
     int row = blockIdx.x;
     int id = threadIdx.x;
     int loop_stride = blockDim.x;
@@ -65,6 +69,7 @@ __global__ void gelu_kernel(const float* input, float* vals, int row_stride, int
 
 __global__ void gelu_kernel(const __half* input, __half* vals, int row_stride, int iterations)
 {
+    debuginfo();
 #ifdef HALF_PRECISION_AVAILABLE
     int row = blockIdx.x;
     int id = threadIdx.x;
@@ -102,6 +107,8 @@ __global__ void fused_bias_gelu(const float* input,
                                 int row_stride,
                                 int iterations)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
     int loop_stride = blockDim.x;
@@ -136,6 +143,8 @@ __global__ void fused_bias_gelu(const __half* input,
                                 int row_stride,
                                 int iterations)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int row = blockIdx.x;
     int id = threadIdx.x;
@@ -184,6 +193,8 @@ __global__ void d_gelu_func(float* d_output,
                             int row_stride,
                             int iterations)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
     int loop_stride = blockDim.x;
@@ -219,6 +230,8 @@ __global__ void d_gelu_func(__half* d_output,
                             int row_stride,
                             int iterations)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int row = blockIdx.x;
     int id = threadIdx.x;
@@ -278,6 +291,8 @@ void launch_bias_gelu(const T* input,
                       int batch_size,
                       cudaStream_t stream)
 {
+    debuginfo();
+
     int iterations = (intermediate_size + 1023) / 1024;
     int threads = (intermediate_size - 1) / (iterations * 4) + 1;
     dim3 block_dims(threads);
@@ -294,6 +309,8 @@ void launch_gelu(const T* input,
                  int batch_size,
                  cudaStream_t stream)
 {
+    debuginfo();
+
     int iterations = (intermediate_size + 1023) / 1024;
     int threads = (intermediate_size - 1) / (iterations * 4) + 1;
     dim3 block_dims(threads);
@@ -322,6 +339,8 @@ void launch_d_gelu(T* d_output,
                    int batch_size,
                    cudaStream_t stream)
 {
+    debuginfo();
+
     int iterations = (intermediate_size + 1023) / 1024;
     int threads = (intermediate_size - 1) / (iterations * 4) + 1;
     dim3 block_dims(threads);

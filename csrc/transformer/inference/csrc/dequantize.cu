@@ -5,7 +5,8 @@
 
 #include "conversion_utils.h"
 #include "inference_cuda_layers.h"
-
+#include "../../../cppdebug.h"
+#include "../../../cudebug.cuh"
 #define MAX_QUANTIZE_GROUPING 1024
 
 #define loop_unroll 1
@@ -20,6 +21,7 @@ __global__ void dequantize_kernel(T* output,
                                   int groups,
                                   int merge_count)
 {
+    debuginfo();
     unsigned merge_hidden = hidden_dim >> merge_count;
     unsigned quantization_stride = (merge_hidden * output_size) / groups;
 
@@ -55,6 +57,8 @@ void launch_dequantize(T* output,
                        unsigned merge_count,
                        cudaStream_t stream)
 {
+    debuginfo();
+
     unsigned threads = 1024;
     dim3 block_dims(threads);
     dim3 grid_dims(hidden_dim);
@@ -90,6 +94,8 @@ __global__ void dequantize_kernel(T* output,
                                   unsigned merge_hidden,
                                   int cnt)
 {
+    debuginfo();
+
     unsigned bid = blockIdx.x * gridDim.y + blockIdx.y;
     unsigned tid = threadIdx.x;
 
@@ -128,6 +134,8 @@ void launch_dequantize(T* output,
                        unsigned groups,
                        cudaStream_t stream)
 {
+    debuginfo();
+
     unsigned threads = 1024;
     hidden_dim /= 4;
     unsigned hid_cnt = threads / hidden_dim;

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include <cstdio>
 #include "dequantization_utils.h"
 #include "ds_kernel_utils.h"
@@ -33,6 +34,7 @@ __global__ void __launch_bounds__(1024) dequant_reduce(int8_t* reduced_data,
                                                        int elems_per_in_group,
                                                        int num_tensors)
 {
+    debuginfo();
     // 这段代码首先获取了当前的线程块（tb）和线程块内的一个 warp（warp）：
     cg::thread_block tb = cg::this_thread_block();
     cg::thread_block_tile<hw_warp_size> warp = cg::tiled_partition<hw_warp_size>(tb);
@@ -201,6 +203,7 @@ void launch_dequant_reduce_impl(int8_t* reduced_data,
                                 int num_tensors,
                                 cudaStream_t stream)
 {
+    debuginfo();
     // This is a coincidence. This is derived by 8 halves per 16 bytes with 2-way packing for int4
     // 定义了每个线程需要处理的元素数量，这个值与numBits（模板参数）相同。
     constexpr int elems_per_thread = numBits;
@@ -283,6 +286,8 @@ void launch_dequant_reduce(int8_t* reduced_data, //这是一个指针，指向�
                            int elems_per_in_group,
                            cudaStream_t stream)
 {
+    debuginfo();
+
     // 根据量化类型（对称或非对称）和位数（4或8），对应的反量化和reduce的实现(LAUNCH_DEQUANT_REDUCE_IMPL)被调用。
     // 这个实现可能会根据不同的配置优化计算过程，例如对于8个GPU和16个GPU的情况。
     if (quant_type == quantize::Type::Symmetric) {

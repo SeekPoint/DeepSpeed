@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "general_kernels.h"
 
 namespace cg = cooperative_groups;
@@ -13,6 +14,8 @@ __global__ void column_sum_reduce(const T* __restrict__ inp,
                                   int rows,
                                   int width)
 {
+    debuginfo();
+
     __shared__ float tile[TILE_DIM][TILE_DIM + 1];
 
     cg::thread_block b = cg::this_thread_block();
@@ -66,6 +69,8 @@ void launch_fuse_transpose_bias_kernel<float>(const float* inp,
                                               int cols,
                                               cudaStream_t stream)
 {
+    debuginfo();
+
     // assert(rows % TILE_DIM == 0);
     // assert(cols % TILE_DIM == 0);
 
@@ -82,6 +87,7 @@ void launch_fuse_transpose_bias_kernel<__half>(const __half* inp,
                                                int cols,
                                                cudaStream_t stream)
 {
+    debuginfo();
     // assert(rows % TILE_DIM == 0);
     // assert(cols % TILE_DIM == 0);
 
@@ -93,6 +99,8 @@ void launch_fuse_transpose_bias_kernel<__half>(const __half* inp,
 
 __global__ void fused_add2_kernel(const int N, float* out, const float* inp1, const float* inp2)
 {
+    debuginfo();
+
     const float4* inp1_4 = reinterpret_cast<const float4*>(inp1);
     const float4* inp2_4 = reinterpret_cast<const float4*>(inp2);
     float4* out_4 = reinterpret_cast<float4*>(out);
@@ -114,6 +122,8 @@ __global__ void fused_add2_kernel(const int N, float* out, const float* inp1, co
 
 __global__ void fused_add2_kernel(const int N, __half* out, const __half* inp1, const __half* inp2)
 {
+    debuginfo();
+
     float2 inp1_4;
     float2 inp2_4;
 
@@ -159,6 +169,8 @@ void launch_fused_add2<float>(float* out,
                               int hidden_dim,
                               cudaStream_t& stream)
 {
+    debuginfo();
+
     int total_count = batch_size * seq_length * hidden_dim / 4;
     dim3 grid_dim = DS_GET_BLOCKS(total_count);  //(batch_size * seq_length);
 
@@ -176,6 +188,8 @@ void launch_fused_add2<__half>(__half* out,
                                int hidden_dim,
                                cudaStream_t& stream)
 {
+    debuginfo();
+
     int total_count = batch_size * seq_length * hidden_dim / 4;
     dim3 grid_dim = DS_GET_BLOCKS(total_count);  //(batch_size * seq_length);
 
@@ -191,6 +205,8 @@ __global__ void fused_add3_kernel(float* out,
                                   int size,
                                   int row_stride)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
 
@@ -220,6 +236,8 @@ __global__ void fused_add3_kernel(__half* out,
                                   int size,
                                   int row_stride)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
     const float2* inp1_arr = reinterpret_cast<const float2*>(inp1);
@@ -268,6 +286,8 @@ void launch_fused_add3<float>(float* out,
                               int hidden_size,
                               cudaStream_t& stream)
 {
+    debuginfo();
+
     dim3 grid_dim(batch_size * seq_length);
 
     dim3 block_dim(hidden_size / 4);
@@ -286,6 +306,8 @@ void launch_fused_add3<__half>(__half* out,
                                int hidden_size,
                                cudaStream_t& stream)
 {
+    debuginfo();
+
     dim3 grid_dim(batch_size * seq_length);
 
     dim3 block_dim(hidden_size / 4);
@@ -302,6 +324,8 @@ __global__ void fused_add4_kernel(float* out,
                                   int size,
                                   int row_stride)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
 
@@ -333,6 +357,8 @@ __global__ void fused_add4_kernel(__half* out,
                                   int size,
                                   int row_stride)
 {
+    debuginfo();
+
     int row = blockIdx.x;
     int id = threadIdx.x;
     const float2* inp1_arr = reinterpret_cast<const float2*>(inp1);
@@ -388,6 +414,8 @@ void launch_fused_add4<float>(float* out,
                               int hidden_size,
                               cudaStream_t& stream)
 {
+    debuginfo();
+
     dim3 grid_dim(batch_size * seq_length);
 
     dim3 block_dim(hidden_size / 4);
@@ -407,6 +435,8 @@ void launch_fused_add4<__half>(__half* out,
                                int hidden_size,
                                cudaStream_t& stream)
 {
+    debuginfo();
+
     dim3 grid_dim(batch_size * seq_length);
 
     dim3 block_dim(hidden_size / 4);

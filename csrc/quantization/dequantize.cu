@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "dequantization_utils.h"
 #include "memory_access_utils.h"
 
@@ -15,6 +16,7 @@ __global__ void dequantize_kernel(T* __restrict__ dequant_data,
                                   int elems_per_group,
                                   int total_elems)
 {
+    debuginfo();
     dequantize::to_global<T, numBits, qType, unroll, threads>(
         dequant_data, q_data, q_params, elems_per_group, total_elems);
 }
@@ -33,6 +35,7 @@ void launch_dequantize_kernel(T* dequant_data,
                               int total_elems,
                               cudaStream_t stream)
 {
+    debuginfo();
     constexpr int unroll = 8;
     constexpr int threads = 512;
     constexpr int elems_per_block = unroll * threads * dequantize::granularity / (sizeof(T));

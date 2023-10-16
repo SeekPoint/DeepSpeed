@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "memory_access_utils.h"
 #include "quantization_utils.h"
 #include "reduction_utils.h"
@@ -31,6 +32,8 @@ __global__ void swizzled_quant_kernel(int8_t* quantized_data,
                                       int nodes,
                                       int devices_per_node)
 {
+    debuginfo();
+
     // 获取当前的线程块对象（thread block）。hw_warp_size是一个常量32
     cg::thread_block tb = cg::this_thread_block();
     // 从线程块中划分一个大小为硬件warp大小的分区（warp）。
@@ -173,6 +176,8 @@ void launch_swizzled_quant_impl(int8_t* q_data,
                                 int devices_per_node,
                                 cudaStream_t stream)
 {
+    debuginfo();
+
     // 函数首先计算一步操作中需要的线程数one_step_threads。
     // 这是基于elems_per_group和固定步长swiz_quant::h_per_step计算得出的。
     // next_pow2函数将输入值向上取到最近的2的幂。这是为了优化线程分配，因为GPU在处理2的幂次数的线程块时，效率最高。
@@ -258,6 +263,8 @@ void launch_swizzled_quant(int8_t* q_data,
                            int devices_per_node,
                            cudaStream_t stream)
 {
+    debuginfo();
+
     // 如果num_bits等于4，那么就会进入第一个if分支；如果num_bits等于8，就会进入第二个if分支。
     // 在每个if分支中，都会再根据q_type的值来调用不同的模板函数。
     if (num_bits == 4) {

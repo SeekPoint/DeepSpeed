@@ -7,7 +7,8 @@
 Copyright NVIDIA/apex
 This file is adapted from fused adam in NVIDIA/apex, commit a109f85
 */
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include <ATen/ATen.h>
 #include <ATen/AccumulateType.h>
 #include <ATen/cuda/CUDAContext.h>
@@ -44,6 +45,7 @@ struct AdamFunctor {
                                                adamMode_t mode,
                                                const float decay)
     {
+        debuginfo();
         // I'd like this kernel to propagate infs/nans.
         // if(*noop_gmem == 1)
         //   return;
@@ -138,6 +140,8 @@ void multi_tensor_adam_cuda(int chunk_size,
                             const float weight_decay)
 {
     using namespace at;
+
+    debuginfo();
 
     // Handle bias correction mode
     float bias_correction1 = 1.0f, bias_correction2 = 1.0f;

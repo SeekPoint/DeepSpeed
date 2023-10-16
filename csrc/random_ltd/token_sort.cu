@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include <cassert>
 #include "custom_cuda_layers.h"
 #include "memory_access_utils.h"
@@ -27,6 +28,8 @@ constexpr int max_warps = threads / warp_size;
 template <int VALS_PER_THREAD>
 __global__ void scan_sort(int32_t* data, int reserved_tokens, int original_tokens)
 {
+    debuginfo();
+
     cg::thread_block tb = cg::this_thread_block();
     cg::thread_block_tile<td_sort::warp_size> warp = cg::tiled_partition<td_sort::warp_size>(tb);
 
@@ -174,6 +177,8 @@ void launch_token_sort(int32_t* indices,
                        int original_tokens,
                        cudaStream_t stream)
 {
+    debuginfo();
+
     // Each sort is completely independent, can flatten this dimension
     dim3 grid(layers * batch_size);
     dim3 block(td_sort::threads);

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 #include "memory_access_utils.h"
 
@@ -14,6 +15,8 @@ __global__ void slice_gpt_mask_impl(T* output_mask,
                                     int truncated_seq_len,
                                     int orig_seq_len)
 {
+    debuginfo();
+
     const int in_batch_stride = orig_seq_len * orig_seq_len;
     const int out_batch_stride = truncated_seq_len * truncated_seq_len;
 
@@ -37,6 +40,8 @@ void launch_slice_gpt_mask(T* output_mask,
                            int orig_seq_len,
                            cudaStream_t stream)
 {
+    debuginfo();
+
     const int threads = (truncated_seq_len >= 1024) ? 1024 : truncated_seq_len;
 
     dim3 block(threads);
@@ -57,6 +62,8 @@ __global__ void slice_bert_mask_impl(T* output_mask,
                                      int32_t truncated_seq_len,
                                      int32_t orig_seq_len)
 {
+    debuginfo();
+
     const int in_batch_stride = orig_seq_len * orig_seq_len;
     const int out_batch_stride = truncated_seq_len * truncated_seq_len;
     const int out_layer_stride = out_batch_stride * gridDim.y;
@@ -101,6 +108,8 @@ void launch_slice_bert_mask(T* output_mask,
                             int32_t orig_seq_len,
                             cudaStream_t stream)
 {
+    debuginfo();
+
     const int threads = (truncated_seq_len >= 1024) ? 1024 : truncated_seq_len;
     dim3 block(threads);
     dim3 grid(layers, batch_size, truncated_seq_len);

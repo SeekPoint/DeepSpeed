@@ -8,7 +8,8 @@
 // HIP ==  Heterogenous-computing Interface for Portability
 // 这里仅仅调研cuXXX这一系列
 #include "cublas_wrappers.h"
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #ifdef __HIP_PLATFORM_HCC__
 int cublas_gemm_ex(rocblas_handle handle,
                    rocblas_operation transa,
@@ -37,6 +38,8 @@ int cublas_gemm_ex(cublasHandle_t handle,
                    cublasGemmAlgo_t algo)
 #endif
 {
+    debuginfo();
+
 #ifdef __HIP_PLATFORM_HCC__
     rocblas_status status = rocblas_gemm_ex(handle,
                                             transa,
@@ -128,6 +131,7 @@ int cublas_gemm_ex(cublasHandle_t handle,
                    cublasGemmAlgo_t algo)
 #endif
 {
+    debuginfo();
 #ifdef __HIP_PLATFORM_HCC__
     rocblas_status status = rocblas_gemm_ex(handle,
                                             transa,
@@ -227,6 +231,8 @@ int cublas_strided_batched_gemm(cublasHandle_t handle,
                                 cublasGemmAlgo_t algo)
 #endif
 {
+    debuginfo();
+
 #ifdef __HIP_PLATFORM_HCC__
     rocblas_status status =
         rocblas_gemm_strided_batched_ex(handle,
@@ -337,6 +343,8 @@ int cublas_strided_batched_gemm(cublasHandle_t handle,
                                 cublasGemmAlgo_t algo)
 #endif
 {
+    debuginfo();
+
 #ifdef __HIP_PLATFORM_HCC__
     rocblas_status status =
         rocblas_gemm_strided_batched_ex(handle,

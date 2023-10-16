@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../../cppdebug.h"
+#include "../../../cudebug.cuh"
 #include "conversion_utils.h"
 #include "ds_kernel_utils.h"
 #include "inference_cuda_layers.h"
@@ -19,6 +20,8 @@ constexpr int granularity = 16;
 template <typename T, int UNROLL, int threadsPerGroup, int maxThreads>
 __global__ void rms_norm(T* output, const T* vals, const T* gamma, float epsilon, int elems_per_row)
 {
+    debuginfo();
+
     constexpr int T_per_load = rms::granularity / sizeof(T);
 
     cg::thread_block tb = cg::this_thread_block();
@@ -90,6 +93,8 @@ __global__ void pre_rms_norm(T* output,
                              float epsilon,
                              int elems_per_row)
 {
+    debuginfo();
+
     constexpr int T_per_load = rms::granularity / sizeof(T);
 
     cg::thread_block tb = cg::this_thread_block();
@@ -190,6 +195,8 @@ void launch_rms_norm(T* norm_output,
                      int elems_per_row,
                      cudaStream_t stream)
 {
+    debuginfo();
+
     // 8 for __half, 4 for float
     constexpr int T_per_load = rms::granularity / sizeof(T);
     constexpr int maxThreads = 256;

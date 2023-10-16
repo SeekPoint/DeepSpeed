@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 #include "memory_access_utils.h"
 
@@ -23,6 +24,8 @@ __global__ void gather_tokens_impl(T* retained_tokens,
                                    int32_t write_batch_stride,
                                    int32_t write_seq_stride)
 {
+    debuginfo();
+
     constexpr int mem_vals_t = td_data::granularity / sizeof(T);
 
     cg::thread_block tb = cg::this_thread_block();
@@ -54,6 +57,8 @@ void launch_gather_tokens(T* retained_tokens,
                           int32_t write_seq_stride,
                           cudaStream_t stream)
 {
+    debuginfo();
+
     constexpr int mem_vals_t = td_data::granularity / sizeof(T);
 
     const int load_steps = (channels + mem_vals_t - 1) / mem_vals_t;
@@ -108,6 +113,8 @@ __global__ void scatter_tokens_impl(T* all_activations,
                                     int32_t write_batch_stride,
                                     int32_t write_seq_stride)
 {
+    debuginfo();
+
     constexpr int mem_vals_t = td_data::granularity / sizeof(T);
 
     cg::thread_block tb = cg::this_thread_block();
@@ -142,6 +149,8 @@ void launch_scatter_tokens(T* all_activations,
                            int32_t write_seq_stride,
                            cudaStream_t stream)
 {
+    debuginfo();
+
     constexpr int mem_vals_t = td_data::granularity / sizeof(T);
 
     const int load_steps = (channels + mem_vals_t - 1) / mem_vals_t;

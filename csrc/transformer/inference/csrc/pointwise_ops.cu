@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../../cppdebug.h"
+#include "../../../cudebug.cuh"
 #include <cuda_fp16.h>
 #include "conversion_utils.h"
 #include "ds_kernel_utils.h"
@@ -17,6 +18,8 @@ constexpr int threads = 256;
 template <typename T>
 __global__ void vector_add_kernel(T* out, const T* a, const T* b, float gamma, int num_elems)
 {
+    debuginfo();
+
     constexpr int T_per_access = pwise::granularity / sizeof(T);
 
     const int block_offset = blockIdx.x * pwise::threads * pwise::unroll * T_per_access;
@@ -54,6 +57,8 @@ void launch_vector_add(T* out,
                        int num_elems,
                        cudaStream_t stream)
 {
+    debuginfo();
+
     constexpr int T_per_access = pwise::granularity / sizeof(T);
     constexpr int T_per_block = pwise::threads * T_per_access * pwise::unroll;
 

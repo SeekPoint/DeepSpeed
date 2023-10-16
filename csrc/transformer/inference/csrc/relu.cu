@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../../cppdebug.h"
+#include "../../../cudebug.cuh"
 #include "conversion_utils.h"
 #include "inference_cuda_layers.h"
 #include "memory_access_utils.h"
@@ -19,6 +20,8 @@ In-place relu(biasAdd(x)) for channels last
 template <typename T>
 __global__ void fused_bias_relu(T* input, const T* bias, int total_count, int intermediate_size)
 {
+    debuginfo();
+
     // Input restriction: intermediate_size % vals_per_access == 0
     constexpr int granularity = 16;
     constexpr int values_per_access = granularity / sizeof(T);
@@ -49,6 +52,8 @@ void launch_bias_relu(T* input,
                       int batch_size,
                       cudaStream_t stream)
 {
+    debuginfo();
+
     constexpr int threads = 1024;
     constexpr int granularity = 16;
 

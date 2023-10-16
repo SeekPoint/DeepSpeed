@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "ds_kernel_utils.h"
 #include "memory_access_utils.h"
 #include "quantization.h"
@@ -26,6 +27,8 @@ __global__ void cached_quantization(int8_t* __restrict__ output_data,
                                     int groups,
                                     int elems_per_group)
 {
+    debuginfo();
+
     cg::thread_block tb = cg::this_thread_block();
     cg::thread_block_tile<hw_warp_size> warp = cg::tiled_partition<hw_warp_size>(tb);
 
@@ -98,6 +101,8 @@ void launch_quant(int8_t* output_data,
                   const quantize::Type quant_type,
                   cudaStream_t stream)
 {
+    debuginfo();
+
     constexpr int max_threads = 256;
 
     constexpr int internal_unroll = 2;

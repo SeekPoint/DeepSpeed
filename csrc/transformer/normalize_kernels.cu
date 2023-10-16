@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 
 namespace cg = cooperative_groups;
@@ -29,6 +30,8 @@ __global__ void fused_bias_residual_layer_norm(float* vals,
                                                float* means,
                                                int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -130,6 +133,8 @@ __global__ void fused_bias_residual_layer_norm(__half* vals,
                                                __half* means,
                                                int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
@@ -263,6 +268,8 @@ void launch_bias_residual_layer_norm<float>(float* vals,
                                             float* vars,
                                             float* means)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(batch_size);
@@ -294,6 +301,8 @@ void launch_bias_residual_layer_norm<__half>(__half* vals,
                                              __half* vars,
                                              __half* means)
 {
+    debuginfo();
+
     int threads = 128;
 
     dim3 grid_dim(batch_size);
@@ -323,6 +332,8 @@ __global__ void fused_bias_residual_layer_norm(float* vals,
                                                float* vars,
                                                int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -421,6 +432,8 @@ __global__ void fused_bias_residual_layer_norm(__half* vals,
                                                __half* vars,
                                                int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
 
     int iteration_stride = blockDim.x;
@@ -566,6 +579,8 @@ void launch_bias_residual_layer_norm<float>(float* vals,
                                             bool training,
                                             float* vars)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(batch_size);
@@ -598,6 +613,8 @@ void launch_bias_residual_layer_norm<__half>(__half* vals,
                                              bool training,
                                              __half* vars)
 {
+    debuginfo();
+
     int threads = 128;
 
     dim3 grid_dim(batch_size);
@@ -635,6 +652,8 @@ __global__ void LayerNormBackward1(const T* __restrict__ out_grad,
                                    int width,
                                    bool invertible)
 {
+    debuginfo();
+
     __shared__ float betta_buffer[TILE_DIM][TILE_DIM + 1];
     __shared__ float gamma_buffer[TILE_DIM][TILE_DIM + 1];
 
@@ -702,6 +721,8 @@ __global__ void LayerNormBackward1(const T* __restrict__ out_grad,
                                    int rows,
                                    int width)
 {
+    debuginfo();
+
     __shared__ float betta_buffer[TILE_DIM][TILE_DIM + 1];
     __shared__ float gamma_buffer[TILE_DIM][TILE_DIM + 1];
 
@@ -767,6 +788,8 @@ __global__ void LayerNormBackward2(const float* out_grad,
                                    bool invertible,
                                    int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -867,6 +890,8 @@ __global__ void LayerNormBackward2(const __half* out_grad,
                                    bool invertible,
                                    int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
@@ -1008,6 +1033,8 @@ void launch_layerNorm_backward<float>(const float* out_grad,
                                       bool invertible,
                                       const float* betta)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1045,6 +1072,8 @@ void launch_layerNorm_backward<__half>(const __half* out_grad,
                                        bool invertible,
                                        const __half* betta)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1084,6 +1113,8 @@ __global__ void LayerNormBackward2(const float* out_grad,
                                    float* inp_grad,
                                    int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -1179,6 +1210,8 @@ __global__ void LayerNormBackward2(const __half* out_grad,
                                    __half* inp_grad,
                                    int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
@@ -1314,6 +1347,8 @@ void launch_layerNorm_backward<float>(const float* out_grad,
                                       int hidden_dim,
                                       cudaStream_t stream[2])
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1349,6 +1384,8 @@ void launch_layerNorm_backward<__half>(const __half* out_grad,
                                        int hidden_dim,
                                        cudaStream_t stream[2])
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1385,6 +1422,8 @@ __global__ void LayerNormBackward1_fused_add(const T* __restrict__ out_grad1,
                                              int width,
                                              bool invertible)
 {
+    debuginfo();
+
     __shared__ float betta_buffer[TILE_DIM][TILE_DIM + 1];
     __shared__ float gamma_buffer[TILE_DIM][TILE_DIM + 1];
 
@@ -1447,6 +1486,8 @@ __global__ void LayerNormBackward1_fused_add(const T* __restrict__ out_grad1,
                                              int rows,
                                              int width)
 {
+    debuginfo();
+
     __shared__ float betta_buffer[TILE_DIM][TILE_DIM + 1];
     __shared__ float gamma_buffer[TILE_DIM][TILE_DIM + 1];
 
@@ -1506,6 +1547,8 @@ __global__ void LayerNormBackward2_fused_add(const float* out_grad1,
                                              bool invertible,
                                              int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -1610,6 +1653,8 @@ __global__ void LayerNormBackward2_fused_add(const __half* out_grad1,
                                              bool invertible,
                                              int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
@@ -1755,6 +1800,8 @@ void launch_layerNorm_backward_fused_add<float>(const float* out_grad1,
                                                 bool invertible,
                                                 const float* betta)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1791,6 +1838,8 @@ void launch_layerNorm_backward_fused_add<__half>(const __half* out_grad1,
                                                  bool invertible,
                                                  const __half* betta)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -1830,6 +1879,8 @@ __global__ void LayerNormBackward2_fused_add(const float* out_grad1,
                                              float* inp_grad,
                                              int row_stride)
 {
+    debuginfo();
+
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
 
@@ -1933,6 +1984,8 @@ __global__ void LayerNormBackward2_fused_add(const __half* out_grad1,
                                              __half* inp_grad,
                                              int row_stride)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     int iteration_stride = blockDim.x;
     int iterations = row_stride / iteration_stride;
@@ -2073,6 +2126,8 @@ void launch_layerNorm_backward_fused_add<float>(const float* out_grad1,
                                                 int hidden_dim,
                                                 cudaStream_t stream[2])
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);
@@ -2109,6 +2164,8 @@ void launch_layerNorm_backward_fused_add<__half>(const __half* out_grad1,
                                                  int hidden_dim,
                                                  cudaStream_t stream[2])
 {
+    debuginfo();
+
     int threads = THREADS;
 
     dim3 grid_dim(hidden_dim / TILE_DIM);

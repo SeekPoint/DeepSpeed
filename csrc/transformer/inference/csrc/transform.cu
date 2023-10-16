@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../../cppdebug.h"
+#include "../../../cudebug.cuh"
 #ifndef __HIP_PLATFORM_HCC__
 #include <cuda_profiler_api.h>
 #endif
@@ -32,6 +33,8 @@ __global__ void bias_add_transform_0213(float* output,
                                         int head_ext,
                                         int max_out_tokens)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = hidden_dim;
     int d2_stride = hidden_dim / heads;
@@ -98,6 +101,8 @@ __global__ void bias_add_transform_0213(T* output,  // q
                                         int head_ext,
                                         int max_out_tokens)
 {
+    debuginfo();
+
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     unsigned half_dim = (rotary_dim << 3) >> 1;
@@ -178,6 +183,8 @@ void launch_bias_add_transform_0213<float>(float* output,
                                            int trans_count,
                                            int max_out_tokens)
 {
+    debuginfo();
+
     hidden_dim >>= 2;
     int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
 
@@ -219,6 +226,8 @@ void launch_bias_add_transform_0213(T* output,
                                     int trans_count,
                                     int max_out_tokens)
 {
+    debuginfo();
+
     hidden_dim >>= 3;
     int head_ext = 1;  // (hidden_dim - 1) / MAX_THREADS + 1;
     dim3 block_dim(hidden_dim / heads, (heads / head_ext));
@@ -285,6 +294,8 @@ __global__ void pad_add_transform_0213(T* output,
                                        int heads,
                                        int padded_head_size)
 {
+    debuginfo();
+
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     float4 ZERO;
@@ -347,6 +358,8 @@ void launch_pad_add_transform_0213(T* output,
                                    int padded_head_size,
                                    cudaStream_t stream)
 {
+    debuginfo();
+
     hidden_dim >>= 3;
     dim3 block_dim((padded_head_size >> 3), heads, 2);
     dim3 grid_dim(batch_size, padded_seq_len / 2);
@@ -382,6 +395,8 @@ __global__ void bias_add_transform_0213<float>(float* output,
                                                int heads,
                                                int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = hidden_dim;
     int d2_stride = hidden_dim / heads;
@@ -423,6 +438,8 @@ __global__ void bias_add_transform_0213(T* output,
                                         int heads,
                                         int head_ext)
 {
+    debuginfo();
+
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     int d0_stride = hidden_dim * seq_length;
@@ -479,6 +496,8 @@ __global__ void bias_add_transform_0213_v2(T* output,
                                            int seq_length,
                                            int heads)
 {
+    debuginfo();
+
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     __shared__ float4 in_data[3072];
@@ -560,6 +579,8 @@ __global__ void transform4d_0213<float>(float* out,
                                         int hidden_dim,
                                         int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = d0_stride / heads;
     int d2_stride = hidden_dim / heads;
@@ -593,6 +614,8 @@ __global__ void transform4d_0213(T* out,
                                  int hidden_dim,
                                  int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * (seq_length / head_ext);
     int d1_stride = hidden_dim;
     int d2_stride = hidden_dim / heads;
@@ -622,6 +645,8 @@ __global__ void transform4d_0213(T* out,
 template <typename T>
 __global__ void transform4d_0213_v2(T* out, const T* in, int heads, int seq_length, int hidden_dim)
 {
+    debuginfo();
+
     __shared__ float4 in_data[3072];
 
     int d0_stride = hidden_dim * seq_length;
@@ -675,6 +700,8 @@ void launch_transform4d_0213<float>(float* out,
                                     cudaStream_t stream,
                                     int trans_count)
 {
+    debuginfo();
+
     hidden_dim >>= 2;
     dim3 grid_dims(batch_size, heads * ((seq_length - 1) / 8 + 1), trans_count);
     dim3 block_dims(hidden_dim / heads, 8);
@@ -692,6 +719,8 @@ void launch_transform4d_0213(T* out,
                              cudaStream_t stream,
                              int trans_count)
 {
+    debuginfo();
+
     hidden_dim >>= 3;
     int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
     dim3 grid_dims(batch_size, trans_count, (seq_length * head_ext));

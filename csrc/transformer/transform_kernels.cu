@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 
 #define rows_trans 16
@@ -11,6 +12,8 @@
 template <typename T>
 __global__ void Transpose_Kernel(const T* inp, T* out, int row_width, int col_width)
 {
+    debuginfo();
+
     __shared__ T data_block[rows_trans * (cols_trans + 1)];
 
     int r = threadIdx.x / cols_trans;
@@ -42,6 +45,8 @@ void Transpose<__half>(const __half* inp_mat,
                        int cols,
                        cudaStream_t stream)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     Transpose_Kernel<__half><<<(rows * cols + threads - 1) / threads, threads, 0, stream>>>(
@@ -51,6 +56,8 @@ void Transpose<__half>(const __half* inp_mat,
 template <>
 void Transpose<float>(const float* inp_mat, float* out_mat, int rows, int cols, cudaStream_t stream)
 {
+    debuginfo();
+
     int threads = THREADS;
 
     Transpose_Kernel<float><<<(rows * cols + threads - 1) / threads, threads, 0, stream>>>(
@@ -73,6 +80,8 @@ __global__ void transform_0213<float>(float* output,
                                       int heads,
                                       int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = hidden_dim;
     int d2_stride = hidden_dim / heads;
@@ -101,6 +110,8 @@ __global__ void transform_0213<__half>(__half* output,
                                        int heads,
                                        int head_ext)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
 
     int d0_stride = hidden_dim * seq_length;
@@ -135,6 +146,8 @@ void launch_transform_0213<float>(float* output,
                                   int heads,
                                   cudaStream_t stream)
 {
+    debuginfo();
+
     hidden_dim >>= 2;
     int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
     dim3 block_dim(hidden_dim / heads, (heads / head_ext));
@@ -153,6 +166,8 @@ void launch_transform_0213<__half>(__half* output,
                                    int heads,
                                    cudaStream_t stream)
 {
+    debuginfo();
+
     hidden_dim >>= 3;
     int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
     dim3 block_dim(hidden_dim / heads, (heads / head_ext));
@@ -180,6 +195,8 @@ __global__ void bias_add_transform_0213<float>(float* output,
                                                int heads,
                                                int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = hidden_dim;
     int d2_stride = hidden_dim / heads;
@@ -224,6 +241,8 @@ __global__ void bias_add_transform_0213<__half>(__half* output,
                                                 int heads,
                                                 int head_ext)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
 
     int d0_stride = hidden_dim * seq_length;
@@ -294,6 +313,8 @@ __global__ void bias_add_transform_0213_v2(__half* output,
                                            int seq_length,
                                            int heads)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     __shared__ float4 in_data[3072];
 
@@ -371,6 +392,8 @@ void launch_bias_add_transform_0213<float>(float* output,
                                            cudaStream_t stream,
                                            int trans_count)
 {
+    debuginfo();
+
     hidden_dim >>= 2;
     int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
 
@@ -392,6 +415,8 @@ void launch_bias_add_transform_0213<__half>(__half* output,
                                             cudaStream_t stream,
                                             int trans_count)
 {
+    debuginfo();
+
     hidden_dim >>= 3;
     if (hidden_dim > 128 || hidden_dim < 16) {
         int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;
@@ -423,6 +448,8 @@ __global__ void transform4d_0213<float>(float* out,
                                         int hidden_dim,
                                         int head_ext)
 {
+    debuginfo();
+
     int d0_stride = hidden_dim * seq_length;
     int d1_stride = d0_stride / heads;
     int d2_stride = hidden_dim / heads;
@@ -456,6 +483,7 @@ __global__ void transform4d_0213<__half>(__half* out,
                                          int hidden_dim,
                                          int head_ext)
 {
+    debuginfo();
 #ifdef HALF_PRECISION_AVAILABLE
 
     int d0_stride = hidden_dim * (seq_length / head_ext);
@@ -492,6 +520,7 @@ __global__ void transform4d_0213_v2(__half* out,
                                     int seq_length,
                                     int hidden_dim)
 {
+    debuginfo();
 #ifdef HALF_PRECISION_AVAILABLE
     __shared__ float4 in_data[3072];
 
@@ -547,6 +576,8 @@ void launch_transform4d_0213<float>(float* out,
                                     cudaStream_t stream,
                                     int trans_count)
 {
+    debuginfo();
+
     hidden_dim >>= 2;
     dim3 grid_dims(batch_size, heads * ((seq_length - 1) / 8 + 1), trans_count);
     dim3 block_dims(hidden_dim / heads, 8);
@@ -564,6 +595,8 @@ void launch_transform4d_0213<__half>(__half* out,
                                      cudaStream_t stream,
                                      int trans_count)
 {
+    debuginfo();
+    
     hidden_dim >>= 3;
     if (hidden_dim > 128 || hidden_dim < 16) {
         int head_ext = (hidden_dim - 1) / MAX_THREADS + 1;

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include "custom_cuda_layers.h"
 
 const int unroll_factor = 4;
@@ -14,6 +15,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -63,6 +66,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -163,6 +168,8 @@ __global__ void dropout_kernel_bwd(const int N,
                                    uint8_t* mask,
                                    std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     CUDA_1D_KERNEL_LOOP(j, N / unroll_factor)
     {
@@ -187,6 +194,8 @@ __global__ void dropout_kernel_bwd(const int N,
                                    uint8_t* mask,
                                    std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
 
 #ifdef __STOCHASTIC_MODE__
@@ -268,6 +277,8 @@ void launch_dropout(T* out,
                     cudaStream_t stream,
                     bool bwd)
 {
+    debuginfo();
+
     assert(unroll_factor == 4);
 
     dim3 grid_dim = DS_GET_BLOCKS(total_count / unroll_factor);
@@ -311,6 +322,8 @@ __global__ void dropout_grad_kernel(const int N, const float scale, float* Xdata
 
 __global__ void dropout_grad_kernel(const int N, const float scale, __half* Xdata, uint8_t* mask)
 {
+    debuginfo();
+
     const __half2 h_scale = __float2half2_rn(scale);
     float2* x_cast = reinterpret_cast<float2*>(Xdata);
     uint32_t* mask_cast = reinterpret_cast<uint32_t*>(mask);
@@ -368,6 +381,8 @@ __global__ void dropout_grad_kernel(const int N, const float scale, __half* Xdat
 template <typename T>
 void launch_dropout_grad(T* vals, uint8_t* mask, int total_count, float ratio, cudaStream_t stream)
 {
+    debuginfo();
+
     assert(unroll_factor == 4);
 
     const float scale = 1. / (1. - ratio);
@@ -403,6 +418,8 @@ __global__ void dropout_grad_kernel(const int N,
                                     __half* out,
                                     uint8_t* mask)
 {
+    debuginfo();
+
     const float2* x_cast = reinterpret_cast<const float2*>(Xdata);
     float2* out_cast = reinterpret_cast<float2*>(out);
     const uint32_t* mask_cast = reinterpret_cast<const uint32_t*>(mask);
@@ -446,6 +463,8 @@ void launch_dropout_grad(T* vals_out,
                          float ratio,
                          cudaStream_t stream)
 {
+    debuginfo();
+
     assert(unroll_factor == 4);
 
     const float scale = 1. / (1. - ratio);
@@ -475,6 +494,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int tid = threadIdx.x % (dim / unroll_factor);
@@ -536,6 +557,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int tid = threadIdx.x % (dim / unroll_factor);
@@ -617,6 +640,8 @@ void launch_dropout(T* out,
                     float ratio,
                     cudaStream_t stream)
 {
+    debuginfo();
+
     assert(unroll_factor == 4);
 
     int total_count = batch * dim / unroll_factor;
@@ -656,6 +681,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int tid = threadIdx.x % (dim / unroll_factor);
@@ -733,6 +760,8 @@ __global__ void dropout_kernel(const int N,
                                uint8_t* mask,
                                std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
+
     const float scale = 1. / (1. - ratio);
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int tid = threadIdx.x % (dim / unroll_factor);
@@ -840,6 +869,8 @@ void launch_dropout(T* out,
                     float ratio,
                     cudaStream_t stream)
 {
+    debuginfo();
+
     assert(unroll_factor == 4);
 
     int total_count = batch * dim / unroll_factor;

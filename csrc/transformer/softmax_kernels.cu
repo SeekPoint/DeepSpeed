@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include <math.h>
 #include "custom_cuda_layers.h"
 #include "general_kernels.h"
@@ -11,6 +12,8 @@ namespace cg = cooperative_groups;
 
 dim3 get_attn_softmax_grid(int batch_size, int heads, int sequence_length, int threads)
 {
+    debuginfo();
+
     int seq_length4 = sequence_length / 4;
     int block_compute_size =
         (seq_length4 < threads ? (int)pow(2.0, floor(log2((float)(threads / seq_length4)))) : 1);
@@ -31,6 +34,8 @@ __global__ void attn_softmax(float* vals,
                              int seq_length,
                              int iterations)
 {
+    debuginfo();
+
     __shared__ float partialSum[MAX_WARP_NUM];
 
     int warp_num = blockDim.x >> WARP_SIZE_BITS;
@@ -161,6 +166,8 @@ __global__ void attn_softmax(__half* vals,
                              int seq_length,
                              int iterations)
 {
+    debuginfo();
+
 #ifdef HALF_PRECISION_AVAILABLE
     __shared__ float partialSum[MAX_WARP_NUM];
 
@@ -316,6 +323,8 @@ void launch_attn_softmax<float>(float* vals,
                                 int sequence_length,
                                 cudaStream_t stream)
 {
+    debuginfo();
+
     const int threads = 128;
     int seq_length4 = sequence_length / 4;
 
@@ -381,6 +390,8 @@ void launch_attn_softmax<__half>(__half* vals,
                                  int sequence_length,
                                  cudaStream_t stream)
 {
+    debuginfo();
+
     const int threads = 128;
     int seq_length4 = sequence_length / 4;
 
@@ -442,6 +453,8 @@ void launch_attn_softmax<__half>(__half* vals,
 template <typename T, int tbSize, int blockStride>
 __global__ void softmax_backward_kernel(T* out_grad, const T* soft_inp, int seq_length)
 {
+    debuginfo();
+
     __shared__ float partialSum[MAX_WARP_NUM];
 
     int warp_num = blockDim.x >> WARP_SIZE_BITS;  // warp-count = num_threads / WARP_SIZE (32)
@@ -508,6 +521,8 @@ __global__ void softmax_backward_kernel_v2(T* grad /* input & output*/,
                                            const T* output,
                                            int softmax_length)
 {
+    debuginfo();
+
     int batch_idx = blockIdx.x * blockDim.y + threadIdx.y;
     int offset = batch_idx * softmax_length + threadIdx.x;
 
@@ -545,6 +560,8 @@ __global__ void softmax_backward_kernel_arbitrary_length(__half* grad /* input &
                                                          const __half* output,
                                                          int softmax_length)
 {
+    debuginfo();
+
     int batch_idx = blockIdx.x * blockDim.y + threadIdx.y;
     int offset = batch_idx * softmax_length + threadIdx.x;
 
@@ -593,6 +610,8 @@ __global__ void softmax_backward_kernel_arbitrary_length(float* grad /* input & 
                                                          const float* output,
                                                          int softmax_length)
 {
+    debuginfo();
+
     int batch_idx = blockIdx.x * blockDim.y + threadIdx.y;
     int offset = batch_idx * softmax_length + threadIdx.x;
 
@@ -645,6 +664,8 @@ void launch_attn_softmax_backward_v2(T* out_grad,
                                      int seq_length,
                                      cudaStream_t stream)
 {
+    debuginfo();
+
     const int warps_per_block = 4;
     dim3 grid_dim(batch_size * heads * seq_length / warps_per_block);
     dim3 block_dim(WARP_SIZE, warps_per_block);

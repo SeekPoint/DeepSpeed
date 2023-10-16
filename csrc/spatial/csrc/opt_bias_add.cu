@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../../cppdebug.h"
+#include "../../cudebug.cuh"
 #include <cassert>
 #include "memory_access_utils.h"
 #include "spatial_cuda_layers.h"
@@ -27,6 +28,8 @@ __global__ void opt_bias_add(__half* result,
                              int seq_len,
                              int channels)
 {
+    debuginfo();
+
     const int id = blockIdx.x * badd_opt::vals_per_block + threadIdx.x * badd_opt::vals_per_h;
     const int stride = badd_opt::vals_per_h * badd_opt::threads;
 
@@ -54,6 +57,7 @@ __global__ void opt_bias_add_add(__half* result,
                                  int seq_len,
                                  int channels)
 {
+    debuginfo();
     const int id = blockIdx.x * badd_opt::vals_per_block + threadIdx.x * badd_opt::vals_per_h;
     const int stride = badd_opt::vals_per_h * badd_opt::threads;
 
@@ -86,6 +90,7 @@ __global__ void opt_bias_add_bias_add(__half* result,
                                       int seq_len,
                                       int channels)
 {
+    debuginfo();
     const int id = blockIdx.x * badd_opt::vals_per_block + threadIdx.x * badd_opt::vals_per_h;
     const int stride = badd_opt::vals_per_h * badd_opt::threads;
 
@@ -124,6 +129,7 @@ void launch_opt_bias_add(__half* result,
                          int channels,
                          cudaStream_t stream)
 {
+    debuginfo();
     // Should evaluate `true` for reasonable hidden sizes
     assert(channels % badd_opt::vals_per_h == 0);
 

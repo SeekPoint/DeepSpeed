@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // DeepSpeed Team
-
+#include "../cppdebug.h"
+#include "../cudebug.cuh"
 #include <math.h>
 #include "custom_cuda_layers.h"
 #include "memory_access_utils.h"
@@ -11,6 +12,7 @@ namespace cg = cooperative_groups;
 
 __global__ void fake_quantize_kernel(__half* vals, int group_size, int num_bits)
 {
+    debuginfo();
 #if __CUDA_ARCH__ >= 700 || defined(__HIP_PLATFORM_HCC__)
 
     cg::thread_block b = cg::this_thread_block();  // tb
@@ -89,6 +91,7 @@ __global__ void fake_quantize_kernel(__half* vals, int group_size, int num_bits)
 
 __global__ void fake_quantize_kernel(float* vals, int group_size, int num_bits)
 {
+    debuginfo();
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<32> g = cg::tiled_partition<32>(b);
 
@@ -173,6 +176,7 @@ void launch_fake_quantize_kernel(T* vals,
                                  int num_bits,
                                  cudaStream_t stream)
 {
+    debuginfo();
     dim3 grid_dim(group_num);
     dim3 block_dim(1024);
 
@@ -197,6 +201,7 @@ __global__ void sr_fake_quantize_kernel(__half* vals,
                                         int num_bits,
                                         std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
 #if __CUDA_ARCH__ >= 700 || defined(__HIP_PLATFORM_HCC__)
 
     cg::thread_block b = cg::this_thread_block();
@@ -333,6 +338,7 @@ __global__ void sr_fake_quantize_kernel(float* vals,
                                         int num_bits,
                                         std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<32> g = cg::tiled_partition<32>(b);
 
@@ -453,6 +459,7 @@ void launch_sr_fake_quantize_kernel(T* vals,
                                     int num_bits,
                                     cudaStream_t stream)
 {
+    debuginfo();
     dim3 block_dim(1024);
     dim3 grid_dim(group_num);
 
@@ -475,6 +482,7 @@ template void launch_sr_fake_quantize_kernel(__half* vals,
 
 __global__ void fake_quantize_kernel_asym(__half* vals, int group_size, int num_bits)
 {
+    debuginfo();
 #if __CUDA_ARCH__ >= 700 || defined(__HIP_PLATFORM_HCC__)
 
     cg::thread_block b = cg::this_thread_block();
@@ -588,6 +596,7 @@ __global__ void fake_quantize_kernel_asym(__half* vals, int group_size, int num_
 
 __global__ void fake_quantize_kernel_asym(float* vals, int group_size, int num_bits)
 {
+    debuginfo();
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<32> g = cg::tiled_partition<32>(b);
 
@@ -696,6 +705,7 @@ void launch_fake_quantize_kernel_asym(T* vals,
                                       int num_bits,
                                       cudaStream_t stream)
 {
+    debuginfo();
     dim3 grid_dim(group_num);
     dim3 block_dim(1024);
 
@@ -720,6 +730,7 @@ __global__ void sr_fake_quantize_kernel_asym(__half* vals,
                                              int num_bits,
                                              std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
 #if __CUDA_ARCH__ >= 700 || defined(__HIP_PLATFORM_HCC__)
 
     cg::thread_block b = cg::this_thread_block();
@@ -876,6 +887,7 @@ __global__ void sr_fake_quantize_kernel_asym(float* vals,
                                              int num_bits,
                                              std::pair<uint64_t, uint64_t> seed)
 {
+    debuginfo();
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<32> g = cg::tiled_partition<32>(b);
 
@@ -1007,6 +1019,7 @@ void launch_sr_fake_quantize_kernel_asym(T* vals,
                                          int num_bits,
                                          cudaStream_t stream)
 {
+    debuginfo();
     dim3 block_dim(1024);
     dim3 grid_dim(group_num);
 
