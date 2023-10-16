@@ -1,5 +1,10 @@
-#https://blog.csdn.net/cabinriver/article/details/8960119
+// https://blog.csdn.net/cabinriver/article/details/8960119
 
+
+#define __output(...) \
+    printf(__VA_ARGS__);
+
+#define __format(__fmt__) "%s(%d)-<%s>: " __fmt__ "\n"
 
 #define debuginfo(__fmt__, ...) __output(__format(__fmt__), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__);
 //4、使用到的宏

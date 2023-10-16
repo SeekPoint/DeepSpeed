@@ -1,0 +1,33 @@
+https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7
+
+
+https://codeantenna.com/a/qFkTMGoUL3
+DeepSpeed教程
+
+
+https://blog.csdn.net/weixin_43301333/article/details/127237122 价值高！
+
+https://zhuanlan.zhihu.com/p/630734624
+deepspeed入门教程
+
+https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7
+
+
+https://codeantenna.com/a/qFkTMGoUL3
+DeepSpeed教程
+
+
+https://zhuanlan.zhihu.com/p/576673548
+深度学习大模型训练--DeepSpeed 源码解读
+
+https://zhuanlan.zhihu.com/p/579709267
+从零开始 预训练 GPT
+
+https://www.zhihu.com/question/453941150
+DeepSpeed 框架是怎么实现将模型分区到各个node的？
+
+https://www.zhangzhenhu.com/deepspeed/index.html
+deepspeed 详解-源码分析
+
+https://zhuanlan.zhihu.com/p/650824387
+关于Deepspeed的一些总结与心得

@@ -1,37 +1,16 @@
-https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7
 
+~/yk_repo/ds/DeepSpeed$ rm -rf ~/.cache/torch_extensions/   ====触发cpp、cu的修改！！！！
+pip install 并不会触发！！！
+而是由app来触发，例如：
 
-https://codeantenna.com/a/qFkTMGoUL3
-DeepSpeed教程
-
-
-https://blog.csdn.net/weixin_43301333/article/details/127237122 价值高！
-
-https://zhuanlan.zhihu.com/p/630734624
-deepspeed入门教程
-
-https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7
-
-
-https://codeantenna.com/a/qFkTMGoUL3
-DeepSpeed教程
-
-
-https://zhuanlan.zhihu.com/p/576673548
-深度学习大模型训练--DeepSpeed 源码解读
-
-https://zhuanlan.zhihu.com/p/579709267
-从零开始 预训练 GPT
-
-https://www.zhihu.com/question/453941150
-DeepSpeed 框架是怎么实现将模型分区到各个node的？
-
-https://www.zhangzhenhu.com/deepspeed/index.html
-deepspeed 详解-源码分析
-
-https://zhuanlan.zhihu.com/p/650824387
-关于Deepspeed的一些总结与心得
-
+applications/DeepSpeed-Chat$ python3 train.py --step 1 --deployment-type single_node
+。。。。。
+Using /home/amd00/.cache/torch_extensions/py39_cu121 as PyTorch extensions root...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/amd00/.cache/torch_extensions/py39_cu121/fused_adam/build.ninja...
+Building extension module fused_adam...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+。。。。
 
 
 unittest框架下运行print无返回结果解决

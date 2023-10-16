@@ -1,3 +1,5 @@
+// https://github.com/brucefan1983/CUDA-Programming/blob/master/src/04-error-check/error.cuh
+
 #pragma once
 #include <stdio.h>
 
