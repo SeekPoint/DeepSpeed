@@ -1,5 +1,9 @@
 // https://blog.csdn.net/cabinriver/article/details/8960119
 
+//#include <string>
+//string str ('/home/amd00/yk_repo/ds/DeepSpeed/csrc');
+//cutlen = str.size();
+
 
 #define __output(...) \
     printf(__VA_ARGS__);
@@ -12,3 +16,7 @@
 //　　2) __FILE__    宏在预编译时会替换成当前的源文件名
 //　　3) __LINE__   宏在预编译时会替换成当前的行号
 //　　4) __FUNCTION__   宏在预编译时会替换成当前的函数名称
+
+
+
+// 去掉宏__FILE__的路径 https://blog.coderhuo.tech/2017/04/14/__FILE__strip_path/

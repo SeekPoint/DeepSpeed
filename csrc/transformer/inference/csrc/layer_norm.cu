@@ -37,7 +37,7 @@ __global__ void fused_ln(T* output,
                          float epsilon,
                          int elems_per_row)
 {
-    debuginfo();
+    // debuginfo();
     constexpr int T_per_load = ln::granularity / sizeof(T);
 
     cg::thread_block tb = cg::this_thread_block();
@@ -136,7 +136,7 @@ void launch_fused_ln(T* output,
                      int elems_per_row,
                      cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     // 8 for __half, 4 for float
     constexpr int T_per_load = ln::granularity / sizeof(T);
@@ -235,7 +235,7 @@ __global__ void fused_residual_ln(T* output,
                                   float epsilon,
                                   int elems_per_row)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_load = ln::granularity / sizeof(T);
 
@@ -358,7 +358,7 @@ void launch_fused_residual_ln(T* output,
                               int elems_per_row,
                               cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     // 8 for __half, 4 for float
     constexpr int T_per_load = ln::granularity / sizeof(T);
@@ -434,7 +434,7 @@ void launch_fused_residual_ln_store_pre_ln_res(T* norm_output,
                                                int elems_per_row,
                                                cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     // 8 for __half, 4 for float
     constexpr int T_per_load = ln::granularity / sizeof(T);

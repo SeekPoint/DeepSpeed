@@ -35,7 +35,7 @@ __global__ void apply_rotary_pos_half(T* mixed_query,
                                       unsigned total_count,
                                       int max_out_tokens)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_thread = granularity / sizeof(T);
     constexpr int heads_per_block = rot_half::threads / threadsPerHead;
@@ -142,7 +142,7 @@ void launch_apply_rotary_pos_emb(T* mixed_query,
                                  cudaStream_t stream,
                                  int max_out_tokens)
 {
-    debuginfo();
+    // debuginfo();
 
     const int half_dim = rotary_dim >> 1;
 

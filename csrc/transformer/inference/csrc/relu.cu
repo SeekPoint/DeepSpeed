@@ -20,7 +20,7 @@ In-place relu(biasAdd(x)) for channels last
 template <typename T>
 __global__ void fused_bias_relu(T* input, const T* bias, int total_count, int intermediate_size)
 {
-    debuginfo();
+    // // debuginfo();
 
     // Input restriction: intermediate_size % vals_per_access == 0
     constexpr int granularity = 16;
@@ -52,7 +52,7 @@ void launch_bias_relu(T* input,
                       int batch_size,
                       cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int threads = 1024;
     constexpr int granularity = 16;

@@ -3,6 +3,7 @@
 #pragma once
 #include <stdio.h>
 
+
 #define CHECK(call)                                   \
 do                                                    \
 {                                                     \
@@ -10,7 +11,7 @@ do                                                    \
     if (error_code != cudaSuccess)                    \
     {                                                 \
         printf("CUDA Error:\n");                      \
-        printf("    File:       %s\n", __FILE__);     \
+        printf("    File:       %s\n", __FILE__.substr();     \
         printf("    Line:       %d\n", __LINE__);     \
         printf("    Func:       %d\n", __FUNCTION__);     \
         printf("    Error code: %d\n", error_code);   \

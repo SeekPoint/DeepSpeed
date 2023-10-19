@@ -42,7 +42,11 @@ def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_gr
             index_in_param_group += 1
         current_offset += lp_param.numel()
     #print("param_and_offset_list is:", param_and_offset_list)
-    '''
+
+    debuginfo(prj='ds')
+    return param_and_offset_list
+
+'''
 	param_and_offset_list is: [(Parameter containing:
 tensor([[ 0.0029, -0.0250,  0.0119,  ..., -0.0127,  0.0176, -0.0144],
         [ 0.0281, -0.0600,  0.0175,  ..., -0.0219,  0.0013, -0.0139],
@@ -72,6 +76,4 @@ tensor([0.4119, 0.3984, 0.4307, 0.4651, 0.4661, 0.3464, 0.4761, 0.3530, 0.4272,
         0.3428, 0.3816, 0.4199, 0.4089, 0.4968, 0.3723, 0.4668, 0.4998, 0.3953,
         0.4421, 0.4229, 0.9312, 0.4124, 0.4570, 0.4321, 0.3259, 0.4626, 0.4431,
 
-    '''
-    debuginfo(prj='ds', info='param_and_offset_list :' + param_and_offset_list)
-    return param_and_offset_list
+'''

@@ -20,7 +20,7 @@ constexpr int granularity = 16;
 template <typename T, int UNROLL, int threadsPerGroup, int maxThreads>
 __global__ void rms_norm(T* output, const T* vals, const T* gamma, float epsilon, int elems_per_row)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_load = rms::granularity / sizeof(T);
 
@@ -93,7 +93,7 @@ __global__ void pre_rms_norm(T* output,
                              float epsilon,
                              int elems_per_row)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_load = rms::granularity / sizeof(T);
 
@@ -195,7 +195,7 @@ void launch_rms_norm(T* norm_output,
                      int elems_per_row,
                      cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     // 8 for __half, 4 for float
     constexpr int T_per_load = rms::granularity / sizeof(T);

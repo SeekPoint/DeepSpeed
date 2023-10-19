@@ -30,7 +30,7 @@ In-place gelu(biasAdd(x)) for channels last
 template <typename T>
 __global__ void fused_bias_gelu(T* input, const T* bias, int total_count, int intermediate_size)
 {
-    debuginfo();
+    // debuginfo();
     // Input restriction: intermediate_size % vals_per_access == 0
     constexpr int granularity = 16;
     constexpr int values_per_access = granularity / sizeof(T);
@@ -61,7 +61,7 @@ void launch_bias_gelu(T* input,
                       int batch_size,
                       cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     constexpr int threads = 1024;
     constexpr int granularity = 16;
 
@@ -89,7 +89,7 @@ In-place channels-last bias add
 template <typename T>
 __global__ void fused_bias_add(T* input, const T* bias, int total_count, int intermediate_size)
 {
-    debuginfo();
+    // // debuginfo();
     // Input restriction: intermediate_size % vals_per_access == 0
     constexpr int granularity = 16;
     constexpr int values_per_access = granularity / sizeof(T);
@@ -120,7 +120,7 @@ void launch_bias_add(T* input,
                      int batch_size,
                      cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     constexpr int threads = 1024;
     constexpr int granularity = 16;
 
@@ -152,7 +152,7 @@ __global__ void fused_bias_residual(float* residual,
                                     const float mp_scale,
                                     const bool preln)
 {
-    debuginfo();
+    // debuginfo();
     float4* res_fl4_ptr = reinterpret_cast<float4*>(residual);
     const float4* hs_fl4_ptr = reinterpret_cast<const float4*>(hidden_state);
     const float4* attn_fl4_ptr = reinterpret_cast<const float4*>(attn);
@@ -199,7 +199,7 @@ __global__ void fused_bias_residual(T* residual,
                                     const float mp_scale,
                                     const bool preln)
 {
-    debuginfo();
+    // // debuginfo();
 
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
@@ -275,7 +275,7 @@ void launch_bias_residual(T* residual,
                           bool preln,
                           cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     int total_count = batch * hidden_dim / 4;
     dim3 block_dims(1024);
@@ -310,7 +310,7 @@ __global__ void gptj_residual_add(float* residual,
                                   const int intermediate_size,
                                   const float mp_scale)
 {
-    debuginfo();
+    // debuginfo();
 
     float4* res_fl4_ptr = reinterpret_cast<float4*>(residual);
     const float4* hs_fl4_ptr = reinterpret_cast<const float4*>(hidden_state);
@@ -353,7 +353,7 @@ __global__ void gptj_residual_add(T* residual,
                                   const int intermediate_size,
                                   const float mp_scale)
 {
-    debuginfo();
+    // debuginfo();
 
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
@@ -422,7 +422,7 @@ void launch_gptj_residual_add(T* residual,
                               int mp_size,
                               cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     int total_count = batch * hidden_dim / 4;
     dim3 block_dims(1024);
@@ -444,7 +444,7 @@ INSTANTIATE_GPT_RES_ADD(__nv_bfloat16);
 template <typename T>
 __global__ void moe_res_matmul(T* residual, T* coef, T* mlp_out, int seq_len, int hidden_dim)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int granularity = 16;
     constexpr int vals_per_access = granularity / sizeof(T);
@@ -481,7 +481,7 @@ void launch_moe_res_matmul(T* residual,
                            int hidden_dim,
                            cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     dim3 grid_dim(seq_len);
     dim3 block_dim(1024);
     moe_res_matmul<<<grid_dim, block_dim, 0, stream>>>(
@@ -500,7 +500,7 @@ INSTANTIATE_LAUNCH_MOE_RES_MATMUL(__half);
 template <typename T>
 __global__ void pad_data_kernel(T* padded_output, T* output, int head_size, int padded_head_size)
 {
-    debuginfo();
+    // debuginfo();
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     float4* padded_output_cast = reinterpret_cast<float4*>(padded_output);
@@ -535,7 +535,7 @@ void pad_data(T* padded_output,
               int padded_head_size,
               cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     dim3 grid_dim((bsz - 1) / 16 + 1);
     dim3 block_dim(padded_head_size / 8, 16);
     pad_data_kernel<<<grid_dim, block_dim, 0, stream>>>(
@@ -558,7 +558,7 @@ __global__ void pad_head_seq_kernel(T* padded_output,
                                     int head_size,
                                     int padded_head_size)
 {
-    debuginfo();
+    // debuginfo();
     using T2 =
         typename std::conditional<std::is_same<T, __half>::value, __half2, __nv_bfloat162>::type;
     float4* padded_output_cast = reinterpret_cast<float4*>(padded_output);
@@ -599,7 +599,7 @@ void pad_head_seq(T* padded_output,
                   int padded_head_size,
                   cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     dim3 grid_dim(bsz, padded_seq_len / 16);
     dim3 block_dim(padded_head_size / 8, 16);
     pad_head_seq_kernel<<<grid_dim, block_dim, 0, stream>>>(
@@ -639,7 +639,7 @@ __global__ void fused_gate_activation(T* output,
                                       int output_stride,
                                       int total_elems)
 {
-    debuginfo();
+    // debuginfo();
     constexpr int T_per_access = fused_geglu::granularity / sizeof(T);
     constexpr int T_per_step = T_per_access * fused_geglu::threads;
     constexpr int T_per_block = T_per_step * fused_geglu::steps;
@@ -696,7 +696,7 @@ void launch_gated_activation(T* output,
                              bool use_gelu,
                              cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
     /*
     Fused bias GEGLU is a variant of the gated activation functions.
     The input here is a matrix of [batch, seq_len, 2 * intermediate_dim]

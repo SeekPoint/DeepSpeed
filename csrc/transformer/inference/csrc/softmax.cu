@@ -50,7 +50,7 @@ __global__ void attn_softmax_v2(T* vals,
                                 int mp_size,
                                 int reduceWidth)
 {
-    debuginfo();
+    // // debuginfo();
 
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<WARP_SIZE> g = cg::tiled_partition<WARP_SIZE>(b);
@@ -273,7 +273,7 @@ __global__ void attn_softmax_v2(float* vals,
                                 int mp_size,
                                 int reduceWidth)
 {
-    debuginfo();
+    // debuginfo();
 
     cg::thread_block b = cg::this_thread_block();
     cg::thread_block_tile<WARP_SIZE> g = cg::tiled_partition<WARP_SIZE>(b);
@@ -445,7 +445,7 @@ void launch_attn_softmax_v2(T* vals,
                             int mp_size,
                             cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     const int total_count = batch_size * heads * num_seq;
 

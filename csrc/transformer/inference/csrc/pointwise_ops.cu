@@ -18,7 +18,7 @@ constexpr int threads = 256;
 template <typename T>
 __global__ void vector_add_kernel(T* out, const T* a, const T* b, float gamma, int num_elems)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_access = pwise::granularity / sizeof(T);
 
@@ -57,7 +57,7 @@ void launch_vector_add(T* out,
                        int num_elems,
                        cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     constexpr int T_per_access = pwise::granularity / sizeof(T);
     constexpr int T_per_block = pwise::threads * T_per_access * pwise::unroll;

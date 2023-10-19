@@ -21,7 +21,7 @@ __global__ void dequantize_kernel(T* output,
                                   int groups,
                                   int merge_count)
 {
-    debuginfo();
+    // debuginfo();
     unsigned merge_hidden = hidden_dim >> merge_count;
     unsigned quantization_stride = (merge_hidden * output_size) / groups;
 
@@ -57,7 +57,7 @@ void launch_dequantize(T* output,
                        unsigned merge_count,
                        cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     unsigned threads = 1024;
     dim3 block_dims(threads);
@@ -94,7 +94,7 @@ __global__ void dequantize_kernel(T* output,
                                   unsigned merge_hidden,
                                   int cnt)
 {
-    debuginfo();
+    // debuginfo();
 
     unsigned bid = blockIdx.x * gridDim.y + blockIdx.y;
     unsigned tid = threadIdx.x;
@@ -134,7 +134,7 @@ void launch_dequantize(T* output,
                        unsigned groups,
                        cudaStream_t stream)
 {
-    debuginfo();
+    // debuginfo();
 
     unsigned threads = 1024;
     hidden_dim /= 4;
