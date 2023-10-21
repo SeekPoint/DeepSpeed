@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import os
-
+from pydebug import gd, infoTensor
 try:
     # Importing logger currently requires that torch is installed, hence the try...except
     # TODO: Remove logger dependency on torch.
@@ -21,7 +21,6 @@ except ImportError as e:
     dsa2 = None
 
 ds_accelerator = None
-qq
 
 
 def _validate_accelerator(accel_obj):
