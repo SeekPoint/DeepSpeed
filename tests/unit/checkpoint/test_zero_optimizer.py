@@ -16,7 +16,7 @@ from unit.checkpoint.common import *
 
 import pytest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class TestZeROCheckpoint(DistributedTest):
     world_size = 2
 

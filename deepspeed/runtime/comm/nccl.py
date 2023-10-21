@@ -10,7 +10,7 @@ import numpy as np
 
 from deepspeed.runtime.compression.cupy import CupyBackend
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class NcclBackend(object):
 

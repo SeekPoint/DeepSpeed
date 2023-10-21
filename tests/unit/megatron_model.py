@@ -12,7 +12,7 @@ from .common import get_test_path
 from deepspeed.pipe import PipelineModule, LayerSpec
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def get_megatron_version():
     gd.debuginfo(prj='dsUT')

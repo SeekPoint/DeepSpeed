@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch
 from torch import distributed as dist
 from deepspeed.ops.sparse_attention import SparsityConfig
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class SparseSelfAttention(nn.Module):
     """Implements an efficient Sparse Self Attention of Transformer layer based on `Generative Modeling with Sparse Transformers`: https://arxiv.org/abs/1904.10509

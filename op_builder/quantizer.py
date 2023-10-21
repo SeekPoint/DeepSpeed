@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .builder import CUDAOpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class QuantizerBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_QUANTIZER"

@@ -15,7 +15,7 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import AsyncIOBuilder
 from .constants import *
 from .utils import swap_in_tensors, swap_out_tensors, MIN_AIO_BYTES, AIO_ALIGNED_BYTES, print_object, SwapBufferPool
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def print_rank_0(message, debug=False, force=False):
     if dist.get_rank() == 0 and (debug or force):

@@ -8,7 +8,7 @@ from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
 import deepspeed
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class LinearOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):

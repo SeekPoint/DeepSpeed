@@ -6,7 +6,7 @@
 import types
 from deepspeed.utils import get_full_hp_param, get_full_hp_grad, get_hp_fragment_mapping
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def link_hp_params(lp_param_list, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                    param_group_index, partition_start, partition_size, partition_optimizer_state, dp_group):

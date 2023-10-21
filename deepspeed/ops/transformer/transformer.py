@@ -14,7 +14,7 @@ from deepspeed.ops.op_builder import TransformerBuilder, StochasticTransformerBu
 # Cuda modules will be imported if needed
 transformer_cuda_module = None
 stochastic_transformer_cuda_module = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TransformerConfig():
 

@@ -15,7 +15,7 @@ from deepspeed.runtime.pipe.topology import _prime_factors
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def test_topology_2d():
     topo = Topo(axes=['row', 'col'], dims=[2, 2])
 

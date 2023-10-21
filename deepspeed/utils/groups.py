@@ -24,7 +24,7 @@
  frequently. For now, the group creation needed for the training scenario is being implemented.
  For inference and other new scenarios, the code will be either reused or added to this file.
 """
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 from deepspeed import comm as dist
 from deepspeed.utils import log_dist

@@ -11,7 +11,7 @@ from deepspeed.utils.logging import logger
 from deepspeed.accelerator import get_accelerator
 
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 MIN_AIO_BYTES = 1024**2
 AIO_ALIGNED_BYTES = 1024

@@ -28,7 +28,7 @@ thread-N: start each experiment in its own thread
 from deepspeed import comm as dist
 
 TIMEOUT = 5
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ResourceManager:
 

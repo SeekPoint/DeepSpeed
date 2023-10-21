@@ -15,7 +15,7 @@ try:
     import neural_compressor as nc
 except ImportError as e:
     nc = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def check_deepspeed_config(config):
     if isinstance(config, dict):

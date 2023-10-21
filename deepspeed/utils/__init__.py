@@ -15,5 +15,5 @@ from .tensor_fragment import safe_get_full_fp32_param, safe_get_full_grad, safe_
 from .mixed_precision_linkage import link_hp_params
 from deepspeed.runtime.dataloader import RepeatingLoader
 from .numa import get_numactl_cmd
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

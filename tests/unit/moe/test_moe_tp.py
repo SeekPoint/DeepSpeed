@@ -9,7 +9,7 @@ import pytest
 from unit.common import DistributedTest
 from unit.util import required_torch_version
 from deepspeed.moe.layer import MoE
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MPU():
 

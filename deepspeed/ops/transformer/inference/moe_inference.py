@@ -17,7 +17,7 @@ from ....moe.sharded_moe import TopKGate
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import InferenceBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedMoEInferenceConfig(DeepSpeedInferenceConfig):
     """Initialize the DeepSpeed Transformer Config.

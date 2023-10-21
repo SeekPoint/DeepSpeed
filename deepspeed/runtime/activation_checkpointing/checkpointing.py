@@ -27,7 +27,7 @@ from deepspeed.utils import logger
 from deepspeed.runtime.utils import copy_to_device, move_to_device, see_memory_usage, bwc_tensor_model_parallel_rank
 from deepspeed.utils.timer import SynchronizedWallClockTimer as Timers
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 # DeepSpeed Checkpointing Enabled or Disabled
 deepspeed_checkpointing_enabled = False
 

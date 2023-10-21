@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def check_tb_availability():
     try:

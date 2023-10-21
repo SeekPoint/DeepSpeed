@@ -18,7 +18,7 @@ from deepspeed.utils import logger
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
     """

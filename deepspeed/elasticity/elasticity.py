@@ -15,7 +15,7 @@ from .constants import ELASTICITY, ENABLED, ENABLED_DEFAULT, LATEST_ELASTICITY_V
     MINIMUM_DEEPSPEED_VERSION, DEEPSPEED_ELASTICITY_CONFIG
 from ..git_version_info import version as __version__
 from ..utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 # Thirty eight smallest highly composite numbers. The list should
 # be enough to support up to 720K batch size.
 HCN_LIST = [

@@ -5,7 +5,7 @@
 
 import abc
 from abc import ABC
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedAccelerator(ABC):
 

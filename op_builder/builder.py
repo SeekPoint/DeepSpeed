@@ -19,7 +19,7 @@ from distutils.errors import CompileError, LinkError
 from abc import ABC, abstractmethod
 from typing import List
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 gd.debuginfo(prj='ds', info='builder.py exec')
 

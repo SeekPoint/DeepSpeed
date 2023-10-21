@@ -11,7 +11,7 @@ import deepspeed
 from torch.utils.data.distributed import DistributedSampler
 import deepspeed.comm as dist
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class SimpleModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, empty_grad=False):

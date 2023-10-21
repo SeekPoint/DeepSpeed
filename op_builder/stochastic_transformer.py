@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .transformer import TransformerBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class StochasticTransformerBuilder(TransformerBuilder):
     BUILD_VAR = "DS_BUILD_STOCHASTIC_TRANSFORMER"

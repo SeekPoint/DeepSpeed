@@ -11,7 +11,7 @@ import collections.abc
 from functools import reduce
 from pydantic import BaseModel
 from deepspeed.utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedConfigModel(BaseModel):
     """

@@ -14,7 +14,7 @@ import numbers
 from ..constants import AUTOTUNING_METRIC_LATENCY
 
 INIT_NUM = 2
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ModelBasedTuner(BaseTuner):
     """Exploring the search space with a cost model"""

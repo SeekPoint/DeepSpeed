@@ -8,7 +8,7 @@ functionality to TensorFlow's IndexedSlices implementation.
 """
 
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class SparseTensor(object):
     """ Compressed Sparse Tensor """

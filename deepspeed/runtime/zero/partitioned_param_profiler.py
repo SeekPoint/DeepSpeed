@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from deepspeed.utils import log_dist
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class PartitionedParameterProfiler(object):
 

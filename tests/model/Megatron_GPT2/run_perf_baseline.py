@@ -9,7 +9,7 @@ Note: please copy webtext data to "Megatron-LM" folder, before running this scri
 import unittest
 import re
 from test_common import BaseTestCase
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 '''
 pass
 '''

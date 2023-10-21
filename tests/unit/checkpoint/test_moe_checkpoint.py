@@ -13,7 +13,7 @@ from unit.checkpoint.common import checkpoint_correctness_verification
 
 import pytest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class TestMoECheckpoint(DistributedTest):
     world_size = 4
 

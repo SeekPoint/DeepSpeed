@@ -7,7 +7,7 @@ from deepspeed import comm as dist
 
 from collections import namedtuple
 from itertools import product as cartesian_product
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ProcessTopology:
     """ Manages the mapping of n-dimensional Cartesian coordinates to linear

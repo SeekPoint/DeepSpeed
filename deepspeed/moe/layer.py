@@ -11,7 +11,7 @@ from deepspeed.utils import groups
 from .sharded_moe import MOELayer, TopKGate
 from .experts import Experts
 import typing
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MoE(torch.nn.Module):
     """Initialize an MoE layer.

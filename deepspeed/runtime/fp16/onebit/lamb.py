@@ -9,7 +9,7 @@ import numpy as np
 from deepspeed import comm as dist
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class OnebitLamb(torch.optim.Optimizer):
     """Implements the 1-bit Lamb algorithm. Currently GPU-only.

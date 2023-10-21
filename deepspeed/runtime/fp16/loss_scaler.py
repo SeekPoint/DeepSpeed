@@ -30,7 +30,7 @@ SCALE_WINDOW = 'scale_window'
 DELAYED_SHIFT = 'delayed_shift'
 CONSECUTIVE_HYSTERESIS = 'consecutive_hysteresis'
 MIN_LOSS_SCALE = 'min_scale'
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # item() is a recent addition, so this helps with backward compatibility.
 def to_python_float(t):

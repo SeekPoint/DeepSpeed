@@ -14,7 +14,7 @@ from ..policy import maybe_copy
 from ..policy import maybe_get_lora
 
 supported_models = {None}
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_BloomContainer(MetaTensorContainer, HybridEngineContainer, BaseTransformerContainer):
 

@@ -25,7 +25,7 @@ from torch.nn.modules.module import Module
 from deepspeed.runtime.utils import noop_decorator
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def print_rank_0(message, debug=False, force=False):
     if dist.get_rank() == 0 and (debug or force):

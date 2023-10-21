@@ -6,7 +6,7 @@
 import copy
 import torch
 from deepspeed.ops.transformer import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, seed, preln, fp16=True):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

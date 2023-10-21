@@ -8,7 +8,7 @@ from .base import *
 from deepspeed import comm as dist
 import deepspeed.ops.transformer as transformer_inference
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BaseTransformerMoEContainer(BaseTransformerContainer):
 

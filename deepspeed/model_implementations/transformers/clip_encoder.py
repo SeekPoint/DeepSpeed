@@ -6,7 +6,7 @@
 import torch
 from deepspeed.accelerator import get_accelerator
 from ..features.cuda_graph import CUDAGraph
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DSClipEncoder(CUDAGraph, torch.nn.Module):
 

@@ -39,7 +39,7 @@ partitioned_param_data_shape = [0]
 zero_init_context = 0
 top_level_context = None
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class NoGatherHandle:
 

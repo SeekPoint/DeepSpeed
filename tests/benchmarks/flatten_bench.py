@@ -21,7 +21,7 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import UtilsBuilder
 
 from apex_C import flatten as flatten_apex
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 '''yknote
 failed
 

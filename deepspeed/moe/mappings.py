@@ -23,7 +23,7 @@
 
 import torch
 import deepspeed
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _gather_tokens(input_, dim=0):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

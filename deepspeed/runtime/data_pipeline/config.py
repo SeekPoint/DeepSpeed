@@ -6,7 +6,7 @@
 from .constants import *
 import copy
 from ..config_utils import get_scalar_param
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # TODO: Reducing config verbosity by returning None or {} when disabled.
 # One challenge is that we still need to somehow include the default values,

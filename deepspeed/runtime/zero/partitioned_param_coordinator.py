@@ -18,7 +18,7 @@ from deepspeed.utils.debug import debug_module2name_id, debug_param2name_id
 from deepspeed.accelerator import get_accelerator
 import logging
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def debug_rank0(message: str) -> None:
     if dist.get_rank() == 0:

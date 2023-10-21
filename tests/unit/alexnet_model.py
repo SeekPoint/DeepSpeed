@@ -13,7 +13,7 @@ import deepspeed.comm as dist
 import deepspeed.runtime.utils as ds_utils
 from deepspeed.accelerator import get_accelerator
 from deepspeed.runtime.pipe.module import PipelineModule, LayerSpec
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class AlexNet(nn.Module):
 

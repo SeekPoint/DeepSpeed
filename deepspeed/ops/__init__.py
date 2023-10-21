@@ -15,6 +15,6 @@ from .transformer import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
 
 from ..git_version_info import compatible_ops as __compatible_ops__
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 

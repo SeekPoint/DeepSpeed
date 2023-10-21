@@ -6,7 +6,7 @@
 import os
 import inspect
 from deepspeed.utils import get_caller_func
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def get_local_rank_from_launcher():
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

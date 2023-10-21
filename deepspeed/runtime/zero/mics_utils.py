@@ -17,7 +17,7 @@ from torch import Tensor
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 
 def _log_rank0(msg):

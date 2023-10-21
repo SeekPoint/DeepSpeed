@@ -31,7 +31,7 @@ from ..constants import *
 from ..curriculum_scheduler import CurriculumScheduler
 from .indexed_dataset import MMapIndexedDataset
 from .utils import create_mmap_dataset_builder, close_mmap_dataset_builder, find_fit_int_dtype
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedDataSampler(object):
 

@@ -10,7 +10,7 @@ import unittest
 import subprocess
 import os
 import re
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 '''
 fail
 '''

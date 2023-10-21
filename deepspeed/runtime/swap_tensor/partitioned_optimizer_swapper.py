@@ -17,13 +17,13 @@ from deepspeed.runtime.swap_tensor.utils import swap_in_tensors, swap_out_tensor
     get_sized_buffers
 from deepspeed.runtime.swap_tensor.async_swapper import AsyncTensorSwapper
 from deepspeed.runtime.swap_tensor.optimizer_utils import OptimizerSwapper
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 DEBUG_MODE = False
 
 SWAP_IN_PARAM_TIMER = 'swap_in_param'
 SWAP_OUT_PARAM_TIMER = 'swap_out_param'
 SWAP_IN_GRADIENT_TIMER = 'swap_in_gradient'
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class PartitionedOptimizerSwapper(OptimizerSwapper):
 

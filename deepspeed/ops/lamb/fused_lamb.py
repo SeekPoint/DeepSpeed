@@ -9,7 +9,7 @@ This file is adapted from NVIDIA/apex/optimizer/fused_adam and implements the LA
 import types
 import torch
 from deepspeed.ops.op_builder import FusedLambBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class FusedLamb(torch.optim.Optimizer):
     """Implements the LAMB algorithm. Currently GPU-only.

@@ -10,7 +10,7 @@ import unittest
 import os
 import re
 from test_common import BaseTestCase
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 '''
 fail
 '''

@@ -12,7 +12,7 @@ from .reshape_utils import (basic_folder_validation, get_zero_files, merge_state
 from .reshape_3d_utils import (model_3d_desc, get_model_3d_descriptor)
 
 GROUP_STATE_KEY = 'state'
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ZeROCheckpoint(object):
 

@@ -6,7 +6,7 @@
 import torch
 
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def print_rank_0(message):
     if dist.get_rank() == 0:

@@ -7,7 +7,7 @@ import torch
 from deepspeed import comm as dist
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class SoftmaxContextOp(BaseOp):
 

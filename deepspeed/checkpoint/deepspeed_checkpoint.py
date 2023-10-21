@@ -28,7 +28,7 @@ SEQUENTIAL_LAYERS = [
 ]
 
 LAYER_CONCAT_DIM = {'self_attention.dense.weight': 1, 'mlp.dense_4h_to_h.weight': 1}
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedCheckpoint(object):
 

@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .builder import CPUOpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class NotImplementedBuilder(CPUOpBuilder):
     BUILD_VAR = "DS_BUILD_NOT_IMPLEMENTED"

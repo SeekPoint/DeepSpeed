@@ -13,7 +13,7 @@ from deepspeed.runtime.data_pipeline.constants import CURRICULUM_LEARNING, \
 from deepspeed.runtime.constants import GRADIENT_ACCUMULATION_STEPS, \
     DATA_PARALLEL_GROUP, GLOBAL_RANK
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class RepeatingLoader:
 

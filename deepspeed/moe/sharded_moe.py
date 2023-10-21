@@ -25,7 +25,7 @@ from torch.nn import Module
 import torch.nn.functional as F
 from deepspeed.utils import groups
 from .mappings import drop_tokens, gather_tokens
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 if TYPE_CHECKING:
     Base = Module[Tensor]
 else:

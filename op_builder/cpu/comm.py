@@ -5,7 +5,7 @@
 
 import os
 from .builder import CPUOpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CCLCommBuilder(CPUOpBuilder):
     BUILD_VAR = "DS_BUILD_CCL_COMM"

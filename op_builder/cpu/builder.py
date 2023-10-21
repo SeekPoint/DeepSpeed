@@ -11,7 +11,7 @@ try:
 except ImportError:
     from deepspeed.ops.op_builder.builder import OpBuilder
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class CPUOpBuilder(OpBuilder):
 
     def builder(self):

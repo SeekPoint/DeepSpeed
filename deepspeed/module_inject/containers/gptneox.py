@@ -14,7 +14,7 @@ from ..policy import maybe_copy
 from packaging import version as pkg_version
 
 from ..policy import maybe_get_lora
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_GPTNEOXContainer(MetaTensorContainer, HybridMegatronContainer, BaseTransformerContainer):
 

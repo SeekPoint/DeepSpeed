@@ -16,7 +16,7 @@ from deepspeed.ops.op_builder import InferenceBuilder
 inference_module = None
 minus_inf = -10000.0
 triton_flash_attn = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def load_triton_flash_attn():
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

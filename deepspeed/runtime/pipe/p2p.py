@@ -13,7 +13,7 @@ from deepspeed import comm as dist
 from packaging.version import Version
 from deepspeed.git_version_info import torch_info
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 _groups = None
 _grid = None
 

@@ -13,7 +13,7 @@ Returns:
 """
 
 random_ltd_module = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def gpt_sample_tokens(reserved_length: int,
                       seq_length: int,

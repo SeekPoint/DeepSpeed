@@ -5,7 +5,7 @@
 
 from deepspeed.runtime.config_utils import get_scalar_param, get_dict_param, DeepSpeedConfigObject
 from deepspeed.autotuning.constants import *
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
 

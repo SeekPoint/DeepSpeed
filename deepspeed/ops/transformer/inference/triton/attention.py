@@ -16,7 +16,7 @@ from deepspeed.ops.transformer.inference.triton import (
 )
 
 minus_inf = -10000.0
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TritonSelfAttention(nn.Module):
     num_layers = 0

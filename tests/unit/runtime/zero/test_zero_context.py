@@ -13,7 +13,7 @@ import deepspeed.comm as dist
 from unit.common import DistributedTest
 from unit.simple_model import SimpleModel
 from utils import setup_serial_env
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # Test that no sub-class or super-class is missed
 class ConvX(torch.nn.Conv1d):

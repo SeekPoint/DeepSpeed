@@ -5,7 +5,7 @@
 
 import numpy as np
 from deepspeed.utils import log_dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ProgressiveLayerDrop(object):
     r""" Progressive Layer Dropping (PLD) for model training.

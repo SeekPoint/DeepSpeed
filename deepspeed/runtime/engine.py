@@ -96,7 +96,7 @@ from deepspeed.utils.logging import print_json_dist, print_configuration
 from deepspeed.accelerator import get_accelerator
 
 from deepspeed.runtime.config import DtypeEnum
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 MEMORY_OPT_ALLREDUCE_SIZE = 500000000
 
@@ -145,7 +145,7 @@ BACKWARD_REDUCE_GLOBAL_TIMER = 'backward_allreduce'
 STEP_MICRO_TIMER = 'step_microstep'
 STEP_GLOBAL_TIMER = 'step'
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class EngineTimers(object):
     r"""Wallclock timers for DeepSpeedEngine"""

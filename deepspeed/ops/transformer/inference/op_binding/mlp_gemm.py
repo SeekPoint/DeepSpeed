@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
 from deepspeed.utils.types import NormType
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MLPGemmOp(BaseOp):
 

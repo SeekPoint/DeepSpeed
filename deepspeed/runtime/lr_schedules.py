@@ -13,7 +13,7 @@ import argparse
 from torch.optim import Optimizer
 import math
 from deepspeed.utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 LR_SCHEDULE = 'lr_schedule'
 LR_RANGE_TEST = 'LRRangeTest'
 ONE_CYCLE = 'OneCycle'

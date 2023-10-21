@@ -16,7 +16,7 @@ import torch
 import gc
 from deepspeed.accelerator import get_accelerator
 import re
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def load_model_with_checkpoint(r_module,
                                sd,

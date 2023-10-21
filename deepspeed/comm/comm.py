@@ -36,7 +36,7 @@ from deepspeed.comm.torch import TorchBackend
 
 from deepspeed import utils
 from datetime import timedelta
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 # Current deepspeed.comm backend (cdb) global object for simple access by client code
 cdb = None
 

@@ -32,7 +32,7 @@ DS_INFERENCE_ENABLED = False
 from torch import nn
 
 INFERENCE_MODEL_TIMER = "model-forward-inference"
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def build_bloom_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
     """

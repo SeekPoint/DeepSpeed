@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import torch.nn as nn
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedTransformerBase(nn.module):
 

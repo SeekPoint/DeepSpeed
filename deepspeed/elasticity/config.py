@@ -5,7 +5,7 @@
 
 import json
 from .constants import *
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ElasticityError(Exception):
     """

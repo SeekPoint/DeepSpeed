@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from deepspeed.utils import log_dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # helper function to map between DS policies and DS containers
 def policy_to_ds_container(**kwargs):

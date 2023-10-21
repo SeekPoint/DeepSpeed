@@ -7,7 +7,7 @@ import torch
 import deepspeed
 from deepspeed.runtime.utils import partition_uniform as partition
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=False):
     """Split a tensor along its last dimension. Adapted from Megatron-LM.

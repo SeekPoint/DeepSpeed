@@ -15,7 +15,7 @@ DS_COMM_REDUCE_SCATTER_OFF = False
 DS_COMM_BROADCAST_OFF = False
 DS_COMM_ALL_REDUCE_OFF = False
 DS_COMM_REDUCE_OFF = False
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def is_torch_two():
     TORCH_MAJOR = int(torch.__version__.split('.')[0])

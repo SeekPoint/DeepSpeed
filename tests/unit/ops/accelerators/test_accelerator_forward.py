@@ -15,7 +15,7 @@ from deepspeed import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def check_equal(first, second, atol=1e-2, verbose=False):
     if verbose:
         print()

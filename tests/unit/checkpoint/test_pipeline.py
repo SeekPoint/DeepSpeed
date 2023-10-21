@@ -11,7 +11,7 @@ from unit.util import skip_on_arch
 
 import pytest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class TestPipelineCheckpoint(DistributedTest):
     world_size = 4
 

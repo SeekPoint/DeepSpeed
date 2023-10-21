@@ -10,7 +10,7 @@ from deepspeed.ops.quantizer import ds_quantizer
 
 TWO_D_PARAMS = 6
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class Quantizer(object):
 
     def __init__(self,

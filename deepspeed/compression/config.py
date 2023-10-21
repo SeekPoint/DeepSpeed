@@ -6,7 +6,7 @@
 from .constants import *
 import copy
 from ..runtime.config_utils import get_scalar_param, get_list_param
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def get_compression_config(param_dict):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

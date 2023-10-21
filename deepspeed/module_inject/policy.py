@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from deepspeed.utils.types import ActivationFuncType, NormType
 import torch
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 transformer_param_names = (
         'attn_qkvw', \

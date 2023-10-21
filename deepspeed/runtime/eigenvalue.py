@@ -8,7 +8,7 @@ from deepspeed.utils import log_dist
 import numpy as np
 import logging
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class Eigenvalue(object):
 

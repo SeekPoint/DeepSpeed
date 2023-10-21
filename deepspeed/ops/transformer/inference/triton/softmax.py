@@ -11,7 +11,7 @@ softmax
 modified the triton kernel in
 https://github.com/openai/triton/blob/34817ecc954a6f4ca7b4dfb352fdde1f8bd49ca5/python/tutorials/02-fused-softmax.py
 '''
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @triton.jit
 def softmax_kernel(output_ptr, input_ptr, stride, n_cols, BLOCK_SIZE: tl.constexpr):

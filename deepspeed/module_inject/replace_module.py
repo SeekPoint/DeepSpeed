@@ -26,7 +26,7 @@ import time
 from .utils import policy_to_ds_container
 
 import gc
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ReplaceWithTensorSlicing:
 

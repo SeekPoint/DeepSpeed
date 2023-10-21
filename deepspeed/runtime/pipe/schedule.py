@@ -6,7 +6,7 @@
 from ..utils import call_to_str
 
 from abc import ABC, abstractmethod
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class PipeSchedule(ABC):
     """Directs the execution of a pipeline engine by generating sequences of

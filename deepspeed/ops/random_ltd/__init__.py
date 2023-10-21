@@ -4,5 +4,5 @@
 # DeepSpeed Team
 
 from .dropping_utils import gpt_sample_tokens, bert_sample_tokens, GatherTokens, ScatterTokens
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info='random_ltd __init__')

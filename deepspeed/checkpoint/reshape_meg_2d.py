@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .reshape_utils import partition_data
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class meg_2d_parallel_map(object):
 

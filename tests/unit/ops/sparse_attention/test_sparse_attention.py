@@ -14,7 +14,7 @@ import deepspeed
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import SparseAttnBuilder
 from unit.util import skip_on_arch, skip_on_cuda
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 if not deepspeed.ops.__compatible_ops__[SparseAttnBuilder.NAME]:
     pytest.skip("sparse attention op is not compatible on this system", allow_module_level=True)
 

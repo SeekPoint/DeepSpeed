@@ -20,7 +20,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 # while this script doesn't use deepspeed to recover data, since the checkpoints are pickled with
 # DeepSpeed data structures it has to be available in the current python environment.
 from deepspeed.utils import logger

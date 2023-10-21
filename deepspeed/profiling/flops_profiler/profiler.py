@@ -14,7 +14,7 @@ import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed.moe.layer import MoE
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 
 Tensor = torch.Tensor

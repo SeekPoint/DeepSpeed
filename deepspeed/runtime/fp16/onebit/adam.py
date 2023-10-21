@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class OnebitAdam(torch.optim.Optimizer):
     """Implements the 1-bit Adam algorithm. Currently GPU-only.

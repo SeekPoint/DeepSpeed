@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def bsh_decoder_gather(reserved_length, hidden_states, mask):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

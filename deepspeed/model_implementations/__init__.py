@@ -5,5 +5,5 @@
 
 from .transformers.ds_transformer import DeepSpeedTransformerInference
 from .transformers.clip_encoder import DSClipEncoder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info='model_imp __init__')

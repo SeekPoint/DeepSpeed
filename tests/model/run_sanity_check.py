@@ -8,14 +8,14 @@ Note: please copy webtext data to "Megatron-LM" folder, before running this scri
 
 import sys
 import unittest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 sys.path.append('../DeepSpeedExamples/Megatron_GPT2')
 sys.path.append('../DeepSpeedExamples/BingBertSquad')
 
 # Import the test cases here.
 import Megatron_GPT2
 import BingBertSquad
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def pytest_hack(runner_result):
     '''This is an ugly hack to get the unittest suites to play nicely with

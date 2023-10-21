@@ -4,6 +4,6 @@
 # DeepSpeed Team
 
 from ..runtime.pipe import PipelineModule, LayerSpec, TiedLayerSpec
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 gd.debuginfo(prj='ds', info='pipe __init__')

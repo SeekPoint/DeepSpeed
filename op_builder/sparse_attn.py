@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .builder import OpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 try:
     from packaging import version as pkg_version
 except ImportError:

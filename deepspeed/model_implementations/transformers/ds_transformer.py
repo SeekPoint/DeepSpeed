@@ -18,7 +18,7 @@ if deepspeed.HAS_TRITON:
     from deepspeed.ops.transformer.inference.triton.attention import TritonSelfAttention
 
 inference_module = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedTransformerInference(nn.Module):
     """Initialize the DeepSpeed Transformer Layer.

@@ -35,7 +35,7 @@ from torch.nn import functional as F
 
 torch_memory_reserved = get_accelerator().memory_reserved
 torch_max_memory_reserved = get_accelerator().max_memory_reserved
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DummyOptim():
     """

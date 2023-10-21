@@ -6,7 +6,7 @@
 import math
 from deepspeed.utils import logger
 from .constants import *
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CurriculumScheduler(object):
 

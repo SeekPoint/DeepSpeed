@@ -8,7 +8,7 @@ from torch import Tensor
 from torch.nn import Module
 from ..constants import *
 from deepspeed.ops.random_ltd.dropping_utils import gpt_sample_tokens, bert_sample_tokens, GatherTokens, ScatterTokens
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 #####based on the paper random-ltd: https://arxiv.org/abs/2211.11586
 class RandomLayerTokenDrop(Module):

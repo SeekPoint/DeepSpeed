@@ -13,7 +13,7 @@ from deepspeed.runtime.zero.partition_parameters import *
 from deepspeed.runtime.zero.partitioned_param_coordinator import PartitionedParameterCoordinator, InflightParamRegistry, iter_params
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 FWD_MODULE_STACK = list()
 
 

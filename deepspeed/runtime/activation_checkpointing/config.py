@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from deepspeed.runtime.config_utils import get_scalar_param, DeepSpeedConfigObject
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 #########################################
 #  DeepSpeed Activation Checkpointing
 #########################################

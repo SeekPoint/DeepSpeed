@@ -7,7 +7,7 @@ import os
 import torch
 import types
 from .constants import (FP32_WEIGHT_KEY, PARAM, VOCAB_DIVISIBILITY_PADDING_TENSOR, CAT_DIM)
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

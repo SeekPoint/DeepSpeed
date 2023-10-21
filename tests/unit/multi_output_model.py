@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MultiOutputModel(torch.nn.Module):
 

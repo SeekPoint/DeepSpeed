@@ -7,7 +7,7 @@ from abc import abstractmethod
 import torch
 
 from .hybrid_engine import HybridEngineContainer
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class HybridSplitQKVContainer(HybridEngineContainer):
 

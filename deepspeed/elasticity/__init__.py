@@ -9,5 +9,5 @@ from .constants import ENABLED, ENABLED_DEFAULT, ELASTICITY
 if is_torch_elastic_compatible():
     from .elastic_agent import DSElasticAgent
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info='elastic __init__')

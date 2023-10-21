@@ -7,7 +7,7 @@ from .utils import check_wandb_availability
 from .monitor import Monitor
 
 import deepspeed.comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class WandbMonitor(Monitor):
 

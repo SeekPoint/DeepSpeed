@@ -7,7 +7,7 @@ import torch
 from typing import Callable
 from torch import Tensor
 from packaging import version as pkg_version
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class OnDevice(object):
     """

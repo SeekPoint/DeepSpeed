@@ -12,7 +12,7 @@ import triton
 import triton.language as tl
 import triton._C.libtriton as libtriton
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @triton.jit
 def _kernel(A, B, C, stride_za, stride_ha, stride_ma, stride_ka, stride_zb, stride_hb, stride_kb, stride_nb, stride_zc,

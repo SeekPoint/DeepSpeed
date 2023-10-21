@@ -6,7 +6,7 @@
 import torch
 import random
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class SparsityConfig:
     """Abstract Configuration class to store `sparsity configuration of a self attention layer`.

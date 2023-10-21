@@ -24,9 +24,7 @@ import subprocess
 from setuptools import setup, find_packages
 from setuptools.command import egg_info
 import time
-
 from pydebug import gd, infoTensor
-
 #why pip install -e . cannot see it, 
 # but python setup.py install and python setup.py clean can see it!
 gd.debuginfo(prj='ds', info='start setup.py')

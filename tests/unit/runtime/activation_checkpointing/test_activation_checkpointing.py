@@ -11,9 +11,9 @@ import deepspeed
 from deepspeed.accelerator import get_accelerator
 from copy import deepcopy
 from unit.common import DistributedTest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 ckpt = deepspeed.checkpointing.checkpoint
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _compute(module, *inputs, do_checkpoint=False):
     if do_checkpoint:

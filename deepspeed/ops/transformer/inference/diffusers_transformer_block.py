@@ -16,7 +16,7 @@ from deepspeed.utils.types import ActivationFuncType
 # Ops will be loaded on demand
 transformer_cuda_module = None
 spatial_cuda_module = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def load_transformer_module():
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

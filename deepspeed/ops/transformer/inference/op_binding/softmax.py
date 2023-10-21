@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class SoftmaxOp(BaseOp):
 

@@ -7,7 +7,7 @@ import pytest
 import torch
 from deepspeed.ops import op_builder
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 inference_module = None
 
 

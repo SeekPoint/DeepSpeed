@@ -23,7 +23,7 @@ import shutil
 import copy
 from contextlib import closing
 import subprocess
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DSElasticAgent(LocalElasticAgent):
 

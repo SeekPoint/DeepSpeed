@@ -8,7 +8,7 @@ import deepspeed
 from unit.common import DistributedTest
 from unit.util import skip_on_arch
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class Model(torch.nn.Module):
 
     def __init__(self):

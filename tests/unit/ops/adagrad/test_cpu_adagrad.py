@@ -12,7 +12,7 @@ from deepspeed.ops.adagrad import DeepSpeedCPUAdagrad
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import CPUAdagradBuilder
 from unit.common import DistributedTest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 if not deepspeed.ops.__compatible_ops__[CPUAdagradBuilder.NAME]:
     pytest.skip("cpu-adagrad is not compatible", allow_module_level=True)
 

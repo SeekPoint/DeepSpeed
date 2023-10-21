@@ -9,7 +9,7 @@ import deepspeed
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 from unit.simple_model import Curriculum_SimpleModel, SimpleModel, random_dataloader, random_dataset
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MPU():
 

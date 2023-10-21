@@ -10,7 +10,7 @@ from unit.simple_model import *
 
 import pytest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class TestSparseCheckpoint(DistributedTest):
     world_size = 2
 

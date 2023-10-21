@@ -7,7 +7,7 @@ import unittest
 import subprocess
 import os
 import time
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BaseTestCase(unittest.TestCase):
 

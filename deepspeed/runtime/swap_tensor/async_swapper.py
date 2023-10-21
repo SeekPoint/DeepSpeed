@@ -13,7 +13,7 @@ from deepspeed.runtime.swap_tensor.utils import swap_out_tensors, SwapBuffer
 
 INVALID_BUFFER_INDEX = -1
 ASYNC_SWAPPER_WAIT_TIMER = 'async_swap_gradient_wait'
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class AsyncTensorSwapper(object):
 

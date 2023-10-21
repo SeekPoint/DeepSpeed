@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class Diffusers2DTransformerConfig():
 

@@ -8,8 +8,8 @@ from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.strategies import DeepSpeedStrategy
 from torch.utils.data import DataLoader, Dataset
 
-from pydebug import debuginfo, infoTensor
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
+from pydebug import gd, infoTensor
 class RandomDataset(Dataset):
     gd.debuginfo(prj='ds', info=self.__class__.__name__)
     def __init__(self, size, length):

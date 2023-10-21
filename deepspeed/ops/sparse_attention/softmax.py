@@ -10,7 +10,7 @@ import torch
 
 import triton
 import triton.language as tl
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def next_power_of_2(n):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

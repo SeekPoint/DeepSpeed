@@ -12,7 +12,7 @@ from deepspeed.runtime.comm.coalesced_collectives import reduce_scatter_coalesce
 from deepspeed.accelerator import get_accelerator
 
 from unit.common import DistributedTest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TestReduceScatterCoalesced(DistributedTest):
     world_size = 2
