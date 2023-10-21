@@ -25,7 +25,7 @@ class TestZeROCheckpoint(DistributedTest):
                                                                              (3, False, 'Adam'),
                                                                              (3, True, 'deepspeed_adam')])
     def test_load_optimizer_state(self, tmpdir, zero_stage, use_cpu_offload, adam_optimizer):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         if use_cpu_offload and not deepspeed.ops.__compatible_ops__[CPUAdamBuilder.NAME]:
             pytest.skip("cpu-adam is not compatible")
@@ -67,7 +67,7 @@ class TestZeROCheckpoint(DistributedTest):
                                                                              (3, False, 'Adam'),
                                                                              (3, True, 'deepspeed_adam')])
     def test_not_load_optimizer_state(self, tmpdir, zero_stage, use_cpu_offload, adam_optimizer):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         if use_cpu_offload and not deepspeed.ops.__compatible_ops__[CPUAdamBuilder.NAME]:
             pytest.skip("cpu-adam is not compatible")
@@ -95,20 +95,20 @@ class TestZeROCheckpoint(DistributedTest):
         hidden_dim = 10
 
         if zero_stage == 3:
-            debuginfo(prj='dsUT', info='stage is 3')
+            gd.debuginfo(prj='dsUT', info='stage is 3')
             global DeepSpeedZeroOptimizer_Stage3
             from deepspeed.runtime.zero.stage3 import DeepSpeedZeroOptimizer_Stage3
             with deepspeed.zero.Init():
                 models = [SimpleModel(hidden_dim, empty_grad=False) for _ in range(2)]
         else:
-            debuginfo(prj='dsUT', info='stage is not 3')
+            gd.debuginfo(prj='dsUT', info='stage is not 3')
             models = [SimpleModel(hidden_dim, empty_grad=False) for _ in range(2)]
 
         checkpoint_correctness_verification(config_dict, models, hidden_dim, tmpdir, load_optimizer_states=False)
 
     @pytest.mark.parametrize('zero_stage', [1, 2])
     def test_hybrid_optimizer_state(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_micro_batch_size_per_gpu": 2,
@@ -136,7 +136,7 @@ class TestZeROCheckpoint(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [0, 1, 2, 3])
     def test_load_module_only(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "optimizer": {
@@ -165,7 +165,7 @@ class ws4_model_checkpoint(DistributedFixture):
     world_size = 4
 
     def run(self, class_tmpdir, elastic_save, load_optim):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         ds_config = {
             "train_batch_size": 4,
             "optimizer": {
@@ -202,7 +202,7 @@ class TestZeROElasticCheckpoint(DistributedTest):
     world_size = 2
 
     def test_elastic_checkpoint_fixed_dp(self, tmpdir, elastic_save, elastic_load, load_optim):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         ds_config = {
             "train_batch_size": 2,
             "optimizer": {
@@ -257,7 +257,7 @@ class TestZeROElasticCheckpoint(DistributedTest):
     def test_elastic_checkpoint_change_dp(self, ws4_model_checkpoint,
                                           class_tmpdir, elastic_save, elastic_load,
                                           load_optim):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         ds_config = {
             "train_batch_size": 4,
             "optimizer": {
@@ -289,7 +289,7 @@ class TestZeROSaveLoadEdgeCase(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [0, 1, 2, 3])
     def test_immediate_save_load(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 4,
             "optimizer": {
@@ -315,7 +315,7 @@ class TestZeROSaveLoadEdgeCase(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [0, 1, 2, 3])
     def test_load_immediate_save(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 4,
             "optimizer": {
@@ -358,7 +358,7 @@ class TestZeROSaveLoadEdgeCase(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [0, 1, 2, 3])
     def test_save_before_accum_grad_is_done(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "optimizer": {
                 "type": 'Adam'
@@ -408,7 +408,7 @@ class TestZeROCheckpointFrozenWeights(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [1, 2, 3])
     def test_load_optimizer_state(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_batch_size": 2,
@@ -440,7 +440,7 @@ class TestZeROCheckpointFrozenWeights(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [1, 2, 3])
     def test_not_load_optimizer_state(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_batch_size": 2,
@@ -470,7 +470,7 @@ class TestZeROCheckpointFrozenWeights(DistributedTest):
 
     @pytest.mark.parametrize('zero_stage', [1, 2, 3])
     def test_load_module_only(self, tmpdir, zero_stage):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "optimizer": {
@@ -498,7 +498,7 @@ class TestSaveTensorClone(DistributedTest):
     @pytest.mark.parametrize('zero_stage', [1, 2])
     @pytest.mark.parametrize('use_cpu_device', [True, False])
     def test_save_tensor_clone(self, tmpdir, zero_stage, use_cpu_device):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         ds_config = {
             "optimizer": {

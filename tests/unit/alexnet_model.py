@@ -18,7 +18,7 @@ from pydebug import debuginfo, infoTensor
 class AlexNet(nn.Module):
 
     def __init__(self, num_classes=10):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(AlexNet, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=5),
@@ -39,7 +39,7 @@ class AlexNet(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, x, y):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         x = self.features(x)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
@@ -49,7 +49,7 @@ class AlexNet(nn.Module):
 class AlexNetPipe(AlexNet):
 
     def to_layers(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         layers = [*self.features, lambda x: x.view(x.size(0), -1), self.classifier]
         return layers
 
@@ -57,7 +57,7 @@ class AlexNetPipe(AlexNet):
 class AlexNetPipeSpec(PipelineModule):
 
     def __init__(self, num_classes=10, **kwargs):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.num_classes = num_classes
         specs = [
             LayerSpec(nn.Conv2d, 3, 64, kernel_size=11, stride=4, padding=5),
@@ -85,7 +85,7 @@ def cast_to_half(x):
 
 
 def cifar_trainset(fp16=False):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     torchvision = pytest.importorskip("torchvision", minversion="0.5.0")
     import torchvision.transforms as transforms
 
@@ -116,7 +116,7 @@ def cifar_trainset(fp16=False):
 
 
 def train_cifar(model, config, num_steps=400, average_dp_losses=True, fp16=True, seed=123):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     with get_accelerator().random().fork_rng(devices=[get_accelerator().current_device_name()]):
         ds_utils.set_random_seed(seed)
 

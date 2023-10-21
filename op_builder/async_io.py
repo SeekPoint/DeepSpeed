@@ -14,15 +14,15 @@ class AsyncIOBuilder(OpBuilder):
     NAME = "async_io"
 
     def __init__(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.aio.{self.NAME}_op'
 
     def sources(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [
             'csrc/aio/py_lib/deepspeed_py_copy.cpp', 'csrc/aio/py_lib/py_ds_aio.cpp',
             'csrc/aio/py_lib/deepspeed_py_aio.cpp', 'csrc/aio/py_lib/deepspeed_py_aio_handle.cpp',
@@ -32,11 +32,11 @@ class AsyncIOBuilder(OpBuilder):
         ]
 
     def include_paths(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/aio/py_lib', 'csrc/aio/common']
 
     def cxx_args(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # -O0 for improved debugging, since performance is bound by I/O
         CPU_ARCH = self.cpu_arch()
         SIMD_WIDTH = self.simd_width()
@@ -55,11 +55,11 @@ class AsyncIOBuilder(OpBuilder):
         ]
 
     def extra_ldflags(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['-laio']
 
     def check_for_libaio_pkg(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         libs = dict(
             dpkg=["-l", "libaio-dev", "apt"],
             pacman=["-Q", "libaio", "pacman"],
@@ -69,9 +69,9 @@ class AsyncIOBuilder(OpBuilder):
         found = False
         for pkgmgr, data in libs.items():
             flag, lib, tool = data
-            debuginfo(prj='ds', info= ' flag: ' + str(flag) + ' lib: ' + str(lib) + ' tool: ' + str(tool))
+            gd.debuginfo(prj='ds', info= ' flag: ' + str(flag) + ' lib: ' + str(lib) + ' tool: ' + str(tool))
             path = distutils.spawn.find_executable(pkgmgr)
-            debuginfo(prj='ds', info= ' path: ' + str(path))
+            gd.debuginfo(prj='ds', info= ' path: ' + str(path))
             if path is not None:
                 cmd = f"{pkgmgr} {flag} {lib}"
                 result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -83,7 +83,7 @@ class AsyncIOBuilder(OpBuilder):
         return found
 
     def is_compatible(self, verbose=True):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Check for the existence of libaio by using distutils
         # to compile and link a test program that calls io_submit,
         # which is a function provided by libaio that is used in the async_io op.

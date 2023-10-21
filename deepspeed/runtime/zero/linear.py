@@ -51,14 +51,14 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
         ctx.save_for_backward(input, weight, bias)
 
         if input.dim() == 2 and bias is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # fused op is marginally faster
             ret = torch.addmm(bias, input, weight.t())
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output = input.matmul(weight.t())
             if bias is not None:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 output += bias
             ret = output
 
@@ -68,7 +68,7 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
     @staticmethod
     @autocast_custom_bwd
     def backward(ctx, grad_output):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # This is a pattern that is very convenient - at the top of backward
         # unpack saved_tensors and initialize all gradients w.r.t. inputs to
         # None. Thanks to the fact that additional trailing Nones are
@@ -107,10 +107,10 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
 
 def zero3_linear_wrap(input, weight, bias=None):
     if bias is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return LinearFunctionForZeroStage3.apply(input, weight)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return LinearFunctionForZeroStage3.apply(input, weight, bias)
 
 
@@ -155,7 +155,7 @@ class LinearModuleForZeroStage3(Module):
     weight: Tensor
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(LinearModuleForZeroStage3, self).__init__()
         print("Building ZeRO module")
         self.in_features = in_features
@@ -168,19 +168,19 @@ class LinearModuleForZeroStage3(Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input: Tensor) -> Tensor:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return LinearFunctionForZeroStage3.apply(input, self.weight, self.bias)
 
     def extra_repr(self) -> str:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return 'in_features={}, out_features={}, bias={}'.format(self.in_features, self.out_features, self.bias
                                                                  is not None)

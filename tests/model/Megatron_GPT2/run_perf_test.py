@@ -18,11 +18,11 @@ pass
 class GPT2PerfTestCase(BaseTestCase):
 
     def __init__(self, methodName="DeepSpeed performance test on GPT2 model"):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(GPT2PerfTestCase, self).__init__(methodName)
 
     def test_perf_1_5B(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 16,
@@ -40,7 +40,7 @@ class GPT2PerfTestCase(BaseTestCase):
         self.run_test(test_config)
 
     def test_perf_4B(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 16,
@@ -58,7 +58,7 @@ class GPT2PerfTestCase(BaseTestCase):
         self.run_test(test_config)
 
     def test_perf_8B(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 16,
@@ -76,7 +76,7 @@ class GPT2PerfTestCase(BaseTestCase):
         self.run_test(test_config)
 
     def test_perf_20B(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 4,
             "gpus": 16,
@@ -95,7 +95,7 @@ class GPT2PerfTestCase(BaseTestCase):
         self.run_test(test_config)
 
     def run_test(self, test_config):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         print("\n")
         print("{0}: starting......".format(self.id()))
@@ -111,7 +111,7 @@ class GPT2PerfTestCase(BaseTestCase):
             print("{0}: execution time per iteration is {1}ms.".format(self.id(), exec_time))
 
     def grep_latency_from_file(self, file_name):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         latency = 0.0
         count = 0
@@ -134,7 +134,7 @@ class GPT2PerfTestCase(BaseTestCase):
 
 
 def suite():
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     suite = unittest.TestSuite()
     suite.addTest(GPT2PerfTestCase('test_perf_1_5B'))
     suite.addTest(GPT2PerfTestCase('test_perf_4B'))
@@ -144,6 +144,6 @@ def suite():
 
 
 if __name__ == '__main__':
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     runner = unittest.TextTestRunner(failfast=True)
     runner.run(suite())

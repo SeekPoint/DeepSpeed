@@ -14,10 +14,10 @@ SKIP_AUTOTUNE = False
 
 def _fp16_matmul_prune_config(configs, named_args, skip_autotune=SKIP_AUTOTUNE):
     if skip_autotune:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         configs = [configs[0]]
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         configs = triton.ops.matmul_perf_model.early_config_prune(configs, named_args)
     return configs
 
@@ -124,7 +124,7 @@ def _fp_matmul(
     BIAS_ADD: tl.constexpr,
     ACTIVATION: tl.constexpr,
 ):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # matrix multiplication
     pid = tl.program_id(0)
     pid_z = tl.program_id(1)
@@ -187,10 +187,10 @@ def _fp_matmul(
 
 def matmul_4d_prune_config(configs, named_args, skip_autotune=SKIP_AUTOTUNE):
     if skip_autotune:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         configs = [configs[0]]
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         device = torch.cuda.current_device()  #ignore-cuda
         capability = torch.cuda.get_device_capability()  #ignore-cuda
         # BLOCK_M, BLOCK_N, BLOCK_K, SPLIT_K, num_warps, num_stages
@@ -328,7 +328,7 @@ def matmul_4d_kernel(
     """Kernel for computing the matmul C = A x B.
     A has shape (M, K), B has shape (K, N) and C has shape (M, N)
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     pid = tl.program_id(axis=0)
     head = tl.program_id(axis=1)
     batch = tl.program_id(axis=2)

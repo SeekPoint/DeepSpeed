@@ -57,7 +57,7 @@ class OnebitAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
 
         if amsgrad:
             raise RuntimeError('1-bit Adam does not support the AMSGrad variant.')
@@ -91,7 +91,7 @@ class OnebitAdam(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
             assert (
@@ -103,7 +103,7 @@ class OnebitAdam(torch.optim.Optimizer):
             self.comm_backend_handle = NcclBackend(self.deepspeed.mpu)
 
         elif self.comm_backend_name == 'mpi':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             from deepspeed.runtime.comm.mpi import MpiBackend
             self.comm_backend_handle = MpiBackend(cuda_aware)
 
@@ -125,10 +125,10 @@ class OnebitAdam(torch.optim.Optimizer):
             scale (float, optional): factor to divide gradient tensor values
                 by before applying to weights. (default: 1)
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         loss = None
         if closure is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             loss = closure()
 
         gather_time = 0
@@ -136,22 +136,22 @@ class OnebitAdam(torch.optim.Optimizer):
         all_time = 0
 
         if self.adam_freeze_key is False:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             v_diff_buffer = 0.0
 
         if grads is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         elif type(grads[0]) != list:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = [grads]
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grads_group = grads
 
         for group, grads_this_group in zip(self.param_groups, grads_group):
@@ -245,33 +245,33 @@ class OnebitAdam(torch.optim.Optimizer):
                         p.add_(-group['lr'] * update)
 
             if not self.initialize:
-                debuginfo(prj='ds', info='Pop out errors', flush=True)
+                gd.debuginfo(prj='ds', info='Pop out errors', flush=True)
                 state.pop('worker_error')
                 state.pop('server_error')
 
         if not self.initialize:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.adam_freeze_key = False
             self.initialize = True
             print(f"Finished the initialization step at rank {dist.get_rank()}")
             return loss
 
         if self.adam_freeze_key is False:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if state['step'] >= self.freeze_step:
-                debuginfo(prj='ds', info='OnebitAdam - starting compressed communication')
+                gd.debuginfo(prj='ds', info='OnebitAdam - starting compressed communication')
                 self.adam_freeze_key = True
                 if self.using_pipeline:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.enable_backward_allreduce = False
 
         return loss
 
     def load_state_dict(self, state_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Overrides load_state_dict() to add special handling when loading checkpoints
         """
@@ -287,16 +287,16 @@ class OnebitAdam(torch.optim.Optimizer):
                 state_dict['param_groups'][i].pop('exp_avg_mask')
         super().load_state_dict(state_dict)
         if self.state[self.param_groups[0]['params'][0]]['step'] < self.freeze_step:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if dist.get_rank() == 0:
                 print("Checkpoint loaded and OnebitAdam warmup stage starts/continues.")
             if self.adam_freeze_key is True:
                 self.adam_freeze_key = False
                 if self.using_pipeline:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.pipeline_enable_backward_allreduce = True
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.enable_backward_allreduce = True
         else:
             if dist.get_rank() == 0:
@@ -304,10 +304,10 @@ class OnebitAdam(torch.optim.Optimizer):
             if self.adam_freeze_key is False:
                 self.adam_freeze_key = True
                 if self.using_pipeline:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     self.deepspeed.enable_backward_allreduce = False
         # We reset the compression errors when loading checkpoints for 3 reasons:
         # 1) The worker and server error at each GPU are distinct, so in current implementation

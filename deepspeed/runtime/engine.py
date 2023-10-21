@@ -105,7 +105,7 @@ DeepSpeedOptimizerCallable = \
 DeepSpeedSchedulerCallable = Callable[[Optimizer], _LRScheduler]
 
 try:
-    debuginfo(prj='ds')
+    gd.debuginfo(prj='ds')
     import apex
     from apex import amp
     APEX_INSTALLED = True
@@ -115,7 +115,7 @@ except ImportError:
 
 
 def split_half_float_double_sparse(tensors):
-    debuginfo(prj='ds')
+    gd.debuginfo(prj='ds')
     device_type = get_accelerator().device_name()
     supported_types = [
         "torch.{}.HalfTensor".format(device_type), "torch.{}.FloatTensor".format(device_type),
@@ -151,7 +151,7 @@ class EngineTimers(object):
     r"""Wallclock timers for DeepSpeedEngine"""
 
     def __init__(self, enable_micro_timers, enable_global_timers):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.forward_timers = []
         self.backward_timers = []
         self.backward_inner_timers = []
@@ -161,7 +161,7 @@ class EngineTimers(object):
         self.micro_timers = []
 
         if enable_micro_timers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.forward_timers += [FORWARD_MICRO_TIMER]
             self.backward_timers += [BACKWARD_MICRO_TIMER]
             self.backward_inner_timers += [BACKWARD_INNER_MICRO_TIMER]
@@ -173,7 +173,7 @@ class EngineTimers(object):
             ]
 
         if enable_global_timers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.forward_timers += [FORWARD_GLOBAL_TIMER]
             self.backward_timers += [BACKWARD_GLOBAL_TIMER]
             self.backward_inner_timers += [BACKWARD_INNER_GLOBAL_TIMER]
@@ -290,14 +290,14 @@ class DeepSpeedEngine(Module):
         log_dist(f"DeepSpeed Flops Profiler Enabled: {self.flops_profiler_enabled()}", ranks=[0])
 
         if self.flops_profiler_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.flops_profiler = FlopsProfiler(self.module, self, self.flops_profiler_recompute_fwd_factor())
 
         if training_data:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.training_dataloader = self.deepspeed_io(training_data)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.training_dataloader = None
 
         # Configure optimizer and scheduler
@@ -307,39 +307,39 @@ class DeepSpeedEngine(Module):
         has_optimizer = False
 
         if optimizer or self.optimizer_name():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             has_optimizer = True
         # If no parameters given by init default to module parameters
         if model_parameters is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             model_parameters = self.module.parameters()
 
         # Convert model parameters from generator to list
         if not isinstance(model_parameters, list):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             model_parameters = list(model_parameters)
 
         # 优化器的初始化
         # 注意，这三种情况是互斥的。
         if has_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # 入参传入了 optimizer 或者配置文件中指定了 optimizer
             self._configure_optimizer(optimizer, model_parameters)
             self._configure_lr_scheduler(lr_scheduler)
             self._report_progress(0)
         elif self.zero_optimization():
             # 启用 zero 优化，即 zero_optimization_stage > 0
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # no optim selected but zero is enabled
             self.optimizer = self._configure_zero_optimizer(optimizer=None)
         elif self.bfloat16_enabled():
             # bf16 模式
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer = self._configure_bf16_optimizer(optimizer=None)
 
         # Hook optimizer for snip_momentum pruning
         if hasattr(model, 'pruners'):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             from ..compression.helper import rewrite_optimizer_step
             self.optimizer.pruners = model.pruners
             rewrite_optimizer_step(self.optimizer)
@@ -355,23 +355,23 @@ class DeepSpeedEngine(Module):
         self.save_non_zero_checkpoint = False
         self.save_zero_checkpoint = False
         if not isinstance(self.optimizer, DeepSpeedZeRoOffload):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self._configure_checkpointing(dist_init_required)
 
         if self.eigenvalue_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.eigenvalue = self._configure_eigenvalue()
 
         if self.pld_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.progressive_layer_drop = self._configure_progressive_layer_drop()
 
         if self.curriculum_enabled_legacy():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.curriculum_scheduler_legacy = self._configure_curriculum_scheduler_legacy()
 
         if self.random_ltd_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             random_ltd_config = self.random_ltd_config()
             random_ltd_config[RANDOM_LTD_GLOBAL_BATCH_SIZE] = self.train_batch_size()
             random_ltd_config[RANDOM_LTD_MICRO_BATCH_SIZE] = self.train_micro_batch_size_per_gpu()
@@ -393,13 +393,13 @@ class DeepSpeedEngine(Module):
         self.unflatten = _unflatten_dense_tensors
 
     def destroy(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.optimizer is not None and hasattr(self.optimizer, 'destroy'):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.destroy()
 
     def _get_model_parameters(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.autotuning_profile_model_info():
             self.autotuning_model_info = {}
             num_params = 0
@@ -416,7 +416,7 @@ class DeepSpeedEngine(Module):
                 if p.requires_grad:
                     trainable_num_params += n
             if self.global_rank == 0:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.autotuning_model_info["num_params"] = num_params * self.mp_world_size
                 self.autotuning_model_info["trainable_num_params"] = trainable_num_params * self.mp_world_size
 
@@ -432,7 +432,7 @@ class DeepSpeedEngine(Module):
             gradient_accumulation_steps (int): Number of training steps to accumulate gradients
                 before averaging and applying them.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return (
             self.train_batch_size,
             self.train_micro_batch_size_per_gpu,
@@ -440,7 +440,7 @@ class DeepSpeedEngine(Module):
         )
 
     def set_train_batch_size(self, train_batch_size):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         """Adjust the global batch size by increasing or decreasing the number of
         micro-batches (i.e., gradient accumulation steps). The size of each micro-batch
         (i.e., ``train_micro_batch_size_per_gpu``) is not changed.
@@ -464,22 +464,22 @@ class DeepSpeedEngine(Module):
         Args:
             micro_batch_size (int): The new micro batch size for training.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # overwrite config
         new_global_batch_size = micro_batch_size * self._config.gradient_accumulation_steps * self.dp_world_size
         self._config.train_batch_size = new_global_batch_size
         self._config.train_micro_batch_size_per_gpu = micro_batch_size
 
     def set_data_post_process_func(self, post_process_func):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.training_dataloader is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.training_dataloader.post_process_func = post_process_func
 
     def set_custom_curriculum_learning_schedule(self, schedule_func_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.training_dataloader is not None and self.curriculum_learning_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.training_dataloader.data_sampler.set_custom_curriculum_learning_schedule(schedule_func_dict)
 
     def get_global_grad_norm(self) -> float:
@@ -492,7 +492,7 @@ class DeepSpeedEngine(Module):
         Returns:
             float: norm
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._global_grad_norm
 
     def __getattr__(self, name):
@@ -502,38 +502,38 @@ class DeepSpeedEngine(Module):
 
         _module = {}
         if "module" in self.__dict__:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             _module = self.__dict__['module']
         if name in dir(self):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return getattr(self, name)
         elif name in dir(_module):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return getattr(_module, name)
         else:
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def checkpoint_tag_validation_enabled(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.checkpoint_tag_validation_enabled
 
     def checkpoint_tag_validation_fail(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.checkpoint_tag_validation_fail
 
     def elasticity_enabled(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.elasticity_enabled
 
     def is_elastic_model_parallel_supported(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.elasticity_enabled():
             # Add code for finding number of GPUs per node automatically
             if self._config.num_gpus_per_node % self._config.elastic_model_parallel_size == 0:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 return True
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 return False
 
     def pld_enabled(self):
@@ -603,7 +603,7 @@ class DeepSpeedEngine(Module):
         return self._config.data_efficiency_config[DATA_ROUTING][RANDOM_LTD]
 
     def random_ltd_initialize(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         assert self.random_ltd_enabled()
         random_ltd_config = self.random_ltd_config()
         random_ltd_queue = deque([x for x in sorted(random_ltd_config[RANDOM_LTD_LAYER_ID])])
@@ -625,22 +625,22 @@ class DeepSpeedEngine(Module):
             #self.lr_scheduler = lr_schedules.WarmupLayerTokenDecayLR(self.optimizer, self.random_ltd_scheduler)
 
     def wall_clock_breakdown(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.wall_clock_breakdown
 
     def flops_profiler_enabled(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.flops_profiler_config.enabled or self.autotuning_enabled()
 
     def flops_profiler_recompute_fwd_factor(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.flops_profiler_config.recompute_fwd_factor
 
     def flops_profiler_profile_step(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         step = self._config.flops_profiler_config.profile_step
         if self._config.autotuning_config.enabled:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             step = self.autotuning_start_profile_step()
         return step
 
@@ -715,7 +715,7 @@ class DeepSpeedEngine(Module):
         return self._config.scheduler_params
 
     def quantize_training(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return (
             self._config.compression_config[WEIGHT_QUANTIZATION][SHARED_PARAMETERS]
             [WEIGHT_QUANTIZE_IN_FORWARD_ENABLED],
@@ -852,18 +852,18 @@ class DeepSpeedEngine(Module):
     def communication_data_type(self):
         res = self._config.communication_data_type
         if res is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return res
 
         if self.fp16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return torch.float16
 
         if self.bfloat16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return torch.bfloat16
         
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
 
         return torch.float32
 
@@ -913,7 +913,7 @@ class DeepSpeedEngine(Module):
         return self._config.aio_config
 
     def get_data_types(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         model_dtype = torch.float32
         if self.fp16_enabled():
             model_dtype = torch.float16
@@ -931,7 +931,7 @@ class DeepSpeedEngine(Module):
         return (model_dtype, grad_accum_dtype)
 
     def _configure_lr_scheduler(self, client_lr_scheduler):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # First check for scheduler in json configuration
         lr_scheduler = self._scheduler_from_config(self.optimizer)
         if lr_scheduler:
@@ -948,12 +948,12 @@ class DeepSpeedEngine(Module):
         log_dist(f'DeepSpeed LR Scheduler = {self.lr_scheduler}', ranks=[0])
 
     def _configure_checkpointing(self, dist_init_required):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         self.checkpoint_engine = TorchCheckpointEngine()
 
         if self._config is not None and self._config.nebula_config.enabled:
             try:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 from deepspeed.runtime.checkpoint_engine.nebula_checkpoint_engine import \
                     NebulaCheckpointEngine
                 self.checkpoint_engine = NebulaCheckpointEngine(config_params=self._config.nebula_config)
@@ -973,7 +973,7 @@ class DeepSpeedEngine(Module):
         self.save_non_zero_checkpoint = (rank == 0) or self.zero_optimization_partition_weights()
 
         if self.zero_optimization() or self.bfloat16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             param_rank = dist.get_rank(group=self.optimizer.dp_process_group)
 
             # Only the first parameter parallel process needs to store the
@@ -984,10 +984,10 @@ class DeepSpeedEngine(Module):
         scheduler_name = self.scheduler_name()
         if scheduler_name is not None:
             if hasattr(lr_schedules, scheduler_name):
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 scheduler = getattr(lr_schedules, scheduler_name)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 assert hasattr(torch.optim.lr_scheduler,
                                scheduler_name), f"DeepSpeed does not recognize LR scheduler {scheduler_name}"
 
@@ -997,33 +997,33 @@ class DeepSpeedEngine(Module):
             instantiated_scheduler = scheduler(optimizer, **scheduler_params)
             return instantiated_scheduler
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return None
 
     def _set_distributed_vars(self, args):
         device_rank = args.device_rank if args is not None and hasattr(args, 'device_rank') else self.local_rank
         if device_rank >= 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             get_accelerator().set_device(device_rank)
             self.device = torch.device(get_accelerator().device_name(), device_rank)
             self.world_size = dist.get_world_size()
             self.global_rank = dist.get_rank()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.world_size = 1
             self.global_rank = 0
             self.device = torch.device(get_accelerator().device_name())
 
     # Configure based on command line arguments
     def _configure_with_arguments(self, args, mpu):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # After the distributed backend is initialized we are guaranteed the LOCAL_RANK
         # environment variable is set. We must align args.local_rank to this value for
         # backwards compatibility with scripts relying on [args|self].local_rank containing
         # the correct local rank info. _do_args_sanity_check will ensure this is the case.
 
         if "OMPI_COMM_WORLD_LOCAL_RANK" in os.environ:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             ompi_local_rank = os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK")
             local_rank = os.environ.get('LOCAL_RANK', ompi_local_rank)
             assert ompi_local_rank == local_rank, f"LOCAL_RANK ({local_rank}) != OMPI_COMM_WORLD_LOCAL_RANK ({ompi_local_rank}), " \
@@ -1032,12 +1032,12 @@ class DeepSpeedEngine(Module):
 
         self.local_rank = int(os.environ['LOCAL_RANK'])
         if hasattr(args, 'local_rank'):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             args.local_rank = self.local_rank
 
     # Validate command line arguments
     def _do_args_sanity_check(self, args):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         assert "LOCAL_RANK" in os.environ or "OMPI_COMM_WORLD_LOCAL_RANK" in os.environ, "DeepSpeed requires the LOCAL_RANK environment " \
             "variable, it is set by the deepspeed launcher, deepspeed.init_distributed, or the torch's launcher. If using a " \
             "different launcher please ensure LOCAL_RANK is set prior to initializing deepspeed."
@@ -1052,11 +1052,11 @@ class DeepSpeedEngine(Module):
                 ), f"Mismatch in local rank setting, args.local_rank={args.local_rank} but env['LOCAL_RANK']={env_local_rank}."
 
     def _is_supported_optimizer(self, optimizer_name):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return (optimizer_name in DEEPSPEED_OPTIMIZERS or getattr(torch.optim, optimizer_name, None) is not None)
 
     def _supported_optims(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         FairseqOptimizer = None
         try:
             from fairseq.optim.fairseq_optimizer import FairseqOptimizer
@@ -1071,7 +1071,7 @@ class DeepSpeedEngine(Module):
 
     # Validate configuration based on command line arguments
     def _do_sanity_check(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         expected_optim_types = self._supported_optims()
         expected_optim_types += [type(None), Callable]
         assert isinstance(self.client_optimizer, tuple(expected_optim_types)), \
@@ -1094,12 +1094,12 @@ class DeepSpeedEngine(Module):
     def _broadcast_model(self):
 
         def is_replicated(p):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if hasattr(p, "ds_status") and p.ds_status is not ZeroParamStatus.AVAILABLE:
                 return False
             return True
         
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
 
         for p in self.module.parameters():
             # Broadcast the model for different parameters
@@ -1121,7 +1121,7 @@ class DeepSpeedEngine(Module):
                              f"{[(n, p.dtype) for n, p in model.named_parameters() if p.dtype != dtype]}")
 
     def _set_client_model(self, model):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # register client model in _modules so that nn.module methods work correctly
         modules = self.__dict__.get('_modules')
         modules['module'] = model
@@ -1135,24 +1135,24 @@ class DeepSpeedEngine(Module):
             [hasattr(param, "ds_id") for param in self.module.parameters()])
 
         if self.fp16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if is_zero3_model:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.__check_params(self.module, torch.half)
             self.module.half()
         elif self.bfloat16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if is_zero3_model:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.__check_params(self.module, torch.bfloat16)
             self.module.bfloat16()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.__check_params(self.module, torch.float)
 
         # zero.Init() handles device placement of model
         if not self.dont_change_device:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.module.to(self.device)
 
         # MoE related initialization
@@ -1162,7 +1162,7 @@ class DeepSpeedEngine(Module):
                 self.num_experts.append(module.num_experts)
 
         if self.has_moe_layers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             for _, module in self.module.named_modules():
                 if isinstance(module, TopKGate):
                     self.gate_modules.append(module)
@@ -1175,7 +1175,7 @@ class DeepSpeedEngine(Module):
 
         # Pass the mpu from here to groups. For subsequent use, just query groups
         if self.mpu is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             groups.mpu = self.mpu
 
         # Set deepspeed parallelism spec. for the model including expert parallelism
@@ -1199,7 +1199,7 @@ class DeepSpeedEngine(Module):
 
     # check if parameters are duplicated in optimizer param_groups
     def _check_for_duplicates(self, optimizer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for name, param in self.module.named_parameters():
             param_id = id(param)
 
@@ -1213,7 +1213,7 @@ class DeepSpeedEngine(Module):
             assert occurrence <= 1, f"Parameter with name: {name} occurs multiple times in optimizer.param_groups. Make sure it only appears once to prevent undefined behavior."
 
     def _do_optimizer_sanity_check(self, basic_optimizer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         model_dtype, grad_accum_dtype = self.get_data_types()
         zero_enabled = self.zero_optimization()
         amp_enabled = self.amp_enabled()
@@ -1222,7 +1222,7 @@ class DeepSpeedEngine(Module):
             not (amp_enabled and zero_enabled)
         ), "Amp and ZeRO are not currently compatible, please use (legacy) fp16 mode which performs similar to amp opt_mode=O2"
         if zero_enabled:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if not is_zero_supported_optimizer(basic_optimizer):
                 assert (
                     self.zero_allow_untested_optimizer()
@@ -1240,7 +1240,7 @@ class DeepSpeedEngine(Module):
                     "Model data type and gradient accumulation data type must be equal to use ZeRO")
             return ZERO_OPTIMIZATION
         elif amp_enabled:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if model_dtype != grad_accum_dtype:
                 raise NotImplementedError(
                     "Model data type and gradient accumulation data type must be equal to use Amp")
@@ -1282,7 +1282,7 @@ class DeepSpeedEngine(Module):
     '''
     # Configure optimizer
     def _configure_optimizer(self, client_optimizer, model_parameters):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # 首先根据入参或者配置文件创建和初始化基本的优化器
         if client_optimizer is not None:
             # 入参传入了优化器，
@@ -1344,7 +1344,7 @@ class DeepSpeedEngine(Module):
         self.quantizer = self._configure_quantization()
 
     def _configure_basic_optimizer(self, model_parameters):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         optimizer_parameters = self.optimizer_params()
         if optimizer_parameters is None:
             optimizer_parameters = {}
@@ -1421,11 +1421,11 @@ class DeepSpeedEngine(Module):
         return optimizer
 
     def _configure_compression_scheduler(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return compression_scheduler(self.module, self._config.compression_config)
 
     def _configure_random_ltd_scheduler(self, configs):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return RandomLTDScheduler(configs)
 
     def _configure_quantization(self):
@@ -1445,7 +1445,7 @@ class DeepSpeedEngine(Module):
             ), "MoQ (quantize in optimization step) weight quantization is only supported for FP16"
         quantizer = None
         if quantize_enabled and not quantize_weight_in_forward:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             from deepspeed.runtime.quantize import Quantizer
 
             quantizer = Quantizer(
@@ -1466,14 +1466,14 @@ class DeepSpeedEngine(Module):
         dynamic_loss_args = self.dynamic_loss_scale_args()
         clip_grad = self.gradient_clipping()
         if APEX_INSTALLED:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             fused_opts = (apex.optimizers.FusedAdam, FusedAdam)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             fused_opts = FusedAdam
         if isinstance(optimizer, fused_opts) \
                 or self.optimizer_name() in [ONEBIT_ADAM_OPTIMIZER, ZERO_ONE_ADAM_OPTIMIZER]:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if self.dynamic_loss_scale():
                 log_dist(f'Creating fp16 optimizer with dynamic loss scale', ranks=[0])
                 timers = self.timers if self.wall_clock_breakdown() else None
@@ -1516,7 +1516,7 @@ class DeepSpeedEngine(Module):
         return optimizer
 
     def _configure_bf16_optimizer(self, optimizer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         clip_grad = self.gradient_clipping()
 
         if optimizer is None:
@@ -1548,7 +1548,7 @@ class DeepSpeedEngine(Module):
                 有关 stage3 优化器的跟踪请跳转到 节 4。
     '''
     def _configure_zero_optimizer(self, optimizer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # ZeRO 开启等级
         zero_stage = self.zero_optimization_stage()
         mics_shard_size = self.mics_shard_size()
@@ -1559,7 +1559,7 @@ class DeepSpeedEngine(Module):
         timers = self.timers if self.wall_clock_breakdown() else None
         # 如果没有基础分类器，创建一个假的
         if optimizer is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             optimizer = DummyOptim(list(self.module.parameters()))
 
         if self.zero_legacy_stage1():  # stage1 已经废弃了，至少从 stage2 起步
@@ -1695,7 +1695,7 @@ class DeepSpeedEngine(Module):
         return optimizer
 
     def _return_mics_optimizer(self, basic_optimizer, timers):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         from deepspeed.runtime.zero.mics import MiCS_Optimizer
         optimizer = MiCS_Optimizer(self.module,
                                    basic_optimizer,
@@ -1727,7 +1727,7 @@ class DeepSpeedEngine(Module):
         return optimizer
 
     def _configure_eigenvalue(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         eigenvalue = Eigenvalue(
             verbose=self.eigenvalue_verbose(),
             max_iter=self.eigenvalue_max_iter(),
@@ -1741,28 +1741,28 @@ class DeepSpeedEngine(Module):
         return eigenvalue
 
     def _configure_progressive_layer_drop(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         pld = ProgressiveLayerDrop(theta=self.pld_theta(), gamma=self.pld_gamma())
 
         return pld
 
     def _configure_curriculum_scheduler_legacy(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         scheduler = CurriculumScheduler(self.curriculum_params_legacy())
         return scheduler
 
     @staticmethod
     def is_map_style_dataset(obj):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return hasattr(obj, "__getitem__") and hasattr(obj, "__len__")
 
     @staticmethod
     def is_iterable_style_dataset(obj):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return isinstance(obj, torch.utils.data.IterableDataset)  # hasattr(obj, "__iter__") should work as well
 
     def dataloader_drop_last(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._config.dataloader_drop_last
 
     def was_step_applied(self) -> bool:
@@ -1773,7 +1773,7 @@ class DeepSpeedEngine(Module):
         Returns:
             bool: Whether the latest ``step()`` modified model parameters.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._step_applied
 
     def deepspeed_io(self,
@@ -1784,7 +1784,7 @@ class DeepSpeedEngine(Module):
                      data_sampler=None,
                      collate_fn=None,
                      num_local_io_workers=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if not (self.is_map_style_dataset(dataset) or self.is_iterable_style_dataset(dataset)):
             raise ValueError("Training data must be a torch Dataset")
 
@@ -1853,17 +1853,17 @@ class DeepSpeedEngine(Module):
     def _scale_loss_by_gas(self, prescaled_loss):
         if isinstance(prescaled_loss, torch.Tensor):
             scaled_loss = prescaled_loss / self.gradient_accumulation_steps()
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         elif isinstance(prescaled_loss, tuple) or isinstance(prescaled_loss, list):
             scaled_loss = []
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             for l in prescaled_loss:
                 if isinstance(l, torch.Tensor):
                     scaled_loss.append(l / self.gradient_accumulation_steps())
                 else:
                     scaled_loss.append(l)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             scaled_loss = prescaled_loss
             if self.warn_unscaled_loss:
                 logger.warning(f"DeepSpeed unable to scale loss because of type: {type(prescaled_loss)}")
@@ -1873,7 +1873,7 @@ class DeepSpeedEngine(Module):
 
     @instrument_w_nvtx
     def forward(self, *inputs, **kwargs):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         r"""Execute forward propagation
         Arguments:
             *inputs: Variable length input list
@@ -1957,26 +1957,26 @@ class DeepSpeedEngine(Module):
 
     def _cast_inputs_half(self, inputs):
         if isinstance(inputs, (list, tuple)):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             new_inputs = []
             for v in inputs:
                 new_inputs.append(self._cast_inputs_half(v))
             return inputs.__class__(new_inputs)
         elif isinstance(inputs, dict):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             new_inputs = {}
             for k, v in inputs.items():
                 new_inputs[k] = self._cast_inputs_half(v)
             return new_inputs
         elif hasattr(inputs, 'half'):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return inputs.half()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return inputs
 
     def print_forward_breakdown(self, fwd_time):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         gate_time = 0.0
         moe_time = 0.0
         falltoall = 0.0
@@ -2008,17 +2008,17 @@ class DeepSpeedEngine(Module):
         self.optimizer.is_gradient_accumulation_boundary = self.is_gradient_accumulation_boundary()
         # ZeRO stage >= 2 communicates during non gradient accumulation boundaries as well
         if self.zero_optimization_partition_gradients():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.overlapping_partition_gradients_reduce_epilogue()
 
         # Communicate only at gradient accumulation boundaries
         elif self.is_gradient_accumulation_boundary():
             if self.zero_optimization_stage() == ZeroStageEnum.optimizer_states and hasattr(
                     self.optimizer, 'reduce_gradients'):
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.optimizer.reduce_gradients(pipeline_parallel=self.pipeline_parallelism)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.buffered_allreduce_fallback(elements_per_buffer=bucket_size)
 
     @instrument_w_nvtx
@@ -2034,7 +2034,7 @@ class DeepSpeedEngine(Module):
         see_memory_usage("Engine before backward", force=self.memory_breakdown())
 
         if self.scale_wrt_gas is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             scale_wrt_gas = self.scale_wrt_gas
 
         if not allreduce_gradients:
@@ -2056,10 +2056,10 @@ class DeepSpeedEngine(Module):
                     self.monitor.write_events(self.summary_events)
 
         if self.is_gradient_accumulation_boundary():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.losses = []
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.losses.append(loss.mean().item())
 
         self._start_timers(self.engine_timers.backward_timers)
@@ -2070,11 +2070,11 @@ class DeepSpeedEngine(Module):
         self._start_timers(self.engine_timers.backward_inner_timers)
 
         if self.zero_optimization():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.is_gradient_accumulation_boundary = self.is_gradient_accumulation_boundary()
             self.optimizer.backward(loss, retain_graph=retain_graph)
         elif self.amp_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # AMP requires delaying unscale when inside gradient accumulation boundaries
             # https://nvidia.github.io/apex/advanced.html#gradient-accumulation-across-iterations
             delay_unscale = not self.is_gradient_accumulation_boundary()
@@ -2082,20 +2082,20 @@ class DeepSpeedEngine(Module):
                 scaled_loss.backward(retain_graph=retain_graph)
         elif self.fp16_enabled():
             if self.eigenvalue_enabled():
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.optimizer.backward(loss, create_graph=True, retain_graph=True)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 self.optimizer.backward(loss, retain_graph=retain_graph)
         elif self.bfloat16_enabled():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.backward(loss)
         else:
             if self.eigenvalue_enabled():
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 loss.backward(create_graph=True, retain_graph=True)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 loss.backward(retain_graph=retain_graph)
 
         self._stop_timers(self.engine_timers.backward_inner_timers)
@@ -2129,11 +2129,11 @@ class DeepSpeedEngine(Module):
 
         """
         if self._is_gradient_accumulation_boundary is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return (self.micro_steps + 1) % \
                 self.gradient_accumulation_steps() == 0
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return self._is_gradient_accumulation_boundary
 
     def set_gradient_accumulation_boundary(self, is_boundary):
@@ -2157,7 +2157,7 @@ class DeepSpeedEngine(Module):
         Arguments:
             is_boundary (bool): are we at a gradient accumulation boundary or not?
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         self._is_gradient_accumulation_boundary = is_boundary
         self.optimizer.is_gradient_accumulation_boundary = is_boundary
 
@@ -2165,7 +2165,7 @@ class DeepSpeedEngine(Module):
         """
         Zero parameter grads.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for param_name, param in self.module.named_parameters():
             param.grad = None
 
@@ -2173,7 +2173,7 @@ class DeepSpeedEngine(Module):
         clip_grad_norm_(parameters=self.module.parameters(), max_norm=self.gradient_clipping(), mpu=self.mpu)
 
     def _take_model_step(self, lr_kwargs, block_eigenvalue={}):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.gradient_clipping() > 0.0:
             if not (self.fp16_enabled() or self.bfloat16_enabled() or self.amp_enabled() or self.zero_optimization()):
                 self.clip_fp32_gradients()
@@ -2239,7 +2239,7 @@ class DeepSpeedEngine(Module):
         self.global_samples += self.train_batch_size()
 
     def step(self, lr_kwargs=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         r"""Execute the weight update step after forward and backward propagation
         on effective_train_batch.
         """
@@ -2345,12 +2345,12 @@ class DeepSpeedEngine(Module):
         see_memory_usage("Engine after step", force=self.memory_breakdown())
 
     def _start_timers(self, timer_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for name in timer_names:
             self.timers(name).start()
 
     def _stop_timers(self, timer_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         record = self.is_gradient_accumulation_boundary() and \
             self.flops_profiler_enabled() and \
                 (self.global_steps >= self.flops_profiler_profile_step())
@@ -2358,7 +2358,7 @@ class DeepSpeedEngine(Module):
             self.timers(name).stop(record=record)
 
     def _autotuning_exit(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.global_rank == 0:
             msg = self.timers.get_mean([
                 FORWARD_GLOBAL_TIMER,
@@ -2383,7 +2383,7 @@ class DeepSpeedEngine(Module):
         exit()
 
     def _write_monitor(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.global_rank == 0:
             self.summary_events = [
                 (
@@ -2415,7 +2415,7 @@ class DeepSpeedEngine(Module):
             self.monitor.write_events(self.summary_events)
 
     def _get_optimizer_param(self, param_name):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         result = []
         if not self.optimizer:
             return result
@@ -2427,75 +2427,75 @@ class DeepSpeedEngine(Module):
         return result
 
     def get_lr(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._get_optimizer_param("lr")
 
     def get_type(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return self._get_optimizer_param("type")
 
     def get_mom(self):
         if self.optimizer_name() in ["SGD", "RMSprop"]:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return self._get_optimizer_param("momentum")
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return self._get_optimizer_param("betas")
 
     def get_pld_theta(self):
         if self.progressive_layer_drop:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return self.progressive_layer_drop.get_theta()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             return None
 
     def _report_progress(self, step):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         lr = self.get_lr()
         mom = self.get_mom()
         log_dist(f"step={step}, skipped={self.skipped_steps}, lr={lr}, mom={mom}", ranks=[0])
 
     def allreduce_bucket(self, bucket, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         tensor = self.flatten(bucket)
 
         tensor_to_allreduce = tensor
 
         if self.communication_data_type != tensor.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             tensor_to_allreduce = tensor.to(self.communication_data_type)
 
         if self.postscale_gradients():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if self.gradient_predivide_factor() != 1.0:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 tensor_to_allreduce.mul_(1.0 / self.gradient_predivide_factor())
 
             dist.all_reduce(tensor_to_allreduce, group=dp_group)
             if self.gradient_average:
                 if self.gradient_predivide_factor() != dist.get_world_size(group=dp_group):
-                    debuginfo(prj='ds', info=self.__class__.__name__ )
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                     tensor_to_allreduce.mul_(self.gradient_predivide_factor() / dist.get_world_size(group=dp_group))
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             tensor_to_allreduce.mul_(1. / dist.get_world_size(group=dp_group))
             dist.all_reduce(tensor_to_allreduce, group=dp_group)
 
         if self.communication_data_type != tensor.dtype and tensor is not tensor_to_allreduce:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             tensor.copy_(tensor_to_allreduce)
 
         return tensor
 
     def allreduce_and_copy(self, small_bucket, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         allreduced = self.allreduce_bucket(small_bucket, dp_group)
         for buf, synced in zip(small_bucket, self.unflatten(allreduced, small_bucket)):
             buf.copy_(synced)
 
     def allreduce_no_retain(self, bucket, dp_group, numel_per_bucket=500000000):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         small_bucket = []
         numel = 0
         for tensor in bucket:
@@ -2509,7 +2509,7 @@ class DeepSpeedEngine(Module):
             self.allreduce_and_copy(small_bucket, dp_group)
 
     def _get_gradients_for_reduction(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         non_expert_grads = []
         expert_grads = {}
         if self.has_moe_layers:
@@ -2541,7 +2541,7 @@ class DeepSpeedEngine(Module):
         return non_expert_grads, expert_grads
 
     def _reduce_non_expert_gradients(self, grads, elements_per_buffer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         split_buckets = split_half_float_double_sparse(grads)
         for _, bucket_tuple in enumerate(split_buckets):
             bucket_type, bucket = bucket_tuple
@@ -2557,7 +2557,7 @@ class DeepSpeedEngine(Module):
                 self.allreduce_no_retain(bucket, dp_group=dp_group, numel_per_bucket=elements_per_buffer)
 
     def _reduce_expert_gradients(self, expert_grads, elements_per_buffer):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for ep_name, expert_grads_group in expert_grads.items():
             expert_split_buckets = split_half_float_double_sparse(expert_grads_group)
             for i, bucket_tuple in enumerate(expert_split_buckets):
@@ -2572,21 +2572,21 @@ class DeepSpeedEngine(Module):
 
     def buffered_allreduce_fallback(self, grads=None, elements_per_buffer=500000000):
         if grads is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             non_expert_grads, expert_grads = self._get_gradients_for_reduction()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             assert not self.has_moe_layers, "attempting to reduce grads in unsupported way w.r.t. MoE"
             non_expert_grads = grads
 
         self._reduce_non_expert_gradients(non_expert_grads, elements_per_buffer)
 
         if self.has_moe_layers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self._reduce_expert_gradients(expert_grads, elements_per_buffer)
 
     def sparse_allreduce_no_retain(self, bucket, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         allreduced_sparses = self.sparse_allreduce_bucket(bucket, dp_group)
         # Densify sparse tensor and copy back to original location
         for tensor in allreduced_sparses:
@@ -2596,7 +2596,7 @@ class DeepSpeedEngine(Module):
                 tensor.orig_dense_tensor.copy_(tensor.to_dense())
 
     def sparse_allreduce_bucket(self, bucket, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         sparse_list = []
         for sparse in bucket:
             sparse_list.append(self.sparse_allreduce(sparse, dp_group))
@@ -2606,24 +2606,24 @@ class DeepSpeedEngine(Module):
         original_data_type = sparse.values.dtype
         if self.communication_data_type != sparse.values.dtype:
             if self.communication_data_type in (torch.float16, torch.bfloat16):
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 indices = sparse.indices.to(torch.int32)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 indices = sparse.indices
             values = sparse.values.to(self.communication_data_type)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             indices = sparse.indices
             values = sparse.values
 
         if self.postscale_gradients():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if self.gradient_average:
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 values.mul_(self.gradient_predivide_factor() / dist.get_world_size(group=dp_group))
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             values.mul_(1. / dist.get_world_size(group=dp_group))
 
         indices_device_list = self.sparse_all_gather(indices, dp_group)
@@ -2634,7 +2634,7 @@ class DeepSpeedEngine(Module):
         return sparse
 
     def sparse_all_gather(self, value, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         my_size = torch.LongTensor([value.size()[0]]).to(self.device)
         all_sizes = self.all_gather_scalar(my_size, dp_group)
         max_size = torch.cat(all_sizes).max()
@@ -2662,13 +2662,13 @@ class DeepSpeedEngine(Module):
         return tensors
 
     def all_gather_scalar(self, value, dp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         tensor_list = [value.new_zeros(value.size()) for _ in range(dist.get_world_size(group=dp_group))]
         dist.all_gather(tensor_list, value, group=dp_group)
         return tensor_list
 
     def module_state_dict(self, destination=None, prefix="", keep_vars=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         sd = self.module.state_dict(destination, prefix, keep_vars)
         if self.random_ltd_enabled():
             sd = remove_random_ltd_state_dict(sd)
@@ -2683,7 +2683,7 @@ class DeepSpeedEngine(Module):
                             mpu=None,
                             num_experts=1,
                             checkpoint_engine=TorchCheckpointEngine()):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if old_moe_load:
             expp_rank = groups._get_expert_data_parallel_rank(groups._get_max_expert_size_name())
 
@@ -2734,10 +2734,10 @@ class DeepSpeedEngine(Module):
     def load_module_state_dict(self, checkpoint, strict=True, custom_load_fn=None):
         module_state_dict = checkpoint['module']
         if custom_load_fn:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             custom_load_fn(src=module_state_dict, dst=self.module)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.module.load_state_dict(
                 module_state_dict,  # TODO
                 strict=strict)
@@ -2756,11 +2756,11 @@ class DeepSpeedEngine(Module):
                     param.data.copy_(saved_frozen_params[name].data)
 
     def _get_zero_ckpt_prefix(self, dp_rank, bf16_mode):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return f'{"bf16_" if bf16_mode else ""}zero_pp_rank_{dp_rank}'
 
     def _get_rank_zero_ckpt_name(self, checkpoints_path, tag, mp_rank, dp_rank, bf16_mode):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         file_prefix = self._get_zero_ckpt_prefix(dp_rank, bf16_mode=bf16_mode)
         zero_ckpt_name = os.path.join(
             checkpoints_path,
@@ -2770,7 +2770,7 @@ class DeepSpeedEngine(Module):
         return zero_ckpt_name
 
     def _get_zero_ckpt_name(self, checkpoints_path, tag):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
         pp_rank = dist.get_rank(group=self.optimizer.dp_process_group)
         bf16_mode = self.bfloat16_enabled()
@@ -2778,15 +2778,15 @@ class DeepSpeedEngine(Module):
 
     def _get_ckpt_name(self, checkpoints_path, tag, mp_placeholder=None):
         if mp_placeholder is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             mp_rank_str = mp_placeholder
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
             mp_rank_str = f"{mp_rank:02d}"
 
         if self.zero_optimization_partition_weights():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             filename = "zero_pp_rank_{}".format(dist.get_rank(group=self.optimizer.dp_process_group))
             ckpt_name = os.path.join(
                 checkpoints_path,
@@ -2794,7 +2794,7 @@ class DeepSpeedEngine(Module):
                 f"{filename}_mp_rank_{mp_rank_str}_model_states.pt",
             )
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             ckpt_name = os.path.join(
                 checkpoints_path,
                 str(tag),
@@ -2803,7 +2803,7 @@ class DeepSpeedEngine(Module):
         return ckpt_name
 
     def _get_optimizer_ckpt_name(self, checkpoints_path, tag, expp_rank):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
         ckpt_name = os.path.join(checkpoints_path, str(tag),
                                  f'expp_rank_{expp_rank}_mp_rank_{mp_rank:02d}_optim_states.pt')
@@ -2813,19 +2813,19 @@ class DeepSpeedEngine(Module):
     def _get_expert_ckpt_name(checkpoints_path, layer_id, expert_id, tag, mpu=None):
         mp_rank = 0 if mpu is None else mpu.get_model_parallel_rank()
         if layer_id <= -1:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # Used to support old checkpoint loading
             ckpt_name = os.path.join(checkpoints_path, '' if tag is None else str(tag),
                                      f'expert_{expert_id}_mp_rank_{mp_rank:02d}_model_states.pt')
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # Used to support new checkpoint loading
             ckpt_name = os.path.join(checkpoints_path, '' if tag is None else str(tag),
                                      f'layer_{layer_id}_expert_{expert_id}_mp_rank_{mp_rank:02d}_model_states.pt')
         return ckpt_name
 
     def _get_all_ckpt_names(self, checkpoints_path, tag):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         # It is required that (checkpoints_path, tag) are consistent among all ranks.
         ckpt_file_pattern = self._get_ckpt_name(checkpoints_path, tag, mp_placeholder="*")
         import glob
@@ -2865,7 +2865,7 @@ class DeepSpeedEngine(Module):
         before ``load_checkpoint()``.
 
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
 
         if tag is None:
             latest_tag = "latest_universal" if self.load_universal_checkpoint() else "latest"
@@ -2914,7 +2914,7 @@ class DeepSpeedEngine(Module):
                          load_lr_scheduler_states=True,
                          load_module_only=False,
                          custom_load_fn=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
 
         from deepspeed.runtime.state_dict_factory import SDLoaderFactory
 
@@ -3036,11 +3036,11 @@ class DeepSpeedEngine(Module):
 
     def _load_zero_checkpoint(self, load_dir, tag, load_optimizer_states=True):
         if self.load_universal_checkpoint():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             zero_sd_list = None
             checkpoint_folder = f'{os.path.join(load_dir, tag)}'
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             if load_optimizer_states and self.dp_world_size != self.loaded_checkpoint_dp_world_size:
                 raise ZeRORuntimeException("The checkpoint being loaded used a DP " \
                     f"world size of {self.loaded_checkpoint_dp_world_size} but the " \
@@ -3064,7 +3064,7 @@ class DeepSpeedEngine(Module):
         return True
 
     def _get_mp_rank_zero_checkpoint_names(self, load_dir, tag, mp_rank, dp_world_size, bf16_mode):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         zero_ckpt_names = []
         for dp_rank in range(dp_world_size):
             ckpt_name = self._get_rank_zero_ckpt_name(checkpoints_path=load_dir,
@@ -3077,7 +3077,7 @@ class DeepSpeedEngine(Module):
         return zero_ckpt_names
 
     def _get_all_zero_checkpoint_names(self, load_dir, tag, bf16_mode):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         mp_rank = 0 if self.mpu is None else self.mpu.get_model_parallel_rank()
         zero_ckpt_names = self._get_mp_rank_zero_checkpoint_names(load_dir=load_dir,
                                                                   tag=tag,
@@ -3096,7 +3096,7 @@ class DeepSpeedEngine(Module):
         return zero_ckpt_names
 
     def _get_all_zero_checkpoint_state_dicts(self, zero_ckpt_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         zero_sd_list = []
         for i, ckpt_name in enumerate(zero_ckpt_names):
             _state = None
@@ -3117,7 +3117,7 @@ class DeepSpeedEngine(Module):
         return zero_optimizer_sd
 
     def _get_all_zero_checkpoints(self, load_dir, tag):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for bf16_mode in [self.bfloat16_enabled(), not self.bfloat16_enabled()]:
             zero_ckpt_names = self._get_all_zero_checkpoint_names(load_dir, tag, bf16_mode)
             if zero_ckpt_names is not None:
@@ -3131,7 +3131,7 @@ class DeepSpeedEngine(Module):
         return None
 
     def _checkpoint_tag_validation(self, tag):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         if self.checkpoint_tag_validation_enabled():
             s_hash = hashlib.sha1(tag.encode())
             bhash = torch.ByteTensor([s_hash.digest()]).flatten().to(self.device)
@@ -3149,7 +3149,7 @@ class DeepSpeedEngine(Module):
                 logger.warning(msg)
 
     def save_checkpoint(self, save_dir, tag=None, client_state={}, save_latest=True):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         """Save training checkpoint
 
         Arguments:
@@ -3165,7 +3165,7 @@ class DeepSpeedEngine(Module):
 
         """
         if self.zero_optimization_partition_weights():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # Prepare for checkpoint save by ensuring all parameters are partitioned
             self.optimizer.checkpoint_event_prologue()
 
@@ -3189,7 +3189,7 @@ class DeepSpeedEngine(Module):
         self._checkpoint_tag_validation(tag)
 
         if self.has_moe_layers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.save_non_zero_checkpoint = False
             self._create_checkpoint_file(save_dir, tag, False)
             self._save_moe_checkpoint(save_dir, tag, client_state=client_state)
@@ -3199,17 +3199,17 @@ class DeepSpeedEngine(Module):
         # All procs then call module_state_dict(), but only procs of data
         # parallel rank 0 save the general model params.
         if not self.has_moe_layers:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self._create_checkpoint_file(save_dir, tag, False)
             self._save_checkpoint(save_dir, tag, client_state=client_state)
 
         if self.save_zero_checkpoint:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self._create_zero_checkpoint_files(save_dir, tag)
             self._save_zero_checkpoint(save_dir, tag)
 
         if self.zero_optimization_partition_weights():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.checkpoint_event_epilogue()
 
         # Save latest checkpoint tag
@@ -3226,7 +3226,7 @@ class DeepSpeedEngine(Module):
         """
             Get the state dict of the non-moe layers
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         for key in list(full_state_dict.keys()):
             if 'expert' in key and 'moe.gate.wg.weight' not in key:
                 full_state_dict.pop(key)
@@ -3234,7 +3234,7 @@ class DeepSpeedEngine(Module):
         return full_state_dict
 
     def _save_moe_checkpoint(self, save_dir, tag, client_state={}):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         save_path = self._get_ckpt_name(save_dir, tag)
         # A hack to save the checkpointing directory. Pipeline parallelism overrides
         # module_state_dict() and uses this path to save the model. module_state_dict()
@@ -3344,7 +3344,7 @@ class DeepSpeedEngine(Module):
         self._curr_save_path = None
 
     def _create_checkpoint_file(self, save_dir, tag, zero_checkpoint):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         name_function = (self._get_zero_ckpt_name if zero_checkpoint else self._get_ckpt_name)
         try:
             checkpoint_name = name_function(save_dir, tag)
@@ -3357,7 +3357,7 @@ class DeepSpeedEngine(Module):
         return True
 
     def _create_zero_checkpoint_files(self, save_dir, tag):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         success = True
         # zero checkpoint files are created sequentially
         for rank in range(dist.get_world_size(self.optimizer.dp_process_group)):
@@ -3369,7 +3369,7 @@ class DeepSpeedEngine(Module):
         return success
 
     def _save_checkpoint(self, save_dir, tag, client_state={}):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
 
         save_path = self._get_ckpt_name(save_dir, tag)
 
@@ -3413,7 +3413,7 @@ class DeepSpeedEngine(Module):
             self.checkpoint_engine.save(state, save_path)
 
     def _get_buffer_names(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         buffer_names = []
 
         # we save buffer names so that we could extract later the real buffers from the saved
@@ -3422,7 +3422,7 @@ class DeepSpeedEngine(Module):
 
         # have to traverse the tree to be able to skip non-persistent buffers
         def get_layer_named_buffers(module, prefix=""):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             for name, buf in module.named_buffers(recurse=False):
                 if buf is not None and name not in module._non_persistent_buffers_set:
                     buffer_names.append(prefix + name)
@@ -3436,15 +3436,15 @@ class DeepSpeedEngine(Module):
         return buffer_names
 
     def _get_param_shape_func(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return param.ds_shape if hasattr(param, 'ds_id') else param.shape
 
     def _get_param_fragment_func(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         return param.ds_tensor.detach().cpu() if hasattr(param, 'ds_id') else param.detach().cpu()
 
     def _get_zero_frozen_param_attributes(self, attr_func):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         frozen_param_fragments = OrderedDict()
 
         for param in self.module.parameters():
@@ -3474,13 +3474,13 @@ class DeepSpeedEngine(Module):
         # zero2 started using a round_robin_bit16_groups which is a shuffled version of bit16_groups -
         # if we don't use it, we get parameters ordered incorrectly
         if hasattr(self.optimizer, "round_robin_bit16_groups"):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             bit16_groups = self.optimizer.round_robin_bit16_groups
         elif self.bfloat16_enabled() and not self.zero_optimization():
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             bit16_groups = self.optimizer.bf16_groups
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             bit16_groups = self.optimizer.bit16_groups if self.zero_optimization_stage(
             ) == 2 else self.optimizer.fp16_groups
 
@@ -3508,7 +3508,7 @@ class DeepSpeedEngine(Module):
         e.g. in `zero_to_fp32`. Each dict entry is a pair of param names, where the key is the name
         of the variable that isn't stored and the value is the actual param holding data.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         shared_index = {}
         shared_params_by_full_name = {}
 
@@ -3516,7 +3516,7 @@ class DeepSpeedEngine(Module):
                           and any(hasattr(param, "ds_id") for param in self.module.parameters()))
 
         def get_layer_state_dict(module, prefix=""):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # handle params
             for name, param in module.named_parameters(recurse=False):
                 if param is None or (is_zero3_model and not hasattr(param, "ds_id")):
@@ -3540,13 +3540,13 @@ class DeepSpeedEngine(Module):
                     get_layer_state_dict(child, prefix + name + ".")
 
         if dist.get_rank() == 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             get_layer_state_dict(self.module, prefix="")
 
         return shared_params_by_full_name
 
     def _copy_recovery_script(self, save_path):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         base_dir = os.path.dirname(os.path.dirname(__file__))
         script = "zero_to_fp32.py"
         src = os.path.join(base_dir, "utils", script)
@@ -3562,13 +3562,13 @@ class DeepSpeedEngine(Module):
         self.checkpoint_engine.save(zero_sd, zero_checkpoint_name)
 
         if self.global_rank == 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self._copy_recovery_script(save_path)
         ckpt_type = 'zero' if self.zero_optimization() else 'bf16_zero'
         logger.info(f'{ckpt_type} checkpoint saved {zero_checkpoint_name}')
 
     def _zero3_consolidated_16bit_state_dict(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         """
         Get a full non-partitioned state_dict with fp16 weights on cpu.
         Important: this function must be called on all ranks and not just rank 0.
@@ -3587,7 +3587,7 @@ class DeepSpeedEngine(Module):
         shared_params = {}
 
         def get_layer_state_dict(module, prefix=""):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             # gather one layer at a time to be memory-efficient
             # must use modifier_rank=0 to release GPU memory after each layer gathered
             #see_memory_usage("before GatheredParameters", force=True)
@@ -3632,7 +3632,7 @@ class DeepSpeedEngine(Module):
         return state_dict
 
     def save_fp16_model(self, save_dir, save_filename="pytorch_model.bin"):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         """has been renamed to save_16bit_model, keeping this around for backwards
         compatibility"""
         return self.save_16bit_model(save_dir, save_filename)
@@ -3661,7 +3661,7 @@ class DeepSpeedEngine(Module):
 
         if self.zero_optimization_partition_weights():
             if self.zero_gather_16bit_weights_on_model_save():
-                debuginfo(prj='ds', info=self.__class__.__name__ )
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ )
                 # consolidation is expensive in time and memory and therefore isn't a default
                 state_dict = self._zero3_consolidated_16bit_state_dict()
             else:
@@ -3670,7 +3670,7 @@ class DeepSpeedEngine(Module):
                     f"Did not save the model {path} because `stage3_gather_16bit_weights_on_model_save` is False")
                 return False
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             state_dict = self.module.state_dict()
 
         tag = f"global_step{self.global_steps}"
@@ -3687,12 +3687,12 @@ class DeepSpeedEngine(Module):
         return True
 
     def empty_partition_cache(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ )
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ )
         """
         Release GPU memory consumed by offloaded model parameters.
         """
         if hasattr(self.optimizer, 'empty_partition_cache'):
-            debuginfo(prj='ds', info=self.__class__.__name__ )
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ )
             self.optimizer.empty_partition_cache()
             gc.collect()
             get_accelerator().empty_cache()

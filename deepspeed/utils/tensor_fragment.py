@@ -47,7 +47,7 @@ class tensor_fragment:
 
 
 def get_full_hp_param(self, optim_state_key=None):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     reduce_buffer = torch.zeros_like(self, dtype=torch.float32).flatten()
     if self._hp_mapping is not None:
         lp_frag_address = self._hp_mapping.lp_fragment_address
@@ -63,7 +63,7 @@ def get_full_hp_param(self, optim_state_key=None):
 
 
 def get_full_hp_grad(self):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     reduce_buffer = torch.zeros_like(self, dtype=torch.float32).flatten()
     if self._hp_mapping is not None:
         hp_mapping = self._hp_mapping
@@ -98,7 +98,7 @@ def safe_get_full_fp32_param(param):
             param (``torch.nn.Parameter``): A model parameter
     """
     # ZeRO stage 3 param
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if hasattr(param, 'ds_id'):
         return param._z3_optimizer.get_full_hp_param(param)
 
@@ -115,7 +115,7 @@ def safe_get_full_optimizer_state(param, optim_state_key):
             param (``torch.nn.Parameter``): A model parameter
     """
     # ZeRO stage 3 param
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if hasattr(param, 'ds_id'):
         return param._z3_optimizer.get_full_hp_param(param, optim_state_key)
 
@@ -132,7 +132,7 @@ def safe_get_full_grad(param):
         Args:
             param (``torch.nn.Parameter``): A model parameter
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if param.grad is not None:
         return param.grad
 
@@ -149,7 +149,7 @@ def safe_get_full_grad(param):
 
 def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                             param_group_index, partition_start, partition_size, optimizer_state_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     lp_end = lp_param.numel() + lp_start
     hp_start = partition_start
     hp_end = partition_start + partition_size

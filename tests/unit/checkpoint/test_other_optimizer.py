@@ -19,7 +19,7 @@ class TestOtherOptimizerCheckpoint(DistributedTest):
 
     @pytest.mark.skipif(not deepspeed.ops.__compatible_ops__[FusedLambBuilder.NAME], reason="lamb is not compatible")
     def test_checkpoint_unfused_optimizer(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -70,7 +70,7 @@ class TestOtherOptimizerCheckpoint(DistributedTest):
                                             load_optimizer_states=False)
 
     def test_checkpoint_fused_optimizer(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -107,7 +107,7 @@ class TestOtherOptimizerCheckpoint(DistributedTest):
                                             load_optimizer_states=False)
 
     def test_checkpoint_fp32_optimizer(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,

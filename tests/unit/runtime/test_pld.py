@@ -29,7 +29,7 @@ class TestPLDModel(DistributedTest):
     world_size = 1
 
     def test_pld_model(self, theta):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         gamma = 0.001
         config_dict = {
             "train_batch_size": 1,
@@ -70,7 +70,7 @@ class TestNonPLDModel(DistributedTest):
     world_size = 1
 
     def test_non_pld_model(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         gamma = 0.001
         theta = 0.5
         config_dict = {

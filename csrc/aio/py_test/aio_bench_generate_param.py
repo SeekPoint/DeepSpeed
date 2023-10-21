@@ -78,7 +78,7 @@ def generate_aio_param(read_log_dir, write_log_dir):
 
 
 def main():
-    debuginfo(prj='ds', info='Generate aio param')
+    gd.debuginfo(prj='ds', info='Generate aio param')
     args = parse_arguments()
     if not validate_args(args):
         quit()

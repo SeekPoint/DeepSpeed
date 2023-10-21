@@ -13,7 +13,7 @@ from pydebug import debuginfo, infoTensor
 class BaseTuner:
 
     def __init__(self, exps, resource_manager, metric):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.all_exps = exps
         self.rm = resource_manager
         self.best_iter = 0
@@ -23,7 +23,7 @@ class BaseTuner:
         logger.info(f"total number of exps =  {len(self.all_exps)}")
 
     def has_next(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Whether there exists more configurations for evaluation"""
         if len(self.all_exps) > 0:
             return True
@@ -38,7 +38,7 @@ class BaseTuner:
         """"Update the tuner with what configurations have been evaluated and their performance results"""
 
     def tune(self, sample_size=1, n_trials=1000, early_stopping=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         i = 0
         try:
             while i < n_trials and self.has_next():

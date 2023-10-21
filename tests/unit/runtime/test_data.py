@@ -27,7 +27,7 @@ class TestDataLoaderDropLast(DistributedTest):
     world_size = 1
 
     def test(self, train_batch_size, drop_last):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {"train_batch_size": train_batch_size, "dataloader_drop_last": drop_last, "steps_per_print": 1}
         hidden_dim = 10
 

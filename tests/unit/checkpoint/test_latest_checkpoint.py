@@ -15,7 +15,7 @@ class TestLatestCheckpoint(DistributedTest):
     world_size = 1
 
     def test_existing_latest(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -38,7 +38,7 @@ class TestLatestCheckpoint(DistributedTest):
                                             empty_tag=True)
 
     def test_missing_latest(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,

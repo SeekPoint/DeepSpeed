@@ -19,7 +19,7 @@ from pydebug import debuginfo, infoTensor
 class MPS_Accelerator(DeepSpeedAccelerator):
 
     def __init__(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._name = "mps"
         self._communication_backend_name = None
 
@@ -28,7 +28,7 @@ class MPS_Accelerator(DeepSpeedAccelerator):
 
     # Device APIs
     def device_name(self, device_index=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if device_index == None:
             return "mps"
         return "mps:{}".format(device_index)
@@ -193,7 +193,7 @@ class MPS_Accelerator(DeepSpeedAccelerator):
         return tensor.pin_memory()
 
     def on_accelerator(self, tensor):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         device_str = str(tensor.device)
         if device_str.startswith("mps"):
             return True
@@ -201,7 +201,7 @@ class MPS_Accelerator(DeepSpeedAccelerator):
             return False
 
     def op_builder_dir(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         try:
             # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
             # if successful this also means we're doing a local install and not JIT compile path
@@ -213,7 +213,7 @@ class MPS_Accelerator(DeepSpeedAccelerator):
 
     # create an instance of op builder, specified by class_name
     def create_op_builder(self, op_name):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         builder_class = self.get_op_builder(op_name)
         if builder_class != None:
             return builder_class()
@@ -221,13 +221,13 @@ class MPS_Accelerator(DeepSpeedAccelerator):
 
     # return an op builder class, specified by class_name
     def get_op_builder(self, class_name):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from deepspeed.ops.op_builder.cpu import NotImplementedBuilder
 
         return NotImplementedBuilder
 
     def build_extension(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from torch.utils.cpp_extension import BuildExtension
 
         return BuildExtension

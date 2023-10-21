@@ -17,7 +17,7 @@ class TestPipelineCheckpoint(DistributedTest):
 
     @pytest.mark.parametrize("zero_stage", [0, 1])
     def test_checkpoint_pipe_engine(self, zero_stage, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         skip_on_arch(min_arch=7)
 
@@ -82,7 +82,7 @@ class TestPipelineCheckpoint(DistributedTest):
             #          num_dp=2)),
         ])
     def test_checkpoint_pipe_module(self, base_topo, test_topo, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         checkpoint_engine = TorchCheckpointEngine()
         base_model = LinearStackPipe(topology=base_topo)

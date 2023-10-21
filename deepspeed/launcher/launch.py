@@ -32,7 +32,7 @@ PID_FILE_BASEPATH = "/tmp"
 
 from pydebug import debuginfo, infoTensor
 def parse_args():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     parser = ArgumentParser(description="DeepSpeed distributed training launch"
                             " utility that creates multiple distributed"
                             " processes on a single node")
@@ -117,7 +117,7 @@ def parse_args():
 
 # Adapted from https://psutil.readthedocs.io/en/latest/#kill-process-tree
 def terminate_process_tree(pid):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     process = psutil.Process(pid)
     children = process.children(recursive=True)
     children.append(process)
@@ -132,7 +132,7 @@ def terminate_process_tree(pid):
 
 
 def main():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     args = parse_args()
     current_env = os.environ.copy()
 
@@ -314,7 +314,7 @@ def main():
     last_return_code = None
 
     def sigkill_handler(signum, frame):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for process in processes:
             logger.info(f"Killing subprocess {process.pid}")
             try:
@@ -356,5 +356,5 @@ def main():
 
 
 if __name__ == "__main__":
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     main()

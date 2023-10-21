@@ -15,7 +15,7 @@ class TestTwoOutputModel(DistributedTest):
     world_size = 1
 
     def test(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         grad_accumulation_steps = 2
         micro_batch_size = 1
         world_size = self.world_size

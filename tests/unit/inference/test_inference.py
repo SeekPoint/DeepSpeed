@@ -271,7 +271,7 @@ class TestModelTask(DistributedTest):
         assert_fn,
         perf_meas=True,
     ):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         invalid_test_msg = validate_test(model_w_task, dtype, enable_cuda_graph, enable_triton)
         if invalid_test_msg:
             pytest.skip(invalid_test_msg)

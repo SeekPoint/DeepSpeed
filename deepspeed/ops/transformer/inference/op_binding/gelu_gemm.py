@@ -12,7 +12,7 @@ from pydebug import debuginfo, infoTensor
 class GELUGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(GELUGemmOp, self).__init__(config)
         try:
             if self.config.dtype in [torch.float16, torch.int8]:
@@ -32,7 +32,7 @@ class GELUGemmOp(BaseOp):
         raise NotImplementedError
 
     def forward(self, input: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, weight_out: torch.Tensor):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         output = self.fused_gemm_gelu(
             input,

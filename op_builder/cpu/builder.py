@@ -15,7 +15,7 @@ from pydebug import debuginfo, infoTensor
 class CPUOpBuilder(OpBuilder):
 
     def builder(self):
-        debuginfo(prj='ds', info='CPUOpBuilder builder')
+        gd.debuginfo(prj='ds', info='CPUOpBuilder builder')
         from torch.utils.cpp_extension import CppExtension as ExtensionBuilder
 
         compile_args = {'cxx': self.strip_empty_entries(self.cxx_args())}
@@ -29,9 +29,9 @@ class CPUOpBuilder(OpBuilder):
         return cpp_ext
 
     def cxx_args(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['-O3', '-g', '-Wno-reorder']
 
     def libraries_args(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return []

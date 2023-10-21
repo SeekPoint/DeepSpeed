@@ -24,7 +24,7 @@ def pytest_hack(runner_result):
     Long-term, these model tests should be adapted to pytest.
     '''
     if not runner_result.wasSuccessful():
-        debuginfo(prj='ds', info='SUITE UNSUCCESSFUL:', file=sys.stderr)
+        gd.debuginfo(prj='ds', info='SUITE UNSUCCESSFUL:', file=sys.stderr)
         for fails in runner_result.failures:
             print(fails, file=sys.stderr)
         assert runner_result.wasSuccessful()  # fail the test

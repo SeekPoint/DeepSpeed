@@ -16,7 +16,7 @@ class TestCheckpointValidationTag(DistributedTest):
 
     @pytest.mark.parametrize('valid_mode', ["FAIL", "WARN", "IGNORE"])
     def test_checkpoint_unique_tag(self, tmpdir, valid_mode):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_batch_size": 2,
@@ -42,7 +42,7 @@ class TestCheckpointValidationTag(DistributedTest):
             model.save_checkpoint(save_dir=tmpdir, tag=f"tag-{dist.get_rank()}")
 
     def test_checkpoint_unknown_tag_validation(self, tmpdir):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         config_dict = {
             "train_batch_size": 2,

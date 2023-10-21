@@ -20,7 +20,7 @@ class TestModelProfiling(DistributedTest):
     world_size = 1
 
     def test(self, enable_cuda_graph, use_cuda_events):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         task = "fill-mask"
         model = "bert-base-cased"

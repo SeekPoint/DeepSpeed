@@ -15,7 +15,7 @@ from deepspeed.accelerator import get_accelerator
 from pydebug import debuginfo, infoTensor
 
 def get_megatron_version():
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     p = os.popen("pip list --format=columns | grep megatron-lm")
     pip_list = p.read()
     assert 'megatron-lm' in pip_list, 'Please install Megatron-LM before getting its version'
@@ -24,7 +24,7 @@ def get_megatron_version():
 
 
 def get_gpt2_model(args_others, mp_size=1):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     from megatron.model import GPT2Model
     from megatron.initialize import initialize_megatron
 
@@ -53,7 +53,7 @@ def get_gpt2_model(args_others, mp_size=1):
 class MockGPT2ModelPipe(PipelineModule):
 
     def __init__(self, num_layers, mp_size, args_others, topo, **kwargs):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         from megatron.initialize import initialize_megatron
 
@@ -75,7 +75,7 @@ class MockGPT2ModelPipe(PipelineModule):
         class ParallelTransformerLayerPipe(ParallelTransformerLayer):
 
             def forward(self, args):
-                debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+                gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
                 # hardcode attn mask for testing, PP requires the attn_mask to be stashed
                 attention_mask = torch.tensor([[True]], device=get_accelerator().current_device_name())
                 return super().forward(args, attention_mask)
@@ -88,7 +88,7 @@ class MockGPT2ModelPipe(PipelineModule):
         super().__init__(layers=layers, loss_fn=torch.nn.CrossEntropyLoss(), topology=topo, **kwargs)
 
     def gpt2_attention_mask_func(self, attention_scores, ltor_mask):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         attention_scores.masked_fill_(ltor_mask, -10000.0)
         return attention_scores
 
@@ -96,13 +96,13 @@ class MockGPT2ModelPipe(PipelineModule):
         """Init method based on N(0, sigma)."""
 
         def init_(tensor):
-            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+            gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             return torch.nn.init.normal_(tensor, mean=0.0, std=sigma)
 
         return init_
 
     def scaled_init_method_normal(self, sigma, num_layers):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         """Init method based on N(0, sigma/sqrt(2*num_layers)."""
         std = sigma / math.sqrt(2.0 * num_layers)
 

@@ -15,7 +15,7 @@ import psutil
 import subprocess
 
 from pydebug import debuginfo, infoTensor
-debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 # return a list of list for cores to numa mapping
 # [
@@ -40,7 +40,7 @@ def get_numa_cores():
 
 
 def check_for_numactl_pkg():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     libs = dict(
         dpkg=["-l", "numactl", "apt"],
         pacman=["-Q", "numactl", "pacman"],
@@ -63,7 +63,7 @@ def check_for_numactl_pkg():
 
 
 def parse_range(rng):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     try:
         value = int(rng)
         return range(value, value + 1)
@@ -88,7 +88,7 @@ def parse_range(rng):
 # 2. Sub ranges must be in ascend order and not overlap with each other
 # 3. No space in the range expression
 def parse_range_list(range_str):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     number_list = []
     last = -1
     range_list = range_str.split(',')
@@ -104,7 +104,7 @@ def parse_range_list(range_str):
 
 
 def get_numactl_cmd(bind_core_list, num_local_procs, local_rank):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     numactl_cmd = []
     check_for_numactl_pkg()
     if 'KMP_AFFINITY' in os.environ.keys():

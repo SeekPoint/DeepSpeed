@@ -44,7 +44,7 @@ class DummyOptim():
     """
 
     def __init__(self, params):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.param_groups = []
         self.param_groups.append({'params': params})
 
@@ -54,7 +54,7 @@ def noop_decorator(func):
 
 
 def ensure_directory_exists(filename):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Create the directory path to ``filename`` if it does not already exist.
 
     Args:
@@ -65,7 +65,7 @@ def ensure_directory_exists(filename):
 
 
 def set_random_seed(seed):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Set the random seed for common PRNGs used during training: random, numpy, and torch.
 
     Args:
@@ -79,13 +79,13 @@ def set_random_seed(seed):
 
 
 def is_model_parallel_parameter(p) -> bool:
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if hasattr(p, 'model_parallel') and p.model_parallel:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return True
 
     if hasattr(p, 'tensor_model_parallel') and p.tensor_model_parallel:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return True
 
     return False
@@ -115,20 +115,20 @@ def bwc_tensor_model_parallel_rank(mpu=None):
         int: the rank
     """
     if mpu is None:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # No model parallelism in easy :)
         return 0
 
     if hasattr(mpu, 'get_tensor_model_parallel_rank'):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # New Megatron and DeepSpeed convention (post pipeline-parallelism release)
         return mpu.get_tensor_model_parallel_rank()
     elif hasattr(mpu, 'get_slice_parallel_rank'):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Some DeepSpeed + pipeline parallelism versions
         return mpu.get_slice_parallel_rank()
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Deprecated Megatron and DeepSpeed convention
         return mpu.get_model_parallel_rank()
 
@@ -146,19 +146,19 @@ def copy_to_device(item, device, criterion_func):
         None
     """
     if criterion_func(item):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return item.to(device)
     elif isinstance(item, list):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [copy_to_device(v, device, criterion_func) for v in item]
     elif isinstance(item, tuple):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return tuple([copy_to_device(v, device, criterion_func) for v in item])
     elif isinstance(item, dict):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return {k: copy_to_device(v, device, criterion_func) for k, v in item.items()}
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return item
 
 
@@ -175,21 +175,21 @@ def move_to_device(item, device, criterion_func):
         None
     """
     if criterion_func(item):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         device_copy = item.to(device)
         item.data = device_copy.data
         return item
     elif isinstance(item, list):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [move_to_device(v, device, criterion_func) for v in item]
     elif isinstance(item, tuple):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return tuple([move_to_device(v, device, criterion_func) for v in item])
     elif isinstance(item, dict):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return {k: move_to_device(v, device, criterion_func) for k, v in item.items()}
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return item
 
 
@@ -197,7 +197,7 @@ class CheckOverflow(object):
     '''Checks for overflow in gradient across parallel process'''
 
     def __init__(self, param_groups=None, mpu=None, zero_reduce_scatter=False, deepspeed=None):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.mpu = mpu
         self.params = [] if param_groups else None
         self.zero_reduce_scatter = zero_reduce_scatter
@@ -215,7 +215,7 @@ class CheckOverflow(object):
         overflow = -1 in norm_group
         overflow_gpu = get_accelerator().FloatTensor([overflow])
         if self.has_moe_params:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # In this case, we need to do an all_reduce across
             # the expert_parallel_group, so that if there was
             # an overflow due to expert weights, we detect it
@@ -223,10 +223,10 @@ class CheckOverflow(object):
             # Only need to check groups.get_largest_expert_parallel_group()
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=groups._get_max_expert_parallel_group())
         if self.mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=self.mpu.get_model_parallel_group())
         elif reduce_overflow:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX)
             dist.barrier()
         overflow = overflow_gpu[0].item()
@@ -236,11 +236,11 @@ class CheckOverflow(object):
         params = []
         has_moe_params = False
         if param_groups is None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             params = self.params
             has_moe_params = self.has_moe_params
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert param_groups is not None, \
                 "self.params and param_groups both cannot be none"
 
@@ -254,16 +254,16 @@ class CheckOverflow(object):
 
     # `params` is a list / generator of torch.Variable
     def has_overflow_serial(self, params):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i, p in enumerate(params):
             if p.grad is not None and self._has_inf_or_nan(p.grad.data, i):
                 return True
         return False
 
     def has_overflow(self, params, has_moe_params=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if has_moe_params is None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             has_moe_params = self.has_moe_params
         overflow = self.has_overflow_serial(params)
         # Since each model parallel GPU carries only part of the model,
@@ -273,25 +273,25 @@ class CheckOverflow(object):
         #                             op=deepspeed.comm.ReduceOp.MAX,
         #                             group=mpu.get_model_parallel_group())
         if has_moe_params:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # All reduce this across expert_parallel_group, so that if an expert
             # overflows, we detect it here
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=groups._get_max_expert_parallel_group())
         if self.zero_reduce_scatter:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=dist.get_world_group())
         elif self.mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.deepspeed is not None:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 using_pipeline = hasattr(self.deepspeed, 'pipeline_enable_backward_allreduce')
                 if (using_pipeline and self.deepspeed.pipeline_enable_backward_allreduce is False) or (
                         not using_pipeline and self.deepspeed.enable_backward_allreduce is False):
-                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=self.mpu.get_data_parallel_group())
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=self.mpu.get_model_parallel_group())
         elif self.deepspeed is not None and self.deepspeed.enable_backward_allreduce is False:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=dist.get_world_group())
 
         overflow = overflow_gpu[0].item()
@@ -301,7 +301,7 @@ class CheckOverflow(object):
     @staticmethod
     def _has_inf_or_nan(x, i):
         try:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # if x is half, the .float() incurs an additional deep copy, but it's necessary if
             # Pytorch's .sum() creates a one-element tensor of the same type as x
             # (which is true for some recent version of pytorch).
@@ -309,7 +309,7 @@ class CheckOverflow(object):
             # More efficient version that can be used if .sum() returns a Python scalar
             # cpu_sum = float(x.sum())
         except RuntimeError as instance:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # We want to check if inst is actually an overflow exception.
             # RuntimeError could come from a different error.
             # If so, we still want the exception to propagate.
@@ -317,15 +317,15 @@ class CheckOverflow(object):
                 raise
             return True
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if cpu_sum == float('inf') or cpu_sum == -float('inf') or cpu_sum != cpu_sum:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return True
             return False
 
 
 def _handle_overflow(cpu_sum, x, i):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     import math
     rank = dist.get_rank()
     if rank == 0:
@@ -338,7 +338,7 @@ def _handle_overflow(cpu_sum, x, i):
 
 
 def get_global_norm(norm_list):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """ Compute total from a list of norms
     """
     total_norm = 0.0
@@ -369,23 +369,23 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2, mpu=None):
     Returns:
         Total norm of the parameters (viewed as a single vector).
     """
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if norm_type == inf:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = max(p.grad.data.abs().max() for p in parameters)
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         # Take max across all GPUs.
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = 0
         for p in parameters:
             if mpu is not None:
@@ -399,7 +399,7 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2, mpu=None):
         # Sum across all model parallel GPUs.
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()**(1. / norm_type)
 
@@ -413,7 +413,7 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2, mpu=None):
 
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in parameters:
             p.grad.data.mul_(clip_coef)
     return total_norm
@@ -442,16 +442,16 @@ def get_grad_norm(parameters, norm_type=2, mpu=None):
 
     norm_type = float(norm_type)
     if norm_type == inf:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = max(p.grad.data.abs().max() for p in parameters)
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         # Take max across all GPUs.
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = 0.
         tensor_mp_rank = bwc_tensor_model_parallel_rank(mpu=mpu)
         for p in parameters:
@@ -470,12 +470,12 @@ def get_grad_norm(parameters, norm_type=2, mpu=None):
         # Sum across all model parallel GPUs.
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()**(1. / norm_type)
 
     if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = -1
 
     return total_norm
@@ -493,9 +493,9 @@ def get_grad_zeros(parameters, mpu=None):
     Returns:
         Total number of params with zero values (viewed as a single vector).
     """
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if isinstance(parameters, torch.Tensor):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         parameters = [parameters]
     parameters = list(filter(lambda p: p.grad is not None, parameters))
 
@@ -517,7 +517,7 @@ def get_grad_zeros(parameters, mpu=None):
     # Sum across all model parallel GPUs.
     total_zeros_cuda = get_accelerator().FloatTensor([float(total_zeros)])
     if mpu is not None:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         dist.all_reduce(total_zeros_cuda, op=dist.ReduceOp.SUM, group=mpu.get_model_parallel_group())
     total_zeros = total_zeros_cuda[0].item()
 
@@ -542,21 +542,21 @@ def get_weight_norm(parameters, norm_type=2, mpu=None):
         Total norm of the parameters (viewed as a single vector).
     """
     if isinstance(parameters, torch.Tensor):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         parameters = [parameters]
 
     norm_type = float(norm_type)
     if norm_type == inf:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = max(p.data.abs().max() for p in parameters)
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         # Take max across all GPUs.
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = 0.
         tensor_mp_rank = bwc_tensor_model_parallel_rank(mpu=mpu)
         for p in parameters:
@@ -575,12 +575,12 @@ def get_weight_norm(parameters, norm_type=2, mpu=None):
         # Sum across all model parallel GPUs.
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()**(1. / norm_type)
 
     if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = -1
 
     return total_norm
@@ -593,7 +593,7 @@ def prefix_sum_inc(weights):
         >>> prefix_sum_inc([3,4,5])
         [3, 7, 12]
     """
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     weights_ = [w for w in weights]
     for x in range(1, len(weights_)):
         weights_[x] += weights_[x - 1]
@@ -601,7 +601,7 @@ def prefix_sum_inc(weights):
 
 
 def partition_uniform(num_items, num_parts):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     parts = [0] * (num_parts + 1)
     # First check for the trivial edge case
     if num_items <= num_parts:
@@ -617,7 +617,7 @@ def partition_uniform(num_items, num_parts):
 
 
 def _lprobe(weights, num_parts, bottleneck):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     num_items = len(weights)
     total_weight = weights[-1]
 
@@ -649,7 +649,7 @@ def _lprobe(weights, num_parts, bottleneck):
 
 
 def _rb_partition_balanced(weights, num_parts, eps):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     total_weight = weights[-1]
     lower = total_weight / num_parts  # best case heaviest partition
     upper = total_weight  # worst case heaviest partition
@@ -666,11 +666,11 @@ def _rb_partition_balanced(weights, num_parts, eps):
 
 
 def partition_balanced(weights, num_parts, eps=1e-3):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     num_items = len(weights)
     # First check for the trivial edge case
     if num_items <= num_parts:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return partition_uniform(num_items, num_parts)
 
     weights_ = prefix_sum_inc(weights)
@@ -688,7 +688,7 @@ def partition_balanced(weights, num_parts, eps=1e-3):
 class PartitionedTensor:
 
     def __init__(self, tensor, group, partition_meta=None):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__()
 
         self.group = group
@@ -701,7 +701,7 @@ class PartitionedTensor:
 
     @classmethod
     def from_meta(cls, meta, local_part, group, device=get_accelerator().device_name()):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert meta.dtype == torch.long
         dummy = torch.ones(dist.get_world_size(group=group))
         part_obj = cls(tensor=dummy, group=group)
@@ -727,7 +727,7 @@ class PartitionedTensor:
         return part_obj
 
     def _partition_tensor(self, tensor):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         partition = partition_uniform(num_items=tensor.numel(), num_parts=self.num_parts)
         start = partition[self.rank]
         length = partition[self.rank + 1] - start
@@ -736,7 +736,7 @@ class PartitionedTensor:
         return tensor_part, partition
 
     def full(self, device=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if device is None:
             device = self.orig_device
 
@@ -763,7 +763,7 @@ class PartitionedTensor:
         return flat_tensor.view(self.full_size()).clone().detach()
 
     def to_meta(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Returns a torch.LongTensor that encodes partitioning information.
 
         Can be used along with ``data()`` to serialize a ``PartitionedTensor`` for
@@ -795,7 +795,7 @@ mem_cached = 0
 
 
 def memory_status(msg, print_rank=-1, reset_max=False):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     global mem_alloced, mem_cached
 
     rank = dist.get_rank()
@@ -805,7 +805,7 @@ def memory_status(msg, print_rank=-1, reset_max=False):
     get_accelerator().synchronize()
 
     if reset_max:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         get_accelerator().reset_max_memory_cached()
         get_accelerator().reset_max_memory_allocated()
 
@@ -847,7 +847,7 @@ def empty_cache():
 
 
 def see_memory_usage(message, force=False):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not force:
         return
     if dist.is_initialized() and not dist.get_rank() == 0:
@@ -872,7 +872,7 @@ def see_memory_usage(message, force=False):
 
 
 def call_to_str(base, *args, **kwargs):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Construct a string representation of a call.
 
     Args:
@@ -895,7 +895,7 @@ def call_to_str(base, *args, **kwargs):
 
 
 def get_only_unique_item(items):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     item_set = set(items)
     if len(item_set) != 1:
         raise RuntimeError(f"expected there to be only one unique element in {items}")
@@ -914,13 +914,13 @@ def clip_gradients(parameters, max_norm=1.0, global_grad_norm=None, mpu=None, ep
     Returns:
         float: the global gradient norm
     """
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if global_grad_norm is None:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         global_grad_norm = get_grad_norm(parameters, mpu=mpu)
     clip_coef = max_norm / (global_grad_norm + eps)
     if clip_coef < 1:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in parameters:
             p.grad.detach().mul_(clip_coef)
     return global_grad_norm
@@ -947,24 +947,24 @@ def get_global_norm_of_tensors(input_tensors, norm_type=2, mpu=None):
 
     norm_type = float(norm_type)
     if norm_type == inf:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = max(t.data.abs().max() for t in input_tensors)
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=mpu.get_model_parallel_group())
             total_norm = total_norm_cuda[0].item()
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = sum([t.data.float().norm(norm_type).item()**norm_type for t in input_tensors])
         total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         if mpu is not None:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()**(1. / norm_type)
 
     if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = -1
 
     return total_norm
@@ -980,15 +980,15 @@ def clip_tensors_by_global_norm(input_tensors, max_norm=1.0, global_norm=None, m
     Returns:
         float: the global norm
     """
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if global_norm is None:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         global_norm = get_global_norm_of_tensors(input_tensors, mpu=mpu)
 
     clip_coef = max_norm / (global_norm + eps)
 
     if clip_coef < 1:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for t in input_tensors:
             t.detach().mul_(clip_coef)
 
@@ -1000,19 +1000,19 @@ def align_dense_tensors(tensor_list, alignment):
     remaining = num_elements % alignment
 
     if remaining:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         elements_to_add = alignment - remaining
         pad_tensor = torch.zeros(elements_to_add, device=tensor_list[0].device, dtype=tensor_list[0].dtype)
         padded_tensor_list = tensor_list + [pad_tensor]
     else:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         padded_tensor_list = tensor_list
 
     return padded_tensor_list
 
 
 def all_gather_dp_groups(partitioned_param_groups, dp_process_group, start_alignment_factor, allgather_bucket_size):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     for group_id, partitioned_params in enumerate(partitioned_param_groups):
         # Sequential AllGather Best of both worlds
         partition_id = dist.get_rank(group=dp_process_group[group_id])
@@ -1045,7 +1045,7 @@ def all_gather_dp_groups(partitioned_param_groups, dp_process_group, start_align
 class TLinear(torch.nn.Linear):
 
     def __init__(self, orig_layer, name=""):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.name = name
         super().__init__(orig_layer.weight.shape[1], orig_layer.weight.shape[0], bias=(orig_layer.bias is not None))
         self.weight.data = transpose(orig_layer.weight.data)
@@ -1053,20 +1053,20 @@ class TLinear(torch.nn.Linear):
         self._fwd_func = self._fwd_bias_add if self.bias is not None else self._fwd
 
     def _fwd(self, input):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return F.linear(input, self.weight)
 
     def _fwd_bias_add(self, input):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return F.linear(input, self.weight, bias=self.bias)
 
     def forward(self, input):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self._fwd_func(input)
 
 
 def get_inactive_params(param_list):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
     return [param for param in param_list if (hasattr(param, 'ds_id') and \
                             param.ds_status == ZeroParamStatus.NOT_AVAILABLE)]

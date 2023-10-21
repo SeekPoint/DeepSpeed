@@ -9,4 +9,4 @@ from ...model_implementations.transformers.ds_transformer import DeepSpeedTransf
 from .inference.moe_inference import DeepSpeedMoEInferenceConfig, DeepSpeedMoEInference
 from pydebug import debuginfo, infoTensor
 
-debuginfo(prj='ds', info='transformer __init__')
+gd.debuginfo(prj='ds', info='transformer __init__')

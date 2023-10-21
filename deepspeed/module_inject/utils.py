@@ -8,7 +8,7 @@ from pydebug import debuginfo, infoTensor
 
 # helper function to map between DS policies and DS containers
 def policy_to_ds_container(**kwargs):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     from .containers import HFGPT2LayerPolicy, DS_GPT2Container
     from .containers import HFBertLayerPolicy, DS_BERTContainer
     from .containers import BLOOMLayerPolicy, DS_BloomContainer
@@ -41,7 +41,7 @@ def policy_to_ds_container(**kwargs):
     if policy_type not in policy_to_container:
         log_dist(f"Policy type {policy_type} not supported", [0])
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         container = policy_to_container[policy_type](**kwargs)
 
     return container

@@ -10,7 +10,7 @@ from pydebug import debuginfo, infoTensor
 class DeepSpeedAccelerator(ABC):
 
     def __init__(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._name = None
         self._communication_backend_name = None
 

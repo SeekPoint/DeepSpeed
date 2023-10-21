@@ -90,6 +90,6 @@ class DeepSpeedZeroOffloadOptimizerConfig(DeepSpeedConfigModel):
 
     @validator("pipeline_read", "pipeline_write", always=True)
     def set_pipeline(cls, field_value, values):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         values["pipeline"] = field_value or values.get("pipeline", False)
         return field_value

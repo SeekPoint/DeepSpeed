@@ -164,7 +164,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         zpg = groups._get_zero_param_intra_parallel_group()
         print_rank_0(f"ZeRO Stage 3 param partitioning group {self.zero_hpz_partition_size} {zpg}", force=False)
         if self.zero_hpz_partition_size > 1 and zpg is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._set_zero_group_parallelism()
             zpg = groups._get_zero_param_intra_parallel_group()
 
@@ -221,11 +221,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.partition_count = dist.get_world_size(group=self.dp_process_group)
 
         if mpu is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.model_parallel_group = None
             self.model_parallel_rank = 0
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.model_parallel_group = mpu.get_model_parallel_group()
             self.model_parallel_rank = mpu.get_model_parallel_rank()
 
@@ -239,11 +239,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.reduce_bucket_size = int(reduce_bucket_size)
 
         if self.all2all_process_group is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert self.all2all_process_group is not None and self.reduce_scatter == True, "when enable all_to_all_reduce, reduce_scatter should also be enabled for data type checks."
 
         if self.reduce_scatter:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             valid_reduce_scatter_dtypes = (torch.float16, torch.bfloat16, torch.float32)
             assert self.communication_data_type in valid_reduce_scatter_dtypes, f"ZeRO-3 supports {valid_reduce_scatter_dtypes} communication_data_type with reduce scatter enabled. Got: '{self.communication_data_type}'"
             assert self.gradient_predivide_factor == 1.0, "gradient_predivide_factor != 1.0 is not yet supported with ZeRO-3 with reduce scatter enabled"
@@ -295,7 +295,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # Optimizer tensor swapping
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._configure_tensor_swapping(offload_optimizer_config, aio_config)
 
         self.is_gradient_accumulation_boundary: bool = True
@@ -340,7 +340,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.set_grad_positions()
 
         if self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.norm_for_param_grads = {}
 
         # stores if a partition has been reduced in this step
@@ -370,11 +370,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self._link_all_hp_params()
 
         if dist.get_rank(group=self.dp_process_group) == 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             see_memory_usage(f"After initializing ZeRO optimizer", force=True)
 
     def destroy(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.parameter_offload.destroy()
         del self.__ipg_bucket_flat_buffer
 
@@ -396,7 +396,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         zpg,
         zero_quantized_weights,
     ):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return DeepSpeedZeRoOffload(module=module,
                                     timers=timers,
                                     ds_config=ds_config,
@@ -412,7 +412,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                     zero_quantized_weights=zero_quantized_weights)
 
     def _get_trainable_parameter_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_groups = []
         for param_group in self.optimizer.param_groups:
             trainable_params = {"params": [p for p in param_group["params"] if p.requires_grad]}
@@ -420,7 +420,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return param_groups
 
     def _set_zero_group_parallelism(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         groups._create_zero_param_parallel_group(self.zero_hpz_partition_size)
 
     def invalidate_secondary_tensor(self):
@@ -430,7 +430,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                     param.ds_secondary_tensor = None
 
     def _setup_for_real_optimizer(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         see_memory_usage("Before creating fp32 partitions", force=True)
         self._create_fp32_partitions()
         see_memory_usage("After creating fp32 partitions", force=True)
@@ -450,7 +450,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # IPG
         if self.contiguous_gradients:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.__ipg_bucket_flat_buffer: Tensor = torch.empty(self.reduce_bucket_size,
                                                                 dtype=self.dtype,
                                                                 device=get_accelerator().current_device_name())
@@ -473,25 +473,25 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             offset += param.partition_numel()
 
     def _link_all_hp_params(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in self.module.parameters():
             p._z3_optimizer = self
 
     def set_lr(self, lr):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Set the learning rate."""
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = lr
 
     def get_lr(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Return the current learning rate."""
         return self.optimizer.param_groups[0]["lr"]
 
     # TODO. factor out to a utility outside of stage3
     @staticmethod
     def defragment(tensors: List[Tensor]) -> Tensor:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """move provided tensors into a contiguous flat buffer, with some additional
         measures taken to reduce memory fragmentation"""
         assert len(set(t.dtype for t in tensors)) == 1
@@ -528,15 +528,15 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return device_buffer
 
     def _get_param_coordinator(self, training):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.parameter_offload.get_param_coordinator(training)
 
     def _configure_offloading(self, offload_optimizer_config, offload_param_config):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # 二阶段也支持 cpu offload 和 pin memory，根据配置情况判断是否启用
         ###################### offload optimizer setup ##################################
         if offload_optimizer_config is not None and offload_optimizer_config.device != OffloadDeviceEnum.none:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.offload_optimizer = True
             self.offload_optimizer_pin_memory = offload_optimizer_config.pin_memory
             self.swap_optimizer = offload_optimizer_config.device == OffloadDeviceEnum.nvme
@@ -553,7 +553,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 force=False)
 
     def _configure_tensor_swapping(self, offload_optimizer_config, aio_config):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         nvme_swap_folder = os.path.join(offload_optimizer_config.nvme_path, 'zero_stage_3')
         os.makedirs(nvme_swap_folder, exist_ok=True)
         if dist.get_rank() == 0:
@@ -572,7 +572,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @property
     def elements_in_ipg_bucket(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return sum(p.ds_numel for p in self.params_in_ipg_bucket)
 
     def _move_to_flat_buffer(self, param_list, flat_buffer, avoid_copy=False):
@@ -582,9 +582,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         or they maybe in GPU, or they maybe in NVME. If they are in NVME, then
         they will be marked as NOT_AVAILABLE, and will be moved to CPU when they are
         needed during training.'''
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if flat_buffer is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # this dst buffer is on NVMe, so skip this
             return
 
@@ -610,7 +610,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             param.ds_tensor.final_location = 'not-nvme'
 
     def _create_param_groups_fp16_flat_cpu_memory(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         aggregate_params_count = 0
 
@@ -663,7 +663,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # move parameters to flattened buffer
         if not self.offload_param:  # partitioned params remain in GPU during training
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # move parameter partitions into a single contiguous flat buffer
             parameter_partitions: List[Tensor] = []
             for sub_group in self.fp16_groups:
@@ -680,7 +680,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 offset += sub_group_numel
         else:  # partitioned params offloaded to CPU when not in use
             # create a flat CPU memory allocation for each param group
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._create_param_groups_fp16_flat_cpu_memory()
             for param_group_idx, param_group in enumerate(param_groups):
                 flat_offset = 0
@@ -714,7 +714,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         should_create_fp16_flat_reuse_buffer = any(flattened_partition_group is None
                                                    for flattened_partition_group in self.fp16_partitioned_groups_flat)
         if should_create_fp16_flat_reuse_buffer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             max_partition_numel, largest_partition_numel = 0, None
             for sub_group in self.fp16_groups:
                 total_elements = sum(t.partition_numel() for t in sub_group)
@@ -726,7 +726,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.fp16_groups[0][0].nvme_swapper.reserve_partitioned_swap_space(largest_partition_numel)
 
     def _swap_in_sub_group_to_flat_buffer(self, flat_buffer, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         offset = 0
         elements_in_sub_group = sum([t.ds_numel for t in self.fp16_partitioned_groups[sub_group_id]])
         assert (flat_buffer.numel() == elements_in_sub_group)
@@ -746,7 +746,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             offset += partitioned_param.ds_numel
 
     def _create_next_swappable_fp32_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         reverse_order_indices = [i for i in range(len(self.fp32_partitioned_groups_flat))]
         reverse_order_indices.reverse()
 
@@ -759,7 +759,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.next_swappable_fp32_partitioned_groups.reverse()
 
     def _get_sub_group_partitions(self, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sub_group_partitions = []
         for param, partitioned_param in zip(self.fp16_groups[sub_group_id],
                                             self.fp16_partitioned_groups[sub_group_id]):
@@ -772,7 +772,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return sub_group_partitions
 
     def _create_fp32_partitions(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         cpu_memory_usage = 0
         cpu_memory_sub_groups = 0
         nvme_memory_usage = 0
@@ -832,12 +832,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.fp32_partitioned_groups_flat[i].requires_grad = True  # keep this in case internal optimizer uses it
 
         if len(swappable_fp32_tensors) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.initialize_parameters(parameters=swappable_fp32_tensors,
                                                          src_tensors=swappable_fp16_src_tensors)
 
         if len(nvme_fp32_dest_tensors) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             fp16_pinned_buffers = self.fp16_groups[0][0].nvme_swapper.reserve_available_buffers()
             assert len(fp16_pinned_buffers) > 0
             self.optimizer_swapper.initialize_from_swapped_fp16_params(fp16_partitions_info=nvme_fp16_partitions_info,
@@ -863,17 +863,17 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # Clear for on-the-fly population before the optimizer step
         for param_group in self.optimizer.param_groups:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             param_group['params'] = []
 
     def _create_fp16_sub_groups(self, params_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         params_group_numel = sum([param.partition_numel() for param in params_group])
         sub_group_size = self.sub_group_size
 
         if sub_group_size is None or sub_group_size >= params_group_numel:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return [params_group]
 
         sub_groups = []
@@ -894,13 +894,13 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return sub_groups
 
     def _release_ipg_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.contiguous_gradients:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.ipg_buffer = None
 
     def _optimizer_step(self, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_group_id = self.sub_group_to_group_id[sub_group_id]
         fp32_param = self.fp32_partitioned_groups_flat[sub_group_id]
         self.optimizer.param_groups[param_group_id]['params'] = [fp32_param]
@@ -909,16 +909,16 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.optimizer.param_groups[param_group_id]['params'] = []
 
     def _swappable_optimizer_subgroup(self, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return False
 
         return self.optimizer_swapper.swappable_tensor(None,
                                                        numel=self.fp16_partitioned_groups_flat_numel[sub_group_id])
 
     def _partitioned_params_swap_out(self, i):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         offset = 0
         fp32_param = self.fp32_partitioned_groups_flat[i]
         assert fp32_param is not None, \
@@ -936,12 +936,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             offset += partitioned_param.ds_numel
 
         if len(swap_fp16_params):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             swap_fp16_params[0].nvme_swapper.swap_out_partitioned_params(dst_fp16_params=swap_fp16_params,
                                                                          src_fp32_params=swap_fp32_params)
 
     def initialize_optimizer_states(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         num_subgroups = len(self.fp16_groups)
 
         largest_numel = max([sum([p.ds_numel for p in psg]) for psg in self.fp16_partitioned_groups])
@@ -955,7 +955,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         is_adagrad = isinstance(self.optimizer, torch.optim.Adagrad)
 
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.init_timers()
 
         INIT_OPTIMIZER_TIMER = 'init_optimizer_state'
@@ -973,32 +973,32 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 force=False)
 
             if swappable_optimizer_subgroup:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._optimizer_states_and_gradient_swap_in(i, timer_names)
 
             if self.offload_optimizer and not swappable_optimizer_subgroup:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 subgroup_gradient_buffer = torch.zeros(num_elements, dtype=gradient_dtype, device=self.device)
                 if self.offload_optimizer_pin_memory:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     subgroup_gradient_buffer = get_accelerator().pin_memory(subgroup_gradient_buffer)
 
                 self.fp32_partitioned_groups_flat[i].grad = subgroup_gradient_buffer
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.fp32_partitioned_groups_flat[i].grad = gradient_buffer.narrow(0, 0, num_elements)
 
             # Initialize the optimizer states with the flattened fp32 partition.
             if not is_adagrad:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._optimizer_step(i)
 
             if swappable_param_subgroup:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._partitioned_params_swap_out(i)
 
             if swappable_optimizer_subgroup:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self._optimizer_states_and_gradient_swap_out(i, timer_names)
 
             see_memory_usage(
@@ -1007,14 +1007,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # Initialize the optimizer states with the flattened fp32 partition.
         if is_adagrad:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer = torch.optim.Adagrad(self.fp32_partitioned_groups_flat, **self.optimizer.defaults)
 
         self.stop_timers([INIT_OPTIMIZER_TIMER])
         self.log_timers(timer_names)
 
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.log_timers()
 
         if not self.offload_optimizer:
@@ -1029,7 +1029,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     #########################################################################
 
     def get_first_param_index(self, group_id, param_group, partition_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for index, param in enumerate(param_group):
             param_id = self.get_param_id(param)
             if partition_id in self.param_to_partition_ids[group_id][param_id]:
@@ -1037,7 +1037,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return None
 
     def initialize_gradient_partitioning_data_structures(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         total_partitions = dist.get_world_size(group=self.dp_process_group)
 
@@ -1063,7 +1063,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def independent_gradient_partition_epilogue(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.report_ipg_memory_usage(f"In ipg_epilogue before reduce_ipg_grads", 0)
         self.__reduce_and_partition_ipg_grads()
         self.report_ipg_memory_usage(f"In ipg_epilogue after reduce_ipg_grads", 0)
@@ -1092,11 +1092,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.micro_step_id += 1
 
     def overlapping_partition_gradients_reduce_epilogue(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.independent_gradient_partition_epilogue()
 
     def create_reduce_and_remove_grad_hooks(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         print_rank_0(f'[Begin] Create gradient reduction hooks')
         self.grad_accs = []
         for i, param_group in enumerate(self.fp16_groups):
@@ -1128,12 +1128,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         print_rank_0(f'[End] Create gradient reduction hooks')
 
     def get_param_id(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         unique_id = id(param)
         return self.param_id[unique_id]
 
     def report_ipg_memory_usage(self, tag, param_elems):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         elem_count = self.elements_in_ipg_bucket + param_elems
         percent_of_bucket_size = (100.0 * elem_count) // self.reduce_bucket_size
         see_memory_usage(
@@ -1159,7 +1159,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     @instrument_w_nvtx
     @torch.no_grad()
     def __add_grad_to_ipg_bucket(self, param: Parameter) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.reduce_and_partition_stream.wait_stream(get_accelerator().default_stream())
 
         if self.contiguous_gradients and self.elements_in_ipg_bucket + param.grad.numel() < self.reduce_bucket_size:
@@ -1177,9 +1177,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     @instrument_w_nvtx
     @torch.no_grad()
     def __reduce_and_partition_ipg_grads(self, safe_mode: bool = False) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not self.params_in_ipg_bucket:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
 
         for param in self.params_in_ipg_bucket:
@@ -1217,10 +1217,10 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     def __avg_scatter_contiguous_grads(self, buffer_to_reduce: Tensor) -> List[Tensor]:
         dtype = buffer_to_reduce.dtype
         if self.communication_data_type == self.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             buffer_to_reduce = buffer_to_reduce.to(self.communication_data_type)
         if self.postscale_gradients and self.gradient_predivide_factor != 1.0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             buffer_to_reduce = buffer_to_reduce.div_(self.gradient_predivide_factor)
 
         world_sz = dist.get_world_size(self.dp_process_group)
@@ -1230,11 +1230,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         dist.all_reduce(buffer_to_reduce, group=self.dp_process_group)
 
         if self.postscale_gradients and self.gradient_predivide_factor != world_sz:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             buffer_to_reduce = buffer_to_reduce.mul(self.gradient_predivide_factor)
 
         if self.communication_data_type != self.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             buffer_to_reduce = buffer_to_reduce.to(self.dtype)
 
         grad_partitions = []
@@ -1264,36 +1264,36 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         full_grads_for_rank = [p.grad for p in params_to_reduce]
         if self.communication_data_type != self.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             full_grads_for_rank = [g.to(self.communication_data_type) for g in full_grads_for_rank]
 
         if self.postscale_gradients and self.gradient_predivide_factor != 1.0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             full_grads_for_rank = [g.div(self.gradient_predivide_factor) for g in full_grads_for_rank]
 
         local_world_size = get_accelerator().device_count()
         global_world_size = dist.get_world_size()
         num_nodes = global_world_size // local_world_size
         if self.all2all_process_group is not None and num_nodes > 1:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_partitions_for_rank = all_to_all_quant_reduce(full_grads_for_rank, self.all2all_process_group)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_partitions_for_rank = reduce_scatter_coalesced(full_grads_for_rank, self.dp_process_group)
 
         if self.postscale_gradients and self.gradient_predivide_factor != 1.0 and self.gradient_predivide_factor != dist.get_world_size(
                 self.dp_process_group):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_partitions_for_rank = [g.mul(self.gradient_predivide_factor) for g in grad_partitions_for_rank]
 
         if self.communication_data_type != self.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             grad_partitions_for_rank = [g.to(self.dtype) for g in grad_partitions_for_rank]
 
         return grad_partitions_for_rank
 
     def set_grad_positions(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i, group in enumerate(self.fp16_groups):
             current_offset = 0
             for param in group:
@@ -1306,7 +1306,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         see_memory_usage(f"After Set Grad positions", force=False)
 
     def _constant_buffered_norm2(self, input, buffer_size=250000000):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         norm = None
         for part in input.view(-1).split(buffer_size):
             if norm is None:
@@ -1316,14 +1316,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return norm**0.5
 
     def set_norm_for_param_grad_in_gpu(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_id = self.get_param_id(param)
         #self.norm_for_param_grads[param_id] = param.grad.data.double().norm(2)
         #Using a more memory efficient version
         self.norm_for_param_grads[param_id] = self._constant_buffered_norm2(param.grad)
 
     def async_inplace_copy_grad_to_fp32_buffer_from_gpu(self, param, fp32_grad_tensor):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         with get_accelerator().stream(self.copy_grad_stream):
             param_id = self.get_param_id(param)
             src_tensor = param.grad.view(-1).float()
@@ -1332,7 +1332,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             param.grad = None
 
     def complete_grad_norm_calculation_for_cpu_offload(self, params):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_norm = 0.0
         norm_type = 2.0
         for p in params:
@@ -1352,14 +1352,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         total_norm = total_norm_cuda[0].item()**(1. / norm_type)
 
         if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             total_norm = -1
 
         return total_norm
 
     @instrument_w_nvtx
     def partition_grads(self, params_to_release: List[Parameter], grad_partitions: List[Tensor]) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         offload_fp32_gradients = {}
         offload_fp32_offsets = {}
         buffers = []
@@ -1417,7 +1417,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             param.grad = None
 
         if self.offload_optimizer and self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for i in offload_fp32_gradients.keys():
                 self.optimizer_swapper.swap_out_gradients(parameter=self.fp32_partitioned_groups_flat[i],
                                                           gradient_offsets=offload_fp32_offsets[i],
@@ -1430,9 +1430,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.reduce_independent_p_g_buckets_and_remove_grads(param, i)
 
     def zero_reduced_gradients(self, partition_id, i):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         def are_all_related_partitions_reduced(params_id):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for partition_id in self.param_to_partition_ids[i][params_id]:
                 if not self.is_partition_reduced[i][partition_id]:
                     return False
@@ -1443,7 +1443,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 self.param_dict[params_id].grad = None
 
     def flatten_and_print(self, message, tensors, start=0, n=5):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         flatten_tensor = self.flatten(tensors)
 
         def print_func():
@@ -1452,7 +1452,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.sequential_execution(print_func, message)
 
     def get_grads_to_reduce(self, i, partition_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def get_reducible_portion(key):
             grad = self.param_dict[key].grad
@@ -1462,17 +1462,17 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                self.partition_size[i] - self.grad_partition_insertion_offset[i][partition_id][key])
             if not pg_correctness_test:
                 if num_elements == total_elements:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     return grad
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     return grad.contiguous().view(-1).narrow(0, int(start), int(num_elements))
             else:
                 if num_elements == total_elements:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     return grad.clone()
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     return grad.clone().contiguous().view(-1).narrow(0, int(start), int(num_elements))
 
         grads_to_reduce = []
@@ -1482,9 +1482,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return grads_to_reduce
 
     def sequential_execution(self, function, message, group=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if group is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             group = self.dp_process_group
         if dist.get_rank(group=group) == 0:
             logger.info(message)
@@ -1494,7 +1494,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             dist.barrier(group=group)
 
     def set_none_gradients_to_zero(self, i, partition_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for param_id in self.is_grad_computed[i][partition_id]:
             param = self.param_dict[param_id]
             if param.grad is None:
@@ -1509,38 +1509,38 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         tensor_to_allreduce = tensor
 
         if pg_correctness_test:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             communication_data_type = torch.float32
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             communication_data_type = self.communication_data_type
 
         if communication_data_type != tensor.dtype:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             tensor_to_allreduce = tensor.to(communication_data_type)
 
         tensor_to_allreduce.div_(dist.get_world_size(group=self.dp_process_group))
 
         if rank is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             #    "All Reducing"
             dist.all_reduce(tensor_to_allreduce, group=self.dp_process_group)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             global_rank = dist.get_global_rank(self.dp_process_group, rank)
             dist.reduce(tensor_to_allreduce, global_rank, group=self.dp_process_group)
 
         if communication_data_type != tensor.dtype and tensor is not tensor_to_allreduce:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if rank is None or rank == dist.get_rank(group=self.dp_process_group):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 tensor.copy_(tensor_to_allreduce)
 
         return tensor
 
     # if rank is specified do a reduction instead of an allreduce
     def allreduce_and_copy(self, small_bucket, rank=None, log=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         with get_accelerator().stream(self.reduction_stream):
             allreduced = self.allreduce_bucket(small_bucket, rank=rank, log=log)
             if rank is None or rank == dist.get_rank(group=self.dp_process_group):
@@ -1548,7 +1548,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                     buf.copy_(synced)
 
     def allreduce_no_retain(self, bucket, numel_per_bucket=500000000, rank=None, log=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         small_bucket = []
         numel = 0
         for tensor in bucket:
@@ -1558,7 +1558,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 self.allreduce_and_copy(small_bucket, rank=rank, log=None)
                 small_bucket = []
         if len(small_bucket) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.allreduce_and_copy(small_bucket, rank=rank, log=log)
 
     #############################################################################
@@ -1568,7 +1568,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     # views the tensor as multiple partitions and returns
     # those partitions
     def get_data_parallel_partitions(self, tensor):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         partitions = []
 
         dp = dist.get_world_size(group=self.dp_process_group)
@@ -1589,7 +1589,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return partitions
 
     def get_partition_info(self, tensor_list, partition_size, partition_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         params_in_partition = []
         params_not_in_partition = []
 
@@ -1622,7 +1622,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def zero_grad(self, set_to_none=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Zero FP16 parameter grads.
         """
@@ -1645,10 +1645,10 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         """ Perform all reduce within model parallel group, if any.
         """
         if self.model_parallel_group is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             pass
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.all_reduce(tensor=tensor, op=op, group=self.model_parallel_group)
 
     @instrument_w_nvtx
@@ -1671,7 +1671,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         """
         norm_type = float(norm_type)
         if norm_type == inf:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             total_norm = max(g.data.abs().max() for g in gradients)
             total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=self.dp_process_group)
@@ -1689,12 +1689,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
             # Sum across all model parallel GPUs.
             if len(grad_norms) == 0:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # FIX https://github.com/microsoft/DeepSpeed/issues/3564
                 total_norm_cuda = torch.tensor(0,
                                                dtype=gradients[0].dtype).to(get_accelerator().device_name()).double()
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 total_norm_cuda = torch.sum(torch.pow(torch.stack(grad_norms), 2))
 
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=self.dp_process_group)
@@ -1704,7 +1704,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             total_norm = total_norm_cuda.item()**(1. / norm_type)
 
         if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             total_norm = -1
 
         return total_norm
@@ -1713,7 +1713,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     # in the first tensor of the list. If there are not enough elements in the tensor
     # list then the flat tensor will be padded with zeros
     def get_flat_partition(self, tensor_list, first_offset, partition_size, return_tensor_list=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         flat_tensor_list = []
         current_size = 0
         for i, tensor in enumerate(tensor_list):
@@ -1744,36 +1744,36 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         # this means its the last partition and does not align with the dp boundary. We need to pad before flattening
         if current_size < partition_size:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             flat_tensor_list.append(
                 torch.zeros(int(partition_size - current_size),
                             dtype=tensor_list[0].dtype,
                             device=tensor_list[0].device))
 
         if return_tensor_list:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return flat_tensor_list
 
         return self.flatten(flat_tensor_list)
 
     def free_grad_in_param_list(self, param_list):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in param_list:
             p.grad = None
 
     def reset_cpu_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.norm_for_param_grads = {}
 
     def log_timers(self, timer_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is None:
             return
 
         self.timers.log(names=list(timer_names))
 
     def start_timers(self, timer_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is None:
             return
 
@@ -1781,7 +1781,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.timers(name).start()
 
     def stop_timers(self, timer_names):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is None:
             return
 
@@ -1789,7 +1789,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.timers(name).stop()
 
     def _pre_step(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.micro_step_id = 0
 
         print_rank_0(f"Inside Step function")
@@ -1802,7 +1802,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def _get_norm_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         norm_groups = []
         for i, group in enumerate(self.fp16_groups):
             if self.offload_optimizer:
@@ -1813,7 +1813,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def _prepare_fp32_grad_for_sub_group(self, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         partition_id = dist.get_rank(group=self.dp_process_group)
 
         single_grad_partition = self.flatten(self.averaged_gradients[sub_group_id]).to(
@@ -1837,15 +1837,15 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     def _prepare_sub_group(self, sub_group_id, timer_names=set()):
         see_memory_usage(f'Before prepare optimizer sub group {sub_group_id}', force=False)
         if self._swappable_optimizer_subgroup(sub_group_id):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._optimizer_states_and_gradient_swap_in(sub_group_id, timer_names)
         elif not self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._prepare_fp32_grad_for_sub_group(sub_group_id)
         see_memory_usage(f'After prepare optimizer sub group {sub_group_id}', force=False)
 
     def _optimizer_states_and_gradient_swap_in(self, sub_group_id, timer_names=set()):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_length = self.fp16_partitioned_groups_flat_numel[sub_group_id]
         fp32_param_id = id(self.fp32_partitioned_groups_flat[sub_group_id])
         assert self._swappable_optimizer_subgroup(sub_group_id), \
@@ -1865,22 +1865,22 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def _release_sub_group(self, sub_group_id, timer_names=set()):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         see_memory_usage(f'Before release optimizer sub group {sub_group_id}', force=False)
         # get rid of the fp32 gradients. Not needed anymore
         if not self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.fp32_partitioned_groups_flat[sub_group_id].grad = None
 
         if self._swappable_optimizer_subgroup(sub_group_id):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._optimizer_states_and_gradient_swap_out(sub_group_id, timer_names)
         see_memory_usage(f'After release optimizer sub group {sub_group_id}', force=False)
 
     # create a flat tensor aligned at the alignment boundary
     @instrument_w_nvtx
     def flatten_dense_tensors_aligned(self, tensor_list, alignment):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         num_elements = 0
         for tens in tensor_list:
             num_elements = num_elements + tens.numel()
@@ -1888,20 +1888,20 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         remaining = num_elements % alignment
 
         if remaining:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             elements_to_add = alignment - remaining
             pad_tensor = torch.zeros(elements_to_add, device=tensor_list[0].device, dtype=tensor_list[0].dtype)
             padded_tensor_list = tensor_list + [pad_tensor]
 
             num_elements = num_elements + elements_to_add
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             padded_tensor_list = tensor_list
 
         return self.flatten(padded_tensor_list)
 
     def _optimizer_states_and_gradient_swap_out(self, sub_group_id, timer_names=set()):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_length = self.fp16_partitioned_groups_flat_numel[sub_group_id]
         fp32_param_id = id(self.fp32_partitioned_groups_flat[sub_group_id])
         assert self._swappable_optimizer_subgroup(sub_group_id), \
@@ -1923,7 +1923,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.fp32_partitioned_groups_flat[sub_group_id].grad = None
 
     def _unflatten_partitioned_parameters(self, sub_group_id):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         updated_params = self.unflatten(self.fp16_partitioned_groups_flat[sub_group_id],
                                         self.fp16_partitioned_groups[sub_group_id])
 
@@ -1935,17 +1935,17 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.zero_grad(set_to_none=True)
 
         if self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.reset_cpu_buffers()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.averaged_gradients = {}
 
         see_memory_usage('After overflow after clearing gradients', force=False)
 
     @instrument_w_nvtx
     def _overflow_check_and_loss_scale_update(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         # First compute norm for all group so we know if there is overflow
         self.check_overflow()
@@ -1955,25 +1955,25 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self._update_scale(self.overflow)
 
         if self.overflow:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._overflow_clean_up(prev_scale)
 
         return self.overflow
 
     @instrument_w_nvtx
     def _post_step(self, timer_names=set()):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.reset_cpu_buffers()
 
         #Gathering persisting parameters
         if len(self.persistent_parameters) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.persistent_parameters[0].all_gather(self.persistent_parameters)
 
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.log_timers()
 
         self.invalidate_secondary_tensor()
@@ -1995,7 +1995,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self._partitioned_params_swap_out(sub_group_id)
 
     def override_loss_scale(self, loss_scale):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if loss_scale != self.external_loss_scale:
             logger.info(f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
         self.custom_loss_scaler = True
@@ -2003,7 +2003,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def step(self, closure=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
             Not supporting closure.
             """
@@ -2012,9 +2012,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         #checks for overflow, adjust the loss scale accordingly
         if self._overflow_check_and_loss_scale_update():
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.swap_optimizer:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.optimizer_swapper.log_timers()
             return
 
@@ -2068,7 +2068,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.n_caching_allocator_flushes = alloc_retries
 
     def dump_pre_step_gradients(self, debug_fp32_grads):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Dump gradient norms for debugging
         for i, _ in enumerate(self.fp16_groups):
             print(f'Pre-Step Dump Norms for Group {i} FP16P, FP16G, FP32G, FP32GUC')
@@ -2081,7 +2081,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 print(f'Pre-Step Norms {i} {param_id} = {norm_list}')
 
     def dump_post_step_gradients(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Dump gradient norms for debugging
         for i, group in enumerate(self.fp16_groups):
             print(f'Post-Step Dump Norms for Group {i} FP16P, FP16DS, FP16FLAT, FP32FLAT')
@@ -2098,26 +2098,26 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     @instrument_w_nvtx
     def unscale_and_clip_grads(self, sub_group_id, total_norm):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # compute combined scale factor for this group
         combined_scale = self.loss_scale
         if self.clip_grad > 0.:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # norm is in fact norm*scale
             clip = ((total_norm / self.loss_scale) + 1e-6) / self.clip_grad
             if clip > 1:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 combined_scale = clip * self.loss_scale
 
         self.fp32_partitioned_groups_flat[sub_group_id].grad.mul_(1. / combined_scale)
 
     def _check_overflow(self, partition_gradients=True):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.overflow = self.has_overflow(partition_gradients)
 
     # `params` is a list / generator of torch.Variable
     def has_overflow_serial(self, params, is_grad_list=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in params:
             if p.grad is not None and self._has_inf_or_nan(p.grad.data):
                 return True
@@ -2125,7 +2125,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return False
 
     def has_overflow_partitioned_grads_serial(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i in range(len(self.fp16_groups)):
             for j, grad in enumerate(self.averaged_gradients[i]):
                 if grad is not None and self._has_inf_or_nan(grad.data, j):
@@ -2135,7 +2135,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     @instrument_w_nvtx
     def has_overflow(self, partition_gradients=True):
         if partition_gradients:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             with get_accelerator().stream(self.reduce_and_partition_stream):
                 if hasattr(self.inf_or_nan_tracker, "logical_or_"):
                     self.inf_or_nan_tracker.logical_or_(torch.isinf(self.grad_partitions_flat_buffer).any())
@@ -2153,7 +2153,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=self.dp_process_group)
 
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             params = []
             for group in self.fp16_groups:
                 for param in group:
@@ -2173,7 +2173,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     @staticmethod
     def _has_inf_or_nan(x, j=None):
         try:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # if x is half, the .float() incurs an additional deep copy, but it's necessary if
             # Pytorch's .sum() creates a one-element tensor of the same type as x
             # (which is true for some recent version of pytorch).
@@ -2181,7 +2181,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             # More efficient version that can be used if .sum() returns a Python scalar
             # cpu_sum = float(x.sum())
         except RuntimeError as instance:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # We want to check if inst is actually an overflow exception.
             # RuntimeError could come from a different error.
             # If so, we still want the exception to propagate.
@@ -2189,9 +2189,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 raise
             return True
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if cpu_sum == float('inf') or cpu_sum == -float('inf') or cpu_sum != cpu_sum:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return True
             return False
 
@@ -2205,23 +2205,23 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.pre_backward()
 
         see_memory_usage(f"Before backward", force=False)
 
         if self.custom_loss_scaler:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             scaled_loss = self.external_loss_scale * loss
             scaled_loss.backward()
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.loss_scaler.backward(loss.float(), retain_graph=retain_graph)
 
         self._get_param_coordinator(training=True).reset_step()
 
         if self.swap_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer_swapper.post_backward()
 
     def get_fp32_grad_partitions(self) -> Dict[int, Dict[int, Tensor]]:
@@ -2231,14 +2231,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.reduce_and_partition_stream.synchronize()
         grad_dict = collections.defaultdict(dict)
         if self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for group in self.fp16_groups:
                 for param_idx, param in enumerate(group):
                     group_idx, dest_offset, num_elements = self.grad_position[self.get_param_id(param)]
                     fp32_grad = self.fp32_partitioned_groups_flat[group_idx].grad.narrow(0, dest_offset, num_elements)
                     grad_dict[group_idx][param_idx] = fp32_grad
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for group_idx, group in self.averaged_gradients.items():
                 for param_idx, gradient in enumerate(group):
                     grad_dict[group_idx][param_idx] = gradient.float()
@@ -2246,7 +2246,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return grad_dict
 
     def _fp32_state_allgather(self, param, fp32_state):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         reduce_buffer = torch.zeros(self.partition_count * fp32_state.numel(),
                                     dtype=torch.float32,
                                     device=param.device).flatten()
@@ -2263,69 +2263,69 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     def get_fp32_grad_for_param(self, param) -> Tensor:
         if not param.requires_grad:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return None
 
         self.reduce_and_partition_stream.synchronize()
 
         if self.offload_optimizer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             group_idx, dest_offset, num_elements = self.grad_position[self.get_param_id(param)]
             fp32_grad = self.fp32_partitioned_groups_flat[group_idx].grad.narrow(0, dest_offset,
                                                                                  num_elements).to(device=param.device)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             fp32_grad = self.__param_id_to_grad_partition[param.ds_id].float()
 
         return self._fp32_state_allgather(param, fp32_grad)
 
     def get_full_hp_param(self, param, optim_state_key=None) -> Tensor:
         if not param.requires_grad:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return None
 
         self.reduce_and_partition_stream.synchronize()
         group_idx, dest_offset, num_elements = self.grad_position[self.get_param_id(param)]
 
         if self._swappable_optimizer_subgroup(group_idx):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._optimizer_states_and_gradient_swap_in(group_idx)
 
         fp32_param = self.fp32_partitioned_groups_flat[group_idx]
         if optim_state_key is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             fp32_opt_state = fp32_param.narrow(0, dest_offset, num_elements).to(device=param.device)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             fp32_opt_state = self.optimizer.state[fp32_param][optim_state_key].narrow(
                 0, dest_offset, num_elements).to(device=param.device)
 
         hp_param = self._fp32_state_allgather(param, fp32_opt_state)
         if self._swappable_optimizer_subgroup(group_idx):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._optimizer_states_and_gradient_swap_out(group_idx)
         return hp_param
 
     @instrument_w_nvtx
     def _partition_all_parameters(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.parameter_offload.partition_all_parameters()
 
     def check_overflow(self, partition_gradients=True):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._check_overflow(partition_gradients)
 
     def _update_scale(self, has_overflow=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.loss_scaler.update_scale(has_overflow)
 
     # Promote state so it can be retrieved or set via "fp16_optimizer_instance.state"
     def _get_state(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.optimizer.state
 
     def _set_state(self, value):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.optimizer.state = value
 
     state = property(_get_state, _set_state)
@@ -2333,11 +2333,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     # Promote param_groups so it can be retrieved or set via "fp16_optimizer_instance.param_groups"
     # (for example, to adjust the learning rate)
     def _get_param_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.optimizer.param_groups
 
     def _set_param_groups(self, value):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.optimizer.param_groups = value
         self.trainable_param_groups = self._get_trainable_parameter_groups()
 
@@ -2346,21 +2346,21 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     # Promote loss scale so it can be retrieved or set via "fp16_optimizer_instance.loss_scale"
     def _get_loss_scale(self):
         if self.custom_loss_scaler:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.external_loss_scale
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.loss_scaler.cur_scale
 
     def _set_loss_scale(self, value):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.loss_scaler.cur_scale = value
 
     loss_scale = property(_get_loss_scale, _set_loss_scale)
     cur_scale = property(_get_loss_scale, _set_loss_scale)
 
     def _get_lean_tensors(self, padded_flattened_tensor, group_tensors, paddings):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Remove paddings from flattened tensor
         individual_tensors = self.unflatten(padded_flattened_tensor, group_tensors)
         lean_lengths = [t.numel() - pad for t, pad in zip(group_tensors, paddings)]
@@ -2370,7 +2370,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     #TODO REVISIT this for stage 3
     def get_lean_optimizer_state(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Return optimizer states after removing paddings.
         # This method assumes that each param group contains a single flattened tensor.
         optimizer_groups_state = []
@@ -2392,7 +2392,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return optimizer_groups_state
 
     def get_groups_without_padding(self, groups_with_padding):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Return group tensor after removing paddings added for alignment to DP world size.
         groups_without_padding = []
         for i, group in enumerate(groups_with_padding):
@@ -2402,19 +2402,19 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         return groups_without_padding
 
     def _set_fp32_optimizer_param_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for sub_group_id, _ in enumerate(self.fp16_groups):
             param_group_id = self.sub_group_to_group_id[sub_group_id]
             self.optimizer.param_groups[param_group_id]['params'].append(
                 self.fp32_partitioned_groups_flat[sub_group_id])
 
     def _clear_fp32_optimizer_param_groups(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for param_group in self.optimizer.param_groups:
             param_group['params'] = []
 
     def _rigid_state_dict(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         state_dict = {}
         state_dict[ZERO_STAGE] = ZeroStageEnum.weights
         state_dict['loss_scaler'] = self.loss_scaler
@@ -2440,7 +2440,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             checkpoint['optimizer'] = optimizer.state_dict()
             torch.save(checkpoint, "saved.pth")
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.elastic_checkpoint:
             raise NotImplementedError("ZeRO-3 does not yet support elastic checkpointing, please disable for now.")
 
@@ -2457,7 +2457,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 # 3) Using extracted weights to update base optimizer weights directly.
 
     def _restore_from_fp32_weights(self, all_state_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         flat_local_partition = []
         for i in range(len(self.fp32_partitioned_groups_flat)):
@@ -2469,19 +2469,19 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     # Restore base optimizer fp32 weights from ZeRO fp16 weights
     def _restore_from_bit16_weights(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for fp16_partitions, fp32_partition in zip(self.fp16_partitioned_groups_flat,
                                                    self.fp32_partitioned_groups_flat):
             fp32_partition.data.copy_(fp16_partitions.data)
 
     # Refresh the fp32 master params from the fp16 copies.
     def refresh_fp32_params(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._restore_from_bit16_weights()
 
     # Extract flattened partition for current rank from all partitions
     def _get_flattened_partition(self, all_partition_states):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         partition_id = dist.get_rank(group=self.dp_process_group)
         alignment = dist.get_world_size(group=self.dp_process_group)
 
@@ -2497,7 +2497,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             local_state_partitions.append(new_partitions[partition_id])
 
         if torch.is_tensor(local_state_partitions[0]):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.flatten_dense_tensors_aligned(local_state_partitions, alignment)
 
         # Assume non-tensor states are not partitioned and equal across ranks, so return first one
@@ -2508,7 +2508,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     # 2) Extracting optimizer state for current partition from the merged state
     # 3) Using the extracted value to directly update the base optimizer.
     def _restore_base_optimizer_state(self, all_state_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         base_optimizer_group_states = []
         for i in range(len(self.optimizer.param_groups)):
             partition_states = {}
@@ -2527,14 +2527,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                     self.optimizer.state[p][key] = saved
 
     def _rigid_load_state_dict(self, state_dict, load_optimizer_states=True):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # I think it should actually be ok to reload the optimizer before the model.
         self.loss_scaler = state_dict['loss_scaler']
         self.dynamic_loss_scale = state_dict['dynamic_loss_scale']
         self.overflow = state_dict['overflow']
 
         if load_optimizer_states:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._set_fp32_optimizer_param_groups()
             self.optimizer.load_state_dict(state_dict[OPTIMIZER_STATE_DICT])
             self._clear_fp32_optimizer_param_groups()
@@ -2587,7 +2587,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             model.load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.elastic_checkpoint:
             raise NotImplementedError("ZeRO-3 does not yet support elastic checkpointing, please disable for now.")
@@ -2600,27 +2600,27 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                     load_optimizer_states=load_optimizer_states)
 
         if len(self.persistent_parameters) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.persistent_parameters[0].partition(self.persistent_parameters)
             self.persistent_parameters[0].all_gather(self.persistent_parameters)
 
     def checkpoint_event_prologue(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._partition_all_parameters()
 
     def checkpoint_event_epilogue(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if len(self.persistent_parameters) > 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.persistent_parameters[0].all_gather(self.persistent_parameters)
 
     def empty_partition_cache(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.parameter_offload.empty_partition_cache()
 
 
 def _handle_overflow(cpu_sum, x, i):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     import math
     rank = dist.get_rank()
     if rank == 0:
@@ -2640,7 +2640,7 @@ def estimate_zero3_model_states_mem_needs(total_params,
                                           cpu_offload_params=True,
                                           zero_init=True,
                                           additional_buffer_factor=1.5):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     total_gpus = num_nodes * num_gpus_per_node
     gpus_factor = 1 / num_nodes
@@ -2651,35 +2651,35 @@ def estimate_zero3_model_states_mem_needs(total_params,
             gpu_mem = largest_layer_memory
 
             if zero_init:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 cpu_mem = total_params * 18 * gpus_factor * additional_buffer_factor
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 cpu_mem = total_params * max(4 * num_gpus_per_node, 18 * gpus_factor) * additional_buffer_factor
 
         else:
             gpu_mem = largest_layer_memory + int(2 * total_params / total_gpus)
 
             if zero_init:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 cpu_mem = total_params * 16 * gpus_factor * additional_buffer_factor
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 cpu_mem = total_params * max(4 * num_gpus_per_node, 16 * gpus_factor) * additional_buffer_factor
     else:
         gpu_mem = largest_layer_memory + int(18 * total_params / total_gpus)
         if zero_init:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             cpu_mem = largest_layer_params * 4 * num_gpus_per_node * additional_buffer_factor
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             cpu_mem = total_params * 4 * num_gpus_per_node * additional_buffer_factor
 
     return int(cpu_mem), int(gpu_mem), largest_layer_memory
 
 
 def model_to_params(model):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # shared params calculated only once
     total_params = sum(dict((p.data_ptr(), p.numel()) for p in model.parameters()).values())
 
@@ -2713,7 +2713,7 @@ def estimate_zero3_model_states_mem_needs_all_live(model,
         - ``additional_buffer_factor``: estimation factor (defaults to 1.5):
 
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     total_params, largest_layer_params = model_to_params(model)
 
@@ -2747,10 +2747,10 @@ def estimate_zero3_model_states_mem_needs_all_cold(total_params,
         - ``additional_buffer_factor``: estimation factor (defaults to 1.5):
 
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     def format_options(cpu_offload, cpu_offload_params, zero_init):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         enabled = []
         padded_cpu_str = f'{OffloadDeviceEnum.cpu:4}'
         param_device = padded_cpu_str if cpu_offload_params else "none"

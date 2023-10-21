@@ -10,4 +10,4 @@ if is_torch_elastic_compatible():
     from .elastic_agent import DSElasticAgent
 
 from pydebug import debuginfo, infoTensor
-debuginfo(prj='ds', info='elastic __init__')
+gd.debuginfo(prj='ds', info='elastic __init__')

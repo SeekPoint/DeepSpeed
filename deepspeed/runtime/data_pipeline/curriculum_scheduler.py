@@ -11,7 +11,7 @@ from pydebug import debuginfo, infoTensor
 class CurriculumScheduler(object):
 
     def __init__(self, config):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__()
         self.state = {}
         assert CURRICULUM_LEARNING_MIN_DIFFICULTY in config, \
@@ -38,7 +38,7 @@ class CurriculumScheduler(object):
             The self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG] is a dictionary of
             difficulty : [max step for this difficulty, next difficulty].
             """
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_discrete schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY}'"
             assert CURRICULUM_LEARNING_SCHEDULE_MAX_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
@@ -67,7 +67,7 @@ class CurriculumScheduler(object):
               "root_degree": 2
             }
             """
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_root schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP}'"
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
@@ -88,7 +88,7 @@ class CurriculumScheduler(object):
               "difficulty_step": 8
             }
             """
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             assert CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_linear schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP}'"
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
@@ -99,7 +99,7 @@ class CurriculumScheduler(object):
                 )
             self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG] = config[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         elif config[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_CUSTOM:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             """
             Fully customized schedule. User need to provide a custom schedule
             function by using the set_custom_curriculum_learning_schedule API
@@ -110,15 +110,15 @@ class CurriculumScheduler(object):
             raise RuntimeError('Unsupported curriculum schedule type')
 
     def get_current_difficulty(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY]
 
     def set_current_difficulty(self, difficulty):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY] = difficulty
 
     def set_custom_get_difficulty(self, schedule_function):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.custom_get_difficulty = schedule_function
 
     def get_state(self):
@@ -128,7 +128,7 @@ class CurriculumScheduler(object):
         self.state = state
 
     def __fixed_discrete_get_difficulty(self, global_steps):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         s_state = self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         if global_steps > s_state[CURRICULUM_LEARNING_SCHEDULE_MAX_STEP][-1]:
             return s_state[CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY][-1]
@@ -137,10 +137,10 @@ class CurriculumScheduler(object):
                 return s_state[CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY][i]
 
     def __fixed_root_get_difficulty(self, global_steps, root_degree=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         s_state = self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         if root_degree is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             root_degree = s_state[CURRICULUM_LEARNING_SCHEDULE_ROOT_DEGREE]
         next_difficulty = (float(global_steps) / s_state[CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP])**(1.0 / root_degree)
         next_difficulty = math.floor(
@@ -153,23 +153,23 @@ class CurriculumScheduler(object):
 
     def get_difficulty(self, global_steps):
         if self.state[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_FIXED_DISCRETE:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.__fixed_discrete_get_difficulty(global_steps)
         elif self.state[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_FIXED_LINEAR:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.__fixed_root_get_difficulty(global_steps, 1)
         elif self.state[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_FIXED_ROOT:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.__fixed_root_get_difficulty(global_steps)
         elif self.state[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_CUSTOM:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.custom_get_difficulty(global_steps)
         else:
             raise RuntimeError('Unsupported curriculum schedule type')
 
     def update_difficulty(self, global_steps):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY] < self.state[CURRICULUM_LEARNING_MAX_DIFFICULTY]:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY] = self.get_difficulty(global_steps)
         return self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY]

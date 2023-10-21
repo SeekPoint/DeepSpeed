@@ -18,7 +18,7 @@ from pydebug import debuginfo, infoTensor
 class AsyncTensorSwapper(object):
 
     def __init__(self, aio_handle, numel_alignment, timers):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.free_buffer_index = []
         self.swapping_buffer_index = []
         self.ready_buffer_index = []
@@ -34,11 +34,11 @@ class AsyncTensorSwapper(object):
         self.dtype = None
 
     def has_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return len(self.all_buffers) > 0
 
     def add_buffers(self, buffer_list):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert len(self.all_buffers) == 0
         assert all([buffer.is_pinned() for buffer in buffer_list])
         dtype = buffer_list[0].dtype
@@ -51,11 +51,11 @@ class AsyncTensorSwapper(object):
         self.timer_names = set()
 
     def get_timer_names(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return list(self.timer_names)
 
     def release_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._report_statistics('Swapped out[Before flush]')
         self._flush_buffers_until_complete()
         self._report_statistics('Swapped out[After flush]')
@@ -70,19 +70,19 @@ class AsyncTensorSwapper(object):
         return pinned_buffers
 
     def swap_out_tensors(self, tensor_list, path_list):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for tensor, swap_path in zip(tensor_list, path_list):
             self._swap_out_tensor(tensor, swap_path)
 
     def _report_statistics(self, message):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if dist.get_rank() == 0:
             element_size = torch.tensor([], dtype=self.dtype).element_size()
             swapped_GB = (self.num_elements_swapped * element_size) / (1024**3)
             logger.debug(f'{message} num_elems = {self.num_elements_swapped}, {swapped_GB:5.2f} GB')
 
     def _swap_out_tensor(self, tensor, swap_path):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert len(self.all_buffers) > 0
 
         aligned_numel = self._io_aligned_numel(tensor.numel())
@@ -95,7 +95,7 @@ class AsyncTensorSwapper(object):
         swap_buffer.insert_tensor(tensor, swap_path, aligned_numel)
 
     def _make_swap_space(self, numel):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.current_buffer_index == INVALID_BUFFER_INDEX:
             self._allocate_buffer()
             return
@@ -108,12 +108,12 @@ class AsyncTensorSwapper(object):
             self._allocate_buffer()
 
     def _io_aligned_numel(self, numel):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         remainder = numel % self.numel_alignment
         return numel if remainder == 0 else (numel + self.numel_alignment - remainder)
 
     def _allocate_buffer(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert self.current_buffer_index == INVALID_BUFFER_INDEX
         assert len(self.all_buffers) > 0
         assert len(self.free_buffer_index) > 0
@@ -121,7 +121,7 @@ class AsyncTensorSwapper(object):
         self.free_buffer_index = self.free_buffer_index[:-1]
 
     def _flush_ready_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.current_buffer_index != INVALID_BUFFER_INDEX:
             self.ready_buffer_index.append(self.current_buffer_index)
             self.current_buffer_index = INVALID_BUFFER_INDEX
@@ -129,7 +129,7 @@ class AsyncTensorSwapper(object):
         self._swap_out_ready_buffers()
 
     def _flush_buffers_until_complete(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._flush_ready_buffers()
         assert len(self.ready_buffer_index) == 0
 
@@ -138,7 +138,7 @@ class AsyncTensorSwapper(object):
         assert len(self.free_buffer_index) == len(self.all_buffers)
 
     def _swap_out_ready_buffers(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for buffer_index in self.ready_buffer_index:
             buffer = self._get_buffer(buffer_index)
             swap_tensors = buffer.get_swap_tensors()
@@ -150,7 +150,7 @@ class AsyncTensorSwapper(object):
         self.ready_buffer_index = []
 
     def _wait_for_swap_complete(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert len(self.swapping_buffer_index) > 0
 
         self._start_timer(ASYNC_SWAPPER_WAIT_TIMER)
@@ -170,25 +170,25 @@ class AsyncTensorSwapper(object):
         self.swapping_buffer_index = []
 
     def _get_buffer(self, index):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert index != INVALID_BUFFER_INDEX
         return self.all_buffers[index]
 
     def _get_current_buffer(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self._get_buffer(self.current_buffer_index)
 
     def _start_timer(self, name):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers:
             self.timers(name).start()
 
     def _stop_timer(self, name):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers:
             self.timers(name).stop()
 
     def _log_timers(self, name_list, force=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers and force:
             self.timers.log(name_list)

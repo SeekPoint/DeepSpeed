@@ -12,14 +12,14 @@ from pydebug import debuginfo, infoTensor
 class BaseTestCase(unittest.TestCase):
 
     def __init__(self, methodName="DeepSpeed performance test"):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(BaseTestCase, self).__init__(methodName)
         self.test_dir = "./test"
         self.baseline_dir = "./baseline"
         self.timestr = time.strftime("%Y%m%d-%H%M%S")
 
     def gen_output_name(self, test_config, prefix, baseline_config=False):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         other_args = test_config["other_args"] if "other_args" in test_config else ""
         zero_args = "_zero" if "zero" in test_config and test_config["zero"] else ""
         other_args = other_args.strip(' -\\').replace(" ", "").replace("\"", "")
@@ -43,20 +43,20 @@ class BaseTestCase(unittest.TestCase):
         return os.path.join(save_dir, prefix + file_name)
 
     def ensure_directory_exists(self, filename):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         dirname = os.path.dirname(filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
     def clean_test_env(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         cmd = "dlts_ssh pkill -9 -f /usr/bin/python"
         print(cmd)
         subprocess.run(cmd, shell=True, check=False, executable='/bin/bash')
         time.sleep(20)
 
     def run_gpt2_test(self, test_config, output):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         ds_flag = "-d " + test_config["json"] if test_config["deepspeed"] else ""
         ckpt_num = test_config["ckpt_num_layers"] if "ckpt_num_layers" in test_config else 1
         other_args = "-o " + test_config["other_args"] if "other_args" in test_config else ""

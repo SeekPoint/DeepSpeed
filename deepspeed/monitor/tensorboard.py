@@ -13,7 +13,7 @@ from pydebug import debuginfo, infoTensor
 class TensorBoardMonitor(Monitor):
 
     def __init__(self, tensorboard_config):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(tensorboard_config)
         check_tb_availability()
 
@@ -23,26 +23,26 @@ class TensorBoardMonitor(Monitor):
         self.job_name = tensorboard_config.job_name
 
         if self.enabled and dist.get_rank() == 0:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.get_summary_writer()
 
     def get_summary_writer(self, base=os.path.join(os.path.expanduser("~"), "tensorboard")):
         if self.enabled and dist.get_rank() == 0:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             from torch.utils.tensorboard import SummaryWriter
             if self.output_path is not None:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 log_dir = os.path.join(self.output_path, self.job_name)
             # NOTE: This code path currently is never used since the default output_path is an empty string and not None. Saving it in case we want this functionality in the future.
             else:
                 if "DLWS_JOB_ID" in os.environ:
-                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = os.environ["DLWS_JOB_ID"]
                 elif "DLTS_JOB_ID" in os.environ:
-                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = os.environ["DLTS_JOB_ID"]
                 else:
-                    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     infra_job_id = "unknown-job-id"
 
                 summary_writer_dir_name = os.path.join(infra_job_id, "logs")
@@ -52,18 +52,18 @@ class TensorBoardMonitor(Monitor):
         return self.summary_writer
 
     def write_events(self, event_list, flush=True):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.enabled and self.summary_writer is not None and dist.get_rank() == 0:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for event in event_list:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.summary_writer.add_scalar(*event)
             if flush:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.summary_writer.flush()
 
     def flush(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.enabled and self.summary_writer is not None and dist.get_rank() == 0:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.summary_writer.flush()

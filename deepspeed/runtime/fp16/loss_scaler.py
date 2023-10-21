@@ -34,7 +34,7 @@ from pydebug import debuginfo, infoTensor
 
 # item() is a recent addition, so this helps with backward compatibility.
 def to_python_float(t):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if hasattr(t, 'item'):
         return t.item()
     return t[0]
@@ -46,24 +46,24 @@ class LossScalerBase:
     """
 
     def __init__(self, cur_scale):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.cur_scale = cur_scale
         self.dynamic = False
 
     @property
     def loss_scale(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.cur_scale
 
     def scale_gradient(self, module, grad_in, grad_out):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return tuple(self.loss_scale * g for g in grad_in)
 
     def update_scale(self, overflow):
         pass
 
     def backward(self, loss, retain_graph=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         scaled_loss = loss * self.loss_scale
         scaled_loss.backward(retain_graph=retain_graph)
         # print(f'LossScalerBackward: {scaled_loss=}')
@@ -82,7 +82,7 @@ class LossScaler(LossScalerBase):
     """
 
     def __init__(self, scale=1):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(LossScaler, self).__init__(scale)
 
     # `params` is a list / generator of torch.Variable
@@ -130,7 +130,7 @@ class DynamicLossScaler(LossScalerBase):
                  consecutive_hysteresis=False,
                  raise_error_at_min_scale=True,
                  dtype=torch.half):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(DynamicLossScaler, self).__init__(init_scale)
         self.cur_iter = 0
         self.last_overflow_iter = -1
@@ -146,7 +146,7 @@ class DynamicLossScaler(LossScalerBase):
 
     # `params` is a list / generator of torch.Variable
     def has_overflow_serial(self, params):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for p in params:
             if p.grad is not None and self._has_inf_or_nan(p.grad.data):
                 return True
@@ -156,7 +156,7 @@ class DynamicLossScaler(LossScalerBase):
     # `x` is a torch.Tensor
     def _has_inf_or_nan(x):
         try:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # if x is half, the .float() incurs an additional deep copy, but it's necessary if
             # Pytorch's .sum() creates a one-element tensor of the same type as x
             # (which is true for some recent version of pytorch).
@@ -164,7 +164,7 @@ class DynamicLossScaler(LossScalerBase):
             # More efficient version that can be used if .sum() returns a Python scalar
             # cpu_sum = float(x.sum())
         except RuntimeError as instance:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # We want to check if inst is actually an overflow exception.
             # RuntimeError could come from a different error.
             # If so, we still want the exception to propagate.
@@ -172,16 +172,16 @@ class DynamicLossScaler(LossScalerBase):
                 raise
             return True
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if cpu_sum in [float('inf'), -float('inf')] or cpu_sum != cpu_sum:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return True
             return False
 
     # `overflow` is boolean indicating whether the gradient overflowed
     def update_scale(self, overflow):
         if overflow:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # self.cur_scale /= self.scale_factor
             if self.delayed_shift == 1 or self.cur_hysteresis == 1:
                 if (self.cur_scale == self.min_scale) and self.raise_error_at_min_scale:
@@ -204,7 +204,7 @@ class DynamicLossScaler(LossScalerBase):
                 self.cur_hysteresis -= 1
             self.last_overflow_iter = self.cur_iter
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.consecutive_hysteresis:
                 if dist.get_rank() == 0:
                     hysteresis_msg = f"Consecutive hysteresis is enabled. Restoring hysteresis to {self.delayed_shift}"
@@ -220,7 +220,7 @@ class DynamicLossScaler(LossScalerBase):
 # Although loss scaling is only defined for fp16, yet for backwards compatibility
 # we still create a scaler for other dtypes (fp32, bf16) which does not perform any scaling.
 def CreateLossScaler(dtype, static_loss_scale, dynamic_scaling, dynamic_loss_args):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if dtype == torch.half and dynamic_scaling:
         if dynamic_loss_args is None:
             return DynamicLossScaler(dtype=dtype)
@@ -259,9 +259,9 @@ if __name__ == "__main__":
     for t in range(500):
         y_pred = x.mm(w1).clamp(min=0).mm(w2)
         loss = (y_pred - y).pow(2).sum() * loss_scaler.loss_scale
-        debuginfo(prj='ds', info='Iter {} loss scale: {}'.format(t, loss_scaler.loss_scale))
-        debuginfo(prj='ds', info='Iter {} scaled loss: {}'.format(t, loss.data[0]))
-        debuginfo(prj='ds', info='Iter {} unscaled loss: {}'.format(t, loss.data[0] / loss_scaler.loss_scale))
+        gd.debuginfo(prj='ds', info='Iter {} loss scale: {}'.format(t, loss_scaler.loss_scale))
+        gd.debuginfo(prj='ds', info='Iter {} scaled loss: {}'.format(t, loss.data[0]))
+        gd.debuginfo(prj='ds', info='Iter {} unscaled loss: {}'.format(t, loss.data[0] / loss_scaler.loss_scale))
 
         # Run backprop
         optimizer.zero_grad()
@@ -277,7 +277,7 @@ if __name__ == "__main__":
             optimizer.step()
         # Otherwise, don't do anything -- ie, skip iteration
         else:
-            debuginfo(prj='ds', info='fp16 dynamic loss scale overflow!')
+            gd.debuginfo(prj='ds', info='fp16 dynamic loss scale overflow!')
 
         # Update loss scale for next iteration
         loss_scaler.update_scale(has_overflow)

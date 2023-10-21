@@ -19,7 +19,7 @@ triton_flash_attn = None
 from pydebug import debuginfo, infoTensor
 
 def load_triton_flash_attn():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     global triton_flash_attn
     try:
         import triton
@@ -38,17 +38,17 @@ class DeepSpeedDiffusersAttentionFunction(Function):
     def forward(ctx, input, context, input_mask, config, attn_qkvw, attn_qw, attn_kw, attn_vw, attn_qkvb,
                 num_attention_heads_per_partition, norm_factor, hidden_size_per_partition, attn_ow, attn_ob,
                 do_out_bias, score_context_func, linear_func, triton_flash_attn_kernel):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def _transpose_for_context(x):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             x = x.permute(0, 2, 1, 3)
             new_x_layer_shape = x.size()[:-2] + \
                                       (hidden_size_per_partition,)
             return x.reshape(*new_x_layer_shape)
 
         def _transpose_for_scores(x):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             attention_head_size = x.shape[-1] // num_attention_heads_per_partition
             new_x_shape = x.size()[:-1] + (num_attention_heads_per_partition, attention_head_size)
             x = x.reshape(*new_x_shape)
@@ -57,13 +57,13 @@ class DeepSpeedDiffusersAttentionFunction(Function):
 
         def selfAttention_fp(input, context, input_mask):
             if config.fp16 and input.dtype == torch.float32:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 input = input.half()
             head_size = input.shape[-1] // config.heads
             do_flash_attn = (head_size <= 128)
             scale = (1 / norm_factor) * (1 / norm_factor)
             if do_flash_attn and context is None:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 qkv_out = linear_func(input, attn_qkvw, attn_qkvb if attn_qkvb is not None else attn_qkvw, attn_qkvb
                                       is not None, do_flash_attn, config.heads, False)
 
@@ -74,12 +74,12 @@ class DeepSpeedDiffusersAttentionFunction(Function):
             else:
                 do_flash_attn = False
                 if context is not None:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     query = torch.matmul(input, attn_qw)
                     key = torch.matmul(context, attn_kw)
                     value = torch.matmul(context, attn_vw)
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     qkv = torch.matmul(input, attn_qkvw)
                     query, key, value = qkv.chunk(3, dim=-1)
                     query = query.contiguous()
@@ -115,7 +115,7 @@ class DeepSpeedDiffusersAttention(nn.Module):
         self,
         config,
     ):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(DeepSpeedDiffusersAttention, self).__init__()
 
         self.config = config
@@ -128,7 +128,7 @@ class DeepSpeedDiffusersAttention(nn.Module):
         data_type_fp = torch.half if self.config.dtype == torch.int8 else self.config.dtype
         global inference_module
         if inference_module is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             builder = InferenceBuilder()
             inference_module = builder.load()
 
@@ -169,7 +169,7 @@ class DeepSpeedDiffusersAttention(nn.Module):
         self.do_out_bias = True
 
         if triton_flash_attn is None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             load_triton_flash_attn()
         self.triton_flash_attn_kernel = triton_flash_attn()
         self.num_attention_heads_per_partition = self.config.heads // self.config.mp_size
@@ -179,25 +179,25 @@ class DeepSpeedDiffusersAttention(nn.Module):
         self.norm_factor = math.sqrt(math.sqrt(self.config.hidden_size // self.config.heads))
 
         if self.config.scale_attn_by_inverse_layer_idx is True:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.norm_factor *= math.sqrt(self.config.layer_id + 1)
             # https://github.com/huggingface/transformers/blob/v4.24.0/src/transformers/models/gpt2/modeling_gpt2.py#L191
 
         if self.config.dtype in [torch.float16, torch.int8]:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.score_context_func = inference_module.softmax_context_fp16
             self.linear_func = inference_module.linear_layer_fp16
             self.allocate_workspace = inference_module.allocate_workspace_fp16
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.score_context_func = inference_module.softmax_context_fp32
             self.linear_func = inference_module.linear_layer_fp32
             self.allocate_workspace = inference_module.allocate_workspace_fp32
 
     def forward(self, input, context=None, input_mask=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.config.layer_id == 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.allocate_workspace(self.config.hidden_size, self.config.heads,
                                     input.size()[1],
                                     input.size()[0], DeepSpeedDiffusersAttention.layer_id, self.config.mp_size, False,

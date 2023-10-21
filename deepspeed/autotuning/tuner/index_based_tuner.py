@@ -12,11 +12,11 @@ class RandomTuner(BaseTuner):
     """Explore the search space in random order"""
 
     def __init__(self, exps: list, resource_manager, metric):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if sample_size > len(self.all_exps):
             sample_size = len(self.all_exps)
 
@@ -30,11 +30,11 @@ class GridSearchTuner(BaseTuner):
     """Explore the search space in sequential order"""
 
     def __init__(self, exps: list, resource_manager, metric):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if sample_size > len(self.all_exps):
             sample_size = len(self.all_exps)
 

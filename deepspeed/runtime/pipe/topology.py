@@ -30,7 +30,7 @@ class ProcessTopology:
             axes (list): the names of the tensor axes
             dims (list): the dimension (length) of each axis of the topology tensor
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         self.axes = axes  # names of each topology axis
         self.dims = dims  # length of each topology axis
@@ -64,7 +64,7 @@ class ProcessTopology:
         return self.mapping[key]
 
     def get_axis_names(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Return a list of the axis names in the ordering of the topology. """
         return self.axes
 
@@ -89,7 +89,7 @@ class ProcessTopology:
         Returns:
             str: A string representation of the coordinate owned by ``rank``.
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         omit_axes = frozenset(omit_axes)
         axes = [a for a in self.get_axis_names() if a not in omit_axes]
         names = []
@@ -106,14 +106,14 @@ class ProcessTopology:
             >>> X.get_dim('y')
             3
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if axis not in self.axes:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return 0
         return self.dims[self.axes.index(axis)]
 
     def get_coord(self, rank):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Return the coordinate owned by a process rank.
 
         The axes of the returned namedtuple can be directly accessed as members. For
@@ -131,7 +131,7 @@ class ProcessTopology:
         raise ValueError(f'rank {rank} not found in topology.')
 
     def get_axis_comm_lists(self, axis):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """ Construct lists suitable for a communicator group along axis ``axis``.
 
         Example:
@@ -187,7 +187,7 @@ class ProcessTopology:
         Returns:
             The list of ranks whose coordinates match filter_kwargs.
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def _filter_helper(x):
             for key, val in filter_kwargs.items():
@@ -199,7 +199,7 @@ class ProcessTopology:
         return [self.mapping[coord] for coord in coords]
 
     def get_axis_list(self, axis, idx):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Returns the list of global ranks whose coordinate in an axis is idx.
 
         For example:
@@ -217,7 +217,7 @@ class ProcessTopology:
         return ranks
 
     def world_size(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return len(self.mapping)
 
     def __str__(self):
@@ -225,7 +225,7 @@ class ProcessTopology:
 
 
 def _prime_factors(N):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """ Returns the prime factorization of positive integer N. """
     if N <= 0:
         raise ValueError("Values must be strictly positive.")
@@ -249,7 +249,7 @@ class PipeDataParallelTopology(ProcessTopology):
     """
 
     def __init__(self, num_pp, num_dp):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(axes=['pipe', 'data'], dims=[num_pp, num_dp])
 
 
@@ -257,7 +257,7 @@ class PipeModelDataParallelTopology(ProcessTopology):
     """ A topology for hybrid pipeline, model, and data parallelism. """
 
     def __init__(self, num_pp, num_mp, num_dp):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(axes=['pipe', 'data', 'model'], dims=[num_pp, num_dp, num_mp])
 
 
@@ -285,13 +285,13 @@ class PipelineParallelGrid:
     """
 
     def __init__(self, topology=None, process_group=None):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         # TODO use process_group if provided
         self.global_rank = dist.get_rank()
         self.world_size = dist.get_world_size()
         if topology is not None:
             if self.global_rank == 0:
-                debuginfo(prj='ds', info='Using topology:' + str(topology))
+                gd.debuginfo(prj='ds', info='Using topology:' + str(topology))
             self._topo = topology
         else:
             num_pp = 1

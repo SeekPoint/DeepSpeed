@@ -57,7 +57,7 @@ ACT_CHKPT_DEFAULT = {
 class DeepSpeedActivationCheckpointingConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(DeepSpeedActivationCheckpointingConfig, self).__init__()
 
         self.partition_activations = None
@@ -75,7 +75,7 @@ class DeepSpeedActivationCheckpointingConfig(DeepSpeedConfigObject):
         self._initialize(act_chkpt_config_dict)
 
     def _initialize(self, act_chkpt_config_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.partition_activations = get_scalar_param(act_chkpt_config_dict, ACT_CHKPT_PARTITION_ACTIVATIONS,
                                                       ACT_CHKPT_PARTITION_ACTIVATIONS_DEFAULT)
 

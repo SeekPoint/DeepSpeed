@@ -14,7 +14,7 @@ from pydebug import debuginfo, infoTensor
 class MPU():
 
     def __init__(self, tp_world_size):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         self.rank = deepspeed.comm.get_rank()
         self.world_size = deepspeed.comm.get_world_size()
@@ -59,7 +59,7 @@ class TestMOETensorParallel(DistributedTest):
     world_size = 4
 
     def test(self, ep_size, tp_size, enable_expert_tp, use_residual):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         # TODO: replace this with a true parallel mlp in the future
         # and run convergence tests

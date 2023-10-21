@@ -26,7 +26,7 @@ class BaseConvolutionContainer(ABC):
 class BaseTransformerContainer(ABC):
 
     def __init__(self, policy, config, model_config, layer_id, child):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.policy = policy
         self.config = config
         self.model_config = model_config
@@ -87,7 +87,7 @@ class BaseTransformerContainer(ABC):
         self.use_triton = config.use_triton and deepspeed.HAS_TRITON
 
     def create_ds_model_config(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.set_hidden_heads(*self.policy.get_hidden_heads())
         assert self.num_attention_heads % self.mp_size == 0,\
                 "To run the model parallel across the GPUs, the attention_heads require to be divisible by the world_size!" +\
@@ -122,9 +122,9 @@ class BaseTransformerContainer(ABC):
             triton_autotune=self.config.triton_autotune)
 
         if self.use_triton and deepspeed.HAS_TRITON:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if not self.config.triton_autotune:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 from deepspeed.ops.transformer.inference.triton.matmul_ext import fp16_matmul
                 fp16_matmul.skip_autotune()
 
@@ -132,15 +132,15 @@ class BaseTransformerContainer(ABC):
 
     def check_meta_tensor_support(self):
         if hasattr(self.qkvw, 'is_meta'):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.qkvw.is_meta:
                 assert self.ckpt_load_enabled, "Meta tensors are not supported for this model currently."
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             raise NotImplementedError("Meta tensor support is not available, please upgrade to torch 1.10+")
 
     def initialize_tensors(self, enable_training=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # Set the tensors from policy (user module) to container (DS module)
         self.set_attention(*self.policy.attention(enable_training=enable_training))
         self.set_mlp(*self.policy.mlp(enable_training=enable_training))
@@ -150,7 +150,7 @@ class BaseTransformerContainer(ABC):
     def convert_to_required_dtype(self):
         # Note: converting tensors to fp16 requires that we do it in-place using self.__dict__ and not make a list/dict copy
         if self.dtype in [torch.half, torch.bfloat16]:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for k, v in self.__dict__.items():
                 # The list comprehension is used for MoE tensor lists
                 if isinstance(v, list) and all((isinstance(tensor, torch.Tensor) \
@@ -162,10 +162,10 @@ class BaseTransformerContainer(ABC):
 
     def get_rotary_dim(self):
         if hasattr(self.model_config, 'rotary_dim'):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.model_config.rotary_dim
         if hasattr(self.child, 'attention') and hasattr(self.child.attention, 'rotary_ndims'):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.child.attention.rotary_ndims
         return -1
 
@@ -173,7 +173,7 @@ class BaseTransformerContainer(ABC):
         self.moe = moe
 
     def set_tensor_parallel_config(self, mp_size, mp_group):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.mp_size = mp_size
         self.mp_group = mp_group
 
@@ -191,37 +191,37 @@ class BaseTransformerContainer(ABC):
         """
         self.hidden_size = hidden_size
         if intermediate_size == DEFAULT_INTERMEDIATE_SIZE:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.intermediate_size = 4 * hidden_size
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.intermediate_size = intermediate_size
         self.num_attention_heads = num_attention_heads
         self.layernorm_epsilon = epsilon
 
     def set_attention(self, qkvw, qkvb, dense_w, dense_b):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.qkvw = qkvw
         self.qkvb = qkvb
         self.dense_w = dense_w
         self.dense_b = dense_b
 
     def set_mlp(self, _h4h_w, _h4h_b, _4hh_w, _4hh_b):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._h4h_w = _h4h_w
         self._h4h_b = _h4h_b
         self._4hh_w = _4hh_w
         self._4hh_b = _4hh_b
 
     def set_layernorm(self, attn_nw, attn_nb, input_nw, input_nb):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.attn_nw = attn_nw
         self.attn_nb = attn_nb
         self.input_nw = input_nw
         self.input_nb = input_nb
 
     def apply_weight_quantization(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # quantize attention weights
         self.attention_quantization()
 
@@ -229,17 +229,17 @@ class BaseTransformerContainer(ABC):
         self.mlp_quantization()
 
     def attention_quantization(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.attention.attn_qkvw = self.quantizer.quantize(self.module.attention.attn_qkvw)
         self.module.attention.attn_ow = self.quantizer.quantize(self.module.attention.attn_ow)
 
     def mlp_quantization(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.mlp.inter_w = self.quantizer.quantize(self.module.mlp.inter_w)
         self.module.mlp.output_w = self.quantizer.quantize(self.module.mlp.output_w)
 
     def apply_tensor_parallelism(self, mp_replace):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # setup the new Attention module
         self.attention_qkv_mp(mp_replace)
         self.attention_o_mp(mp_replace)
@@ -253,7 +253,7 @@ class BaseTransformerContainer(ABC):
         #self.apply_weight_quantization()
 
     def attention_qkv_mp(self, mp_replace, reversed_dim=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.attention.attn_qkvw = mp_replace.strided_copy(self.module.attention.attn_qkvw,
                                                                   self.qkvw,
                                                                   num_splits=3,
@@ -264,7 +264,7 @@ class BaseTransformerContainer(ABC):
                                                                   int8=reversed_dim)
 
     def attention_o_mp(self, mp_replace, reversed_dim=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.attention.attn_ow = mp_replace.copy(self.module.attention.attn_ow, self.dense_w, int8=reversed_dim)
         self.module.attention.attn_ob = mp_replace.copy(self.module.attention.attn_ob,
                                                         self.dense_b,
@@ -272,12 +272,12 @@ class BaseTransformerContainer(ABC):
                                                         allocate_tensor=reversed_dim)
 
     def mlp_inter_mp(self, mp_replace, reversed_dim=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.mlp.inter_w = mp_replace.copy(self.module.mlp.inter_w, self._h4h_w, int8=reversed_dim)
         self.module.mlp.inter_b = mp_replace.copy(self.module.mlp.inter_b, self._h4h_b, int8=reversed_dim)
 
     def mlp_output_mp(self, mp_replace, reversed_dim=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.module.mlp.output_w = mp_replace.copy(self.module.mlp.output_w, self._4hh_w, int8=reversed_dim)
         self.module.mlp.output_b = mp_replace.copy(self.module.mlp.output_b,
                                                    self._4hh_b,
@@ -287,7 +287,7 @@ class BaseTransformerContainer(ABC):
     def copy_data_to_new_module(self):
         params = {'attn_nw': self.attn_nw, 'attn_nb': self.attn_nb}
         for key in params:
-            debuginfo(prj='ds', info=f'key:{key}')
+            gd.debuginfo(prj='ds', info=f'key:{key}')
             if params[key] is None:
                 setattr(self.module.mlp, key, None)
             else:
@@ -303,24 +303,24 @@ class BaseTransformerContainer(ABC):
                         torch.nn.parameter.Parameter(params[key].to(get_accelerator().current_device_name())))
 
     def transpose(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.transpose_attention()
         self.transpose_mlp()
 
     def transpose_attention(self):
         if self.attn_linear_layer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.qkvw = self.transpose_impl(self.qkvw.data)
             self.dense_w = self.transpose_impl(self.dense_w.data)
 
     def transpose_mlp(self):
         if self.mlp_linear_layer:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self._h4h_w = self.transpose_impl(self._h4h_w.data)
             self._4hh_w = self.transpose_impl(self._4hh_w.data)
 
     def transpose_impl(self, data):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         data = data.contiguous()
         data.reshape(-1).copy_(data.transpose(-1, -2).contiguous().reshape(-1))
         data = data.reshape(data.shape[-1], data.shape[-2])
@@ -328,7 +328,7 @@ class BaseTransformerContainer(ABC):
         return data
 
     def get_all_params(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         params = [
             self.attn_nw,
             self.attn_nb,
@@ -342,9 +342,9 @@ class BaseTransformerContainer(ABC):
         return params
 
     def get_attn_params(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [self.qkvw, self.qkvb, self.dense_w, self.dense_b]
 
     def get_mlp_params(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [self._h4h_w, self._h4h_b, self._4hh_w, self._4hh_b]

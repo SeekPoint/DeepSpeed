@@ -35,7 +35,7 @@ def to_device(batch, device):
 def convert_linear_layer_to_lora(model, part_module_name, lora_dim=0, lora_scaling=1, lora_droppout=0):
     from deepspeed.compression.helper import recursive_getattr, recursive_setattr
 
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
 
     repalce_name = []
     for name, module in model.named_modules():
@@ -53,7 +53,7 @@ class LinearLayer_LoRA(torch.nn.Module):
     # an simple implementation of LoRA
     # for now only support Linear Layer
     def __init__(self, weight, lora_dim=0, lora_scaling=1, lora_droppout=0, bias=None):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(LinearLayer_LoRA, self).__init__()
         self.weight = weight
         self.bias = bias
@@ -83,30 +83,30 @@ class LinearLayer_LoRA(torch.nn.Module):
         self.fuse_lora = False
 
     def eval(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.lora_dropout.eval()
 
     def train(self, mode=True):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.lora_dropout.train(mode)
 
     def reset_parameters(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         torch.nn.init.kaiming_uniform_(self.lora_right_weight, a=math.sqrt(5))
         torch.nn.init.zeros_(self.lora_left_weight)
 
     def forward(self, input):
         if self.fuse_lora:
-            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+            gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             return F.linear(input, self.weight, self.bias)
         else:
-            debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+            gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
             return F.linear(input, self.weight, self.bias) + (
                 self.lora_dropout(input) @ self.lora_right_weight @ self.lora_left_weight) * self.lora_scaling
 
 
 def only_optimize_lora_parameters(model):
-    debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+    gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
     # turn off the gradient of all the parameters except the LoRA parameters
     for name, param in model.named_parameters():
         if "lora_right_weight" in name or "lora_left_weight" in name:
@@ -125,7 +125,7 @@ class TestHybridEngineLoRA(DistributedTest):
     world_size = 1
 
     def get_model(self, model_name):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         model_config = AutoConfig.from_pretrained(model_name)
         model_config.dropout = 0.0
@@ -135,13 +135,13 @@ class TestHybridEngineLoRA(DistributedTest):
         return model
 
     def get_tokenizer(self, model_name):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
     def get_train_sentences(self, batch_size):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         sentences = [
             r"\n\nHuman: I am trying to write a fairy tale. What is the most popular plot?\n\n"
             r"Assistant: The most popular plot might be a princess goes to a faraway land, falls in love",
@@ -154,7 +154,7 @@ class TestHybridEngineLoRA(DistributedTest):
             raise NotImplementedError(f"batch_size {batch_size} not implemented")
 
     def test_lora(self, batch_size, model_name, zero_stage, offload_device):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         model = self.get_model(model_name)
         tokenizer = self.get_tokenizer(model_name)

@@ -16,7 +16,7 @@ class TestTensorBoard(DistributedTest):
     world_size = 2
 
     def test_tensorboard(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "tensorboard": {
@@ -32,7 +32,7 @@ class TestTensorBoard(DistributedTest):
         assert tb_monitor.job_name == "test"
 
     def test_empty_tensorboard(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {"train_batch_size": 2, "tensorboard": {}}
         ds_config = DeepSpeedConfig(config_dict)
         tb_monitor = TensorBoardMonitor(ds_config.monitor_config.tensorboard)
@@ -46,7 +46,7 @@ class TestWandB(DistributedTest):
     world_size = 2
 
     def test_wandb(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "wandb": {
@@ -64,7 +64,7 @@ class TestWandB(DistributedTest):
         assert wandb_monitor.project == "my_project"
 
     def test_empty_wandb(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {"train_batch_size": 2, "wandb": {}}
         ds_config = DeepSpeedConfig(config_dict)
         wandb_monitor = WandbMonitor(ds_config.monitor_config.wandb)
@@ -79,7 +79,7 @@ class TestCSVMonitor(DistributedTest):
     world_size = 2
 
     def test_csv_monitor(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "csv_monitor": {
@@ -95,7 +95,7 @@ class TestCSVMonitor(DistributedTest):
         assert csv_monitor.job_name == "test"
 
     def test_empty_csv_monitor(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {"train_batch_size": 2, "csv_monitor": {}}
         ds_config = DeepSpeedConfig(config_dict)
         csv_monitor = csvMonitor(ds_config.monitor_config.csv_monitor)

@@ -9,20 +9,20 @@ from pydebug import debuginfo, infoTensor
 class meg_2d_parallel_map(object):
 
     def __init__(self, pp_degree, tp_degree):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.pp_degree = pp_degree
         self.tp_degree = tp_degree
         self.map = {}
 
     def simple_init(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.map = {
             self._make_key(i // self.tp_degree, i % self.tp_degree): [i]
             for i in range(self.pp_degree * self.tp_degree)
         }
 
     def add_data(self, pp_index, tp_index, data):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._validate_indices(pp_index, tp_index)
         assert type(data) is list
 
@@ -32,7 +32,7 @@ class meg_2d_parallel_map(object):
         self.map[key] += data
 
     def get_data(self, pp_index=None, tp_index=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self._validate_indices(pp_index, tp_index)
         pp_indices = list(range(self.pp_degree)) if pp_index is None else [pp_index]
         tp_indices = list(range(self.tp_degree)) if tp_index is None else [tp_index]
@@ -58,7 +58,7 @@ class meg_2d_parallel_map(object):
 
 
 def _reshape_tp_dimension(old_2d_map, new_tp_degree):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     old_pp_degree = old_2d_map.pp_degree
     new_2d_map = meg_2d_parallel_map(old_pp_degree, new_tp_degree)
     for i in range(old_pp_degree):
@@ -71,7 +71,7 @@ def _reshape_tp_dimension(old_2d_map, new_tp_degree):
 
 
 def _reshape_pp_dimension(old_2d_map, new_pp_degree):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     old_tp_degree = old_2d_map.tp_degree
     new_2d_map = meg_2d_parallel_map(new_pp_degree, old_tp_degree)
     for i in range(old_tp_degree):
@@ -93,19 +93,19 @@ def reshape_meg_2d_parallel(old_pp_degree, old_tp_degree, new_pp_degree, new_tp_
         old_2d_map.print_data(f'original_2d_map:')
 
     if old_tp_degree != new_tp_degree:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_tp_map = _reshape_tp_dimension(old_2d_map, new_tp_degree)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_tp_map = old_2d_map
     if verbose:
         new_tp_map.print_data(f'after_tp_reshape:')
 
     if old_pp_degree != new_pp_degree:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         final_map = _reshape_pp_dimension(new_tp_map, new_pp_degree)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         final_map = new_tp_map
 
     if verbose:
@@ -139,7 +139,7 @@ def get_mpu_ranks(tp_size=1, pp_size=1, dp_size=1, virtual_pp_size=None):
     with a total of 16 GPUs, rank 0 to 7 belong to the first box and
     ranks 8 to 15 belong to the second box.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     world_size = tp_size * pp_size * dp_size
 
@@ -195,7 +195,7 @@ def reshape(src, tgt):
     reshape([tp_size_src, pp_size_src, dp_size_src],
             [tp_size_tgt, pp_size_tgt, dp_size_tgt])
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     print(f"\n\n*** Reshaping: {src} => {tgt}")
 

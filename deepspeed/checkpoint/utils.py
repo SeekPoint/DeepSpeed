@@ -9,7 +9,7 @@ from .constants import (MODEL_FILE_PREFIX, MODEL_FILE_SUFFIX, OPTIM_FILE_SUFFIX,
 
 from pydebug import debuginfo, infoTensor
 def get_model_ckpt_name_for_rank(base_folder, mp_rank_str):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     ckpt_name = os.path.join(
         base_folder,
         MODEL_FILE_PREFIX + mp_rank_str + MODEL_FILE_SUFFIX,
@@ -18,7 +18,7 @@ def get_model_ckpt_name_for_rank(base_folder, mp_rank_str):
 
 
 def get_zero_ckpt_name_for_rank(base_folder, dp_rank, mp_rank):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     zero_prefix = f'{ZERO_FILE_PREFIX}{dp_rank}'
     mp_rank_string = f'_{MODEL_FILE_PREFIX}{mp_rank:02d}'
     zero_ckpt_name = os.path.join(
@@ -29,7 +29,7 @@ def get_zero_ckpt_name_for_rank(base_folder, dp_rank, mp_rank):
 
 
 def get_layer_ckpt_name_for_rank(base_folder, layer_id, tp_rank):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     ckpt_file = f'{layer_id}-model_{tp_rank:02d}{MODEL_FILE_SUFFIX}'
     ckpt_path = os.path.join(base_folder, ckpt_file)
     return ckpt_path
@@ -53,7 +53,7 @@ def clone_tensors_for_torch_save(item, device=torch.device('cpu')):
     Returns:
         - copy of ``item`` with cloned tensors on target device
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if torch.is_tensor(item):
         return item.detach().clone().to(device)
     elif isinstance(item, list):

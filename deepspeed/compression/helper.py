@@ -23,7 +23,7 @@ def recursive_getattr(model, module_name):
         module_name (`str`)
             The name of the module to get the attribute from.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     split_list = module_name.split('.')
     output = model
     for name in split_list:
@@ -42,7 +42,7 @@ def recursive_setattr(model, module_name, module):
         module (`torch.nn.Module`)
             The module to set the attribute to.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     split_list = module_name.split('.')
     output = model
     for name in split_list[:-1]:
@@ -64,7 +64,7 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
 
     # Get the old module
     old_module = recursive_getattr(model, module_name)
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
     need_bias = False
     if hasattr(old_module, 'bias') and old_module.bias is not None:
@@ -73,23 +73,23 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
     # Initialize the new module
     if isinstance(old_module, LinearLayer_Compress) or isinstance(old_module, torch.nn.Linear):
         if isinstance(old_module, LinearLayer_Compress):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = old_module
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = LinearLayer_Compress(old_module.in_features, old_module.out_features,
                                               bias=need_bias).to(device=old_module.weight.device,
                                                                  dtype=old_module.weight.dtype)
             new_module.weight.data = old_module.weight.data
             if need_bias:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 new_module.bias.data = old_module.bias.data
     elif isinstance(old_module, Conv2dLayer_Compress) or isinstance(old_module, torch.nn.Conv2d):
         if isinstance(old_module, Conv2dLayer_Compress):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = old_module
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = Conv2dLayer_Compress(old_module.in_channels, old_module.out_channels, old_module.kernel_size, old_module.stride, old_module.padding, \
                                             old_module.dilation, old_module.groups, need_bias, \
                                             old_module.padding_mode).to(device=old_module.weight.device, dtype=old_module.weight.dtype)
@@ -97,7 +97,7 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
             if need_bias:
                 new_module.bias.data = old_module.bias.data
     elif isinstance(old_module, torch.nn.BatchNorm2d):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_module = BNLayer_Compress(old_module.num_features, old_module.eps, old_module.momentum, old_module.affine,
                                       old_module.track_running_stats).to(old_module.weight.device,
                                                                          old_module.weight.dtype)
@@ -108,20 +108,20 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
         new_module.running_var.data = old_module.running_var.data
     elif isinstance(old_module, Embedding_Compress) or isinstance(old_module, torch.nn.Embedding):
         if isinstance(old_module, Embedding_Compress):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = old_module
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = Embedding_Compress(old_module.num_embeddings, old_module.embedding_dim, old_module.padding_idx, old_module.max_norm, old_module.norm_type, \
                                         old_module.scale_grad_by_freq, old_module.sparse).to(device=old_module.weight.device, dtype=old_module.weight.dtype)
             new_module.weight.data = old_module.weight.data
     elif mpu is not None and (isinstance(old_module, ColumnParallelLinear_Compress)
                               or isinstance(old_module, mpu.ColumnParallelLinear)):
         if isinstance(old_module, ColumnParallelLinear_Compress):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = old_module
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = ColumnParallelLinear_Compress(mpu,
                                                        old_module.input_size,
                                                        old_module.output_size,
@@ -135,10 +135,10 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
     elif mpu is not None and (isinstance(old_module, RowParallelLinear_Compress)
                               or isinstance(old_module, mpu.RowParallelLinear)):
         if isinstance(old_module, RowParallelLinear_Compress):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = old_module
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             new_module = RowParallelLinear_Compress(mpu,
                                                     old_module.input_size,
                                                     old_module.output_size,
@@ -150,11 +150,11 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
             if need_bias:
                 new_module.bias.data = old_module.bias.data
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         new_module = None
 
     if compression_technique is not None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for k, v in compression_technique.items():
             if k == SPARSE_PRUNING:
                 if v[SPARSE_PRUNING_ENABLED]:
@@ -188,7 +188,7 @@ def module_replacement(model, module_name, compression_technique=None, mpu=None)
 
 
 def is_module_compressible(module, mpu=None):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     ret = isinstance(module, torch.nn.Linear) or \
           isinstance(module, torch.nn.Conv2d) or \
           isinstance(module, torch.nn.Embedding) or \
@@ -210,7 +210,7 @@ def compression_preparation(model, compression_technique_list, mpu):
             The list of compression techniques to prepare the model to.
             list[]
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # Here we first replace all module with our linear wrapper
     for module_name, module in model.named_modules():
         if is_module_compressible(module, mpu):
@@ -234,7 +234,7 @@ def fix_compression(model, module_name, compression_technique, mask=None, dim_re
         compression_technique (`str`)
             The compression technique to fix the module to.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # Here we can make things much simpler by just replacing the module
     module = recursive_getattr(model, module_name)
     for k, v in compression_technique.items():
@@ -255,10 +255,10 @@ def convert_conv1d_to_linear(model, convert_type):
     This is a help function to convert conv1d to linear (e.g., convert GPT2 from HF)
     '''
     if hasattr(model, 'module'):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         c_model = model.module
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         c_model = model
 
     for name, module in c_model.named_modules():
@@ -284,7 +284,7 @@ def generate_pruners(config, model):
         model (`torch.nn.module`)
             The torch module object to be pruned.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     assert nc_pruner is not None, "please ensure the neural_compressor python package is installed by pip or conda if user wants to use snip_momentum sparse pruning"
     from nc_pruner.utils import process_config, parse_to_prune
     from nc_pruner.pruners import get_pruner
@@ -309,7 +309,7 @@ def register_on_step_begin(model):
         model (`torch.nn.module`)
             The torch module object to be pruned.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     def hook(module, input):
         for pruner in module.pruners:
             pruner.on_step_begin(0)
@@ -325,9 +325,9 @@ def rewrite_optimizer_step(opt: torch.optim.Optimizer):
             The torch optimizer object to be hooked.
     """
 
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     def new_step(self, closure=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if hasattr(self, "pruners"):
             for pruner in self.pruners:
                 pruner.on_before_optimizer_step()

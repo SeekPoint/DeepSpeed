@@ -12,25 +12,25 @@ class CCLCommBuilder(CPUOpBuilder):
     NAME = "deepspeed_ccl_comm"
 
     def __init__(self, name=None):
-        debuginfo(prj='ds', info='CCLCommBuilder init' + str(self.name))
+        gd.debuginfo(prj='ds', info='CCLCommBuilder init' + str(self.name))
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.comm.{self.NAME}_op'
 
     def sources(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/cpu/comm/ccl.cpp']
 
     def include_paths(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         includes = ['csrc/cpu/includes']
         return includes
 
     def is_compatible(self, verbose=True):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # TODO: add soft compatibility check for private binary release.
         #  a soft check, as in we know it can be trivially changed.
         return super().is_compatible(verbose)
@@ -43,5 +43,5 @@ class CCLCommBuilder(CPUOpBuilder):
             )
             return []
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return ['-lccl', f'-L{ccl_root_path}/lib']

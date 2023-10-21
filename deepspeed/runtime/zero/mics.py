@@ -23,10 +23,10 @@ from torch.nn import Parameter
 from pydebug import debuginfo, infoTensor
 
 def has_hierarchical_all_gather_groups(comm_groups: MiCS_CommGroups):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     result = False
     if comm_groups.param_intra_node_group is not None and comm_groups.param_inter_node_shard_group is not None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         result = True
     return result
 
@@ -37,11 +37,11 @@ class MiCS_AllGatherCoalescedHandle(AllGatherCoalescedHandle):
     """
 
     def __init__(self, allgather_handle, params: List[Parameter], partitions: List[Tensor], world_size: int) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super().__init__(allgather_handle, params, partitions, world_size)
 
     def wait(self) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         """
         # let the current stream to op
@@ -136,12 +136,12 @@ class MiCS_Init(Init):
                 model = deepspeed.zero.MiCS_Init(module=model,
                                                  config_dict_or_path=ds_config)
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         assert config_dict_or_path is not None, "Must provide configuration for MiCS Initialization"
         _ds_config = deepspeed.runtime.config.DeepSpeedConfig(config_dict_or_path, mpu)
         if not dist.is_initialized():
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dist.init_distributed()
             assert dist.is_initialized(), "Parameters cannot be scattered without initializing deepspeed.comm"
         self.mics_comm_groups = create_mics_comm_groups(
@@ -154,7 +154,7 @@ class MiCS_Init(Init):
                          config_dict_or_path, config, enabled, dtype, mpu)
 
     def _convert_to_deepspeed_param(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super()._convert_to_deepspeed_param(param)
         # attach communication groups to every param
         param.comm = self.mics_comm_groups
@@ -168,20 +168,20 @@ class MiCS_Init(Init):
             mics_comm_groups: MiCS_CommGroups = params[0].comm
             hierarchical_all_gather = has_hierarchical_all_gather_groups(mics_comm_groups)
             if dist.has_coalescing_manager() and hierarchical_all_gather:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self._hierarchical_all_gather_params(params, param_buffers)
             elif dist.has_coalescing_manager():
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return self._flat_all_gather_with_coalescing_manager(params, param_buffers)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return old_all_gather_coalesced(params, safe_mode)
 
         # change the all_gather_coalesced method
         param.all_gather_coalesced = _param_all_gather_coalesced
 
     def _pre_all_gather(self, params, params_buffers=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # fetches from nvme if the partition is not available and in nvme
         self._ensure_availability_of_partitioned_params(params)
 
@@ -203,7 +203,7 @@ class MiCS_Init(Init):
         """"""
         # must have to change the status of the param
         # and ensure they are on the device
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         params, params_buffers = self._pre_all_gather(params, params_buffers)
 
         mics_comm_groups: MiCS_CommGroups = params[0].comm
@@ -237,7 +237,7 @@ class MiCS_Init(Init):
                                              world_size=param_shard_size)
 
     def _hierarchical_all_gather_params(self, params, params_buffers=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """"""
         params, params_buffers = self._pre_all_gather(params, params_buffers)
 
@@ -307,16 +307,16 @@ class MiCS_Init(Init):
         )
 
     def get_partition_dp_group(self, param):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return param.comm.param_shard_group
 
     def get_partition_rank(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.mics_comm_groups.param_shard_rank
 
     @property
     def num_partitions(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.mics_comm_groups.param_shard_size
 
 
@@ -336,7 +336,7 @@ class MiCS_Offload(DeepSpeedZeRoOffload):
                  model_persistence_threshold=sys.maxsize,
                  offload_param_config=None,
                  mpu=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(module, timers, ds_config, overlap_comm, prefetch_bucket_size, max_reuse_distance,
                          max_live_parameters, param_persistence_threshold, model_persistence_threshold,
                          offload_param_config, mpu)
@@ -350,13 +350,13 @@ class MiCS_Offload(DeepSpeedZeRoOffload):
         if non_zero_params:
             zero_params = [p for p in module.parameters() if is_zero_param(p)]
             if zero_params:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 zero_params[0].convert_to_zero_parameters(param_list=non_zero_params)
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 group = None
                 if mpu:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     group = mpu.get_data_parallel_group()
 
                 MiCS_Init(module=module,
@@ -438,14 +438,14 @@ class MiCS_Optimizer(DeepSpeedZeroOptimizer_Stage3):
         zpg=None,
         zero_quantized_weights=False,
     ):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert not zero_quantized_weights and zpg is None, "MiCS is mutually exclusive with ZeRO++"
         return MiCS_Offload(module, timers, ds_config, overlap_comm, prefetch_bucket_size, max_reuse_distance,
                             max_live_parameters, param_persistence_threshold, model_persistence_threshold,
                             offload_param_config, mpu)
 
     def partition_grads(self, params_to_release: List[Parameter], grad_partitions: List[Tensor]) -> None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         grad_buffers = super().partition_grads(params_to_release, grad_partitions)
         # perform all-reduce among replication groups
         # the function will perform accumulation boundary check
@@ -455,11 +455,11 @@ class MiCS_Optimizer(DeepSpeedZeroOptimizer_Stage3):
     def allreduce_mics_shard_grads(self, params, partitioned_grads_buffers: List[Tensor]):
         """
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # TODO: improve the condition check
         if not self.is_gradient_accumulation_boundary or \
             len(partitioned_grads_buffers) == 0:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
 
         mics_comm_groups: MiCS_CommGroups = params[0].comm
@@ -467,17 +467,17 @@ class MiCS_Optimizer(DeepSpeedZeroOptimizer_Stage3):
         param_repli_size = mics_comm_groups.param_repli_size
 
         if param_repli_size is None or param_repli_size <= 1:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
         if not get_accelerator().on_accelerator(partitioned_grads_buffers[0]):
             raise RuntimeError("Local sharding has no support for CPU offloading")
 
         if dist.has_all_reduce_coalesced():
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             scale_tensors(partitioned_grads_buffers, param_repli_size)
             dist.all_reduce_coalesced(tensors=partitioned_grads_buffers, group=param_repli_group)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # manually coalescing all-reduce
             aggregated_buffer: Tensor = torch.cat(partitioned_grads_buffers)
             aggregated_buffer.div_(param_repli_size)
@@ -492,7 +492,7 @@ class MiCS_Optimizer(DeepSpeedZeroOptimizer_Stage3):
                         load_optimizer_states=True,
                         load_from_fp32_weights=False,
                         checkpoint_folder=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         r""" Loading the ZeRO-3/MiCS partitioned checkpoints
         Because the self.dp_process_group is replaced with the communicator for
         partition group we can call the load_state_dict logic from ZeRO-3.

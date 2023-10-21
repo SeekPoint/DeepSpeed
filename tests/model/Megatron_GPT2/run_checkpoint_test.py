@@ -53,11 +53,11 @@ def grep_loss_from_file(file_name):
 class GPT2CheckpointTestCase(BaseTestCase):
 
     def __init__(self, methodName="DeepSpeed function test on GPT2 model"):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(GPT2CheckpointTestCase, self).__init__(methodName)
 
     def setUp(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         self.save_dir = os.getcwd()
         new_dir = os.path.dirname(__file__)
@@ -65,11 +65,11 @@ class GPT2CheckpointTestCase(BaseTestCase):
             os.chdir(new_dir)
 
     def tearDown(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         os.chdir(self.save_dir)
 
     def test_mp2_gpu4_node1_with_zero1(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -92,7 +92,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_with_zero2(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -115,7 +115,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_with_zero2_offload(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -139,7 +139,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu1_node1_with_zero1(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -163,7 +163,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu4_node1_with_zero1(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -187,7 +187,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu1_node1_with_zero2(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -211,7 +211,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu1_node1_with_zero2_offload(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -236,7 +236,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu4_node1_with_zero2(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -260,7 +260,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp1_gpu2_load_gpu4_node1_with_zero2_offload(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 1,
             "gpus": 2,
@@ -285,7 +285,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_load_gpu2_node1_with_zero1(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -309,7 +309,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu2_load_gpu4_node1_with_zero1(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 2,
@@ -333,7 +333,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_load_gpu2_node1_with_zero2(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -357,7 +357,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_load_gpu2_node1_with_zero2_offload(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -382,7 +382,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu2_load_gpu4_node1_with_zero2(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 2,
@@ -406,7 +406,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu2_load_gpu4_node1_with_zero2_offload(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 2,
@@ -431,7 +431,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def test_mp2_gpu4_node1_without_zero(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         test_config = {
             "mp": 2,
             "gpus": 4,
@@ -454,7 +454,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         self.assertTrue(succ)
 
     def gen_name(self, test_config, prefix):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         save_dir = "checkpoint_test_logs"
         tag = test_config["tag"]
@@ -463,7 +463,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         return os.path.join(save_dir, prefix + file_name)
 
     def run_test(self, test_config, r_tol):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         print("\n")
 
         print("{0}: starting......".format(self.id()))
@@ -545,7 +545,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         return self.check_parity(base_file, test_file, r_tol)
 
     def has_loss_data(self, file_name):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         has_loss = False
         if os.path.exists(file_name):
             loss = grep_loss_from_file(file_name)
@@ -555,7 +555,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
         return has_loss
 
     def check_parity(self, base_file, test_file, r_tol):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         base_loss = grep_loss_from_file(base_file)
         test_loss = grep_loss_from_file(test_file)
 
@@ -571,7 +571,7 @@ class GPT2CheckpointTestCase(BaseTestCase):
 
 
 def checkpoint_suite():
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     suite = unittest.TestSuite()
 
     suite.addTest(GPT2CheckpointTestCase('test_mp2_gpu4_node1_with_zero1'))
@@ -602,6 +602,6 @@ def checkpoint_suite():
 
 
 if __name__ == '__main__':
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     runner = unittest.TextTestRunner(failfast=True)
     runner.run(checkpoint_suite())

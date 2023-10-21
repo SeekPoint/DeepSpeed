@@ -15,7 +15,7 @@ from pydebug import debuginfo, infoTensor
 class SimpleModel(torch.nn.Module):
 
     def __init__(self, hidden_dim, empty_grad=False):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(SimpleModel, self).__init__()
         self.linear = torch.nn.Linear(hidden_dim, hidden_dim, bias=True)
         self.linear = torch.nn.Linear(hidden_dim, hidden_dim, bias=False)
@@ -25,7 +25,7 @@ class SimpleModel(torch.nn.Module):
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self, x, y):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         hidden = x
         hidden1 = self.linear(hidden)
         hidden2 = self.linear(hidden1)
@@ -33,7 +33,7 @@ class SimpleModel(torch.nn.Module):
 
 
 def create_config_from_dict(tmpdir, config_dict):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     config_path = os.path.join(tmpdir, 'temp_config.json')
     with open(config_path, 'w') as fd:
         json.dump(config_dict, fd)
@@ -41,7 +41,7 @@ def create_config_from_dict(tmpdir, config_dict):
 
 
 def get_data_loader(model, total_samples, hidden_dim, device):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     batch_size = model.train_micro_batch_size_per_gpu()
     train_data = torch.randn(total_samples, hidden_dim, device=device, dtype=torch.half)
     train_label = torch.empty(total_samples, dtype=torch.long, device=device).random_(hidden_dim)
@@ -52,7 +52,7 @@ def get_data_loader(model, total_samples, hidden_dim, device):
 
 
 def get_args(tmpdir, config_dict):
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument('--zero', type=int, default=0)
@@ -103,7 +103,7 @@ config_dict = {
 args = get_args('/tmp/', config_dict)
 hidden_dim = 4 * 1024
 
-debuginfo(prj='dsUT')
+gd.debuginfo(prj='dsUT')
 
 model = SimpleModel(hidden_dim, empty_grad=False)
 

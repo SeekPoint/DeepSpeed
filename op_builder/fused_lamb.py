@@ -13,36 +13,36 @@ class FusedLambBuilder(CUDAOpBuilder):
     NAME = "fused_lamb"
 
     def __init__(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
-        debuginfo(prj='ds', info=f'deepspeed.ops.lamb.{self.NAME}_op')
+        gd.debuginfo(prj='ds', info=f'deepspeed.ops.lamb.{self.NAME}_op')
         return f'deepspeed.ops.lamb.{self.NAME}_op'
 
     def sources(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/lamb/fused_lamb_cuda.cpp', 'csrc/lamb/fused_lamb_cuda_kernel.cu']
 
     def include_paths(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/includes']
 
     def cxx_args(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         args = super().cxx_args()
         return args + self.version_dependent_macros()
 
     def nvcc_args(self):
         nvcc_flags = ['-O3'] + self.version_dependent_macros()
         if self.is_rocm_pytorch():
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             ROCM_MAJOR, ROCM_MINOR = self.installed_rocm_version()
             nvcc_flags += ['-DROCM_VERSION_MAJOR=%s' % ROCM_MAJOR, '-DROCM_VERSION_MINOR=%s' % ROCM_MINOR]
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             nvcc_flags.extend(
                 ['-allow-unsupported-compiler' if sys.platform == "win32" else '', '-lineinfo', '--use_fast_math'] +
                 self.compute_capability_args())
-        debuginfo(prj='ds', info=' nvcc_flags: ' + str(nvcc_flags))
+        gd.debuginfo(prj='ds', info=' nvcc_flags: ' + str(nvcc_flags))
         return nvcc_flags

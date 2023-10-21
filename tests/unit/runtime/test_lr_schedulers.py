@@ -44,7 +44,7 @@ class TestGetLrBeforeTrain(DistributedTest):
     world_size = 1
 
     def test(self, scheduler_type, params):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -85,7 +85,7 @@ class TestLrSchedule(DistributedTest):
     world_size = 1
 
     def test_lr_warmup_schedule(self, warmup_num_steps, warmup_type):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -139,7 +139,7 @@ class TestLrSchedule(DistributedTest):
         assert all([warmup_max_lr == lr for lr in step_lrs[warmup_num_steps:]])
 
     def test_lr_warmup_decay_schedule(self, warmup_num_steps, warmup_type):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -216,7 +216,7 @@ class TestSchedulerOptimizerParity(DistributedTest):
     world_size = 1
 
     def test(self, scheduler_type, params):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -262,7 +262,7 @@ class TestLrRange(DistributedTest):
     world_size = 1
 
     def test(self, min_lr, step_rate, step_size, staircase):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -325,7 +325,7 @@ class TestOneCycle(DistributedTest):
                                  (1e-5, 1e-1, 0, 10, 0),
                              ])  # yapf: disable
     def test_lr(self, min_lr, max_lr, decay_rate, cycle_step_size, decay_step_size):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -390,7 +390,7 @@ class TestOneCycle(DistributedTest):
                                  (0.08, 0.09, 0, 21),
                              ]) # yapf: disable
     def test_mom(self, min_mom, max_mom, decay_rate, step_size):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,

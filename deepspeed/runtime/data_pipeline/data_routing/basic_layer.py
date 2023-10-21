@@ -17,7 +17,7 @@ class RandomLayerTokenDrop(Module):
     """
 
     def __init__(self, layer: Module):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(RandomLayerTokenDrop, self).__init__()
         self.random_ltd_layer = layer
         self.reserved_length = None  #config['max_value']
@@ -39,11 +39,11 @@ class RandomLayerTokenDrop(Module):
         self.model_type = config[RANDOM_LTD_MODEL_TYPE]
 
         if hs_order == 'batch_seq_dim':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.get_hidden_tensor_shape = self.get_bsh
             self.batch_first = True
         elif hs_order == 'seq_batch_dim':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.get_hidden_tensor_shape = self.get_sbh
             self.batch_first = False
         else:
@@ -53,37 +53,37 @@ class RandomLayerTokenDrop(Module):
             raise NotImplementedError
 
         if self.model_type == 'encoder':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.index_generator = bert_sample_tokens
         elif self.model_type == 'decoder':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.index_generator = gpt_sample_tokens
         else:
             logger.warning("************For now, we only support encoder-only or decoder-only models************")
             raise NotImplementedError
 
     def get_bsh(self, hidden_stats):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.curr_seq, self.curr_micro_batch = hidden_stats.size()[1], hidden_stats.size()[0]
 
     def get_sbh(self, hidden_stats):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.curr_seq, self.curr_micro_batch = hidden_stats.size()[0], hidden_stats.size()[1]
 
     def forward(self, hidden_states, **kwargs) -> Tensor:
         if self.random_ltd_scheduler is not None:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.reserved_length = self.random_ltd_scheduler.get_current_seq()
             self.get_hidden_tensor_shape(hidden_states)
         if self.training and self.random_ltd_scheduler is not None and self.reserved_length < self.curr_seq:
             if self.mask_name is not None:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 mask = kwargs[self.mask_name]
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 mask = None
             if self.random_ltd_layer_id == 0:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 sampled_indices, part_attention_mask = self.index_generator(self.reserved_length,\
                                                                                       self.curr_seq, \
                                                                                       self.curr_micro_batch, \
@@ -92,7 +92,7 @@ class RandomLayerTokenDrop(Module):
                 self.random_ltd_scheduler.state[RANDOM_LTD_SAMPLE_INDEX] = sampled_indices
                 self.random_ltd_scheduler.state[RANDOM_LTD_ATTENTION_MASK] = part_attention_mask
             else:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 sampled_indices = self.random_ltd_scheduler.state[RANDOM_LTD_SAMPLE_INDEX]
                 part_attention_mask = self.random_ltd_scheduler.state[RANDOM_LTD_ATTENTION_MASK]
 
@@ -100,25 +100,25 @@ class RandomLayerTokenDrop(Module):
                                                                    sampled_indices[self.random_ltd_layer_id, :, :],
                                                                    self.batch_first)
             if self.mask_name is not None:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if self.model_type == 'encoder':
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     kwargs[self.mask_name] = part_attention_mask[self.random_ltd_layer_id]
                 else:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     kwargs[self.mask_name] = part_attention_mask
 
             outputs = self.random_ltd_layer(part_hidden_states, **kwargs)
 
             if isinstance(outputs, tuple):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 hidden_states = ScatterTokens.apply(hidden_states, outputs[0],
                                                     sampled_indices[self.random_ltd_layer_id, :, :], self.batch_first)
                 my_list = list(outputs)
                 my_list[0] = hidden_states
                 return tuple(my_list)
             elif isinstance(outputs, Tensor):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 hidden_states = ScatterTokens.apply(hidden_states, outputs,
                                                     sampled_indices[self.random_ltd_layer_id, :, :], self.batch_first)
                 return hidden_states
@@ -127,5 +127,5 @@ class RandomLayerTokenDrop(Module):
                        You need to adjust the output according to the layer in your model************")
                 raise NotImplementedError
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.random_ltd_layer(hidden_states, **kwargs)

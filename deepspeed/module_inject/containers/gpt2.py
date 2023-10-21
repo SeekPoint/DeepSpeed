@@ -11,13 +11,13 @@ from pydebug import debuginfo, infoTensor
 class DS_GPT2Container(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
 
     def create_module(self, config=None):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedGPTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
@@ -31,7 +31,7 @@ class HFGPT2LayerPolicy(TransformerPolicy):
         # HuggingFace GPT2 uses convolutional layer instead of linear layer
         super().__init__(inference, linear_layer=False)
         self.client_module = client_module
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         try:
             import transformers
             HFGPT2LayerPolicy._orig_layer_class = transformers.models.gpt2.modeling_gpt2.GPT2Block
@@ -39,28 +39,28 @@ class HFGPT2LayerPolicy(TransformerPolicy):
             HFGPT2LayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.attn.embed_dim, \
                 self.client_module.attn.num_heads, \
                 self.client_module.ln_1.eps, \
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return  self.client_module.attn.c_attn.weight, \
                 self.client_module.attn.c_attn.bias, \
                 self.client_module.attn.c_proj.weight, \
                 self.client_module.attn.c_proj.bias
 
     def mlp(self, enable_training=False):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.mlp.c_fc.weight, \
                self.client_module.mlp.c_fc.bias, \
                self.client_module.mlp.c_proj.weight, \
                self.client_module.mlp.c_proj.bias
 
     def layernorm(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.client_module.ln_2.weight, \
                self.client_module.ln_2.bias, \
                self.client_module.ln_1.weight, \

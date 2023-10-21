@@ -14,7 +14,7 @@ from pydebug import debuginfo, infoTensor
 class MPU():
 
     def __init__(self, tp_world_size):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         self.rank = deepspeed.comm.get_rank()
         self.world_size = deepspeed.comm.get_world_size()
         self.tp_world_size = tp_world_size
@@ -54,7 +54,7 @@ class TestDataEfficiency(DistributedTest):
     world_size = 2
 
     def test_curriculum_learning(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -130,7 +130,7 @@ class TestLegacyCurriculumScheduler(DistributedTest):
     world_size = 2
 
     def test_fixed_discrete(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,
@@ -175,7 +175,7 @@ class TestLegacyCurriculumScheduler(DistributedTest):
             assert seqlen == true_seqlen, f"Incorrect curriculum schedule"
 
     def test_fixed_linear(self):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         config_dict = {
             "train_batch_size": 2,
             "steps_per_print": 1,

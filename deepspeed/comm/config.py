@@ -10,7 +10,7 @@ from pydebug import debuginfo, infoTensor
 class CommsConfig(BaseModel):
 
     class Config:
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         validate_all = True
         validate_assignment = True
         use_enum_values = True
@@ -18,7 +18,7 @@ class CommsConfig(BaseModel):
 
 
 class CommsLoggerConfig(CommsConfig):
-    debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     enabled: bool = COMMS_LOGGER_ENABLED_DEFAULT
     prof_all: bool = COMMS_LOGGER_PROF_ALL_DEFAULT
     prof_ops: list = COMMS_LOGGER_PROF_OPS_DEFAULT
@@ -29,7 +29,7 @@ class CommsLoggerConfig(CommsConfig):
 class DeepSpeedCommsConfig:
 
     def __init__(self, ds_config):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.comms_logger_enabled = 'comms_logger' in ds_config
 
         if self.comms_logger_enabled:

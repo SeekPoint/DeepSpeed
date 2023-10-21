@@ -27,7 +27,7 @@ import time
 from pydebug import debuginfo, infoTensor
 #why pip install -e . cannot see it, 
 # but python setup.py install and python setup.py clean can see it!
-debuginfo(prj='ds', info='start setup.py')  
+gd.debuginfo(prj='ds', info='start setup.py')
 torch_available = True
 try:
     import torch
@@ -89,7 +89,7 @@ if torch_available and torch.cuda.is_available():
         else:
             cupy = f"cupy-cuda{cuda_major_ver}x"
     
-    debuginfo(prj='ds', info='cupy:' + str(cupy))
+    gd.debuginfo(prj='ds', info='cupy:' + str(cupy))
 
     if cupy:
         extras_require['1bit'].append(cupy)
@@ -279,7 +279,7 @@ thisdir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(thisdir, 'README.md'), encoding='utf-8') as fin:
     readme_text = fin.read()
 
-debuginfo(prj='ds', info='extras_require:' + str(extras_require))
+gd.debuginfo(prj='ds', info='extras_require:' + str(extras_require))
 
 start_time = time.time()
 

@@ -16,7 +16,7 @@ class OneLayerNet(torch.nn.Module):
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
         """
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         super(OneLayerNet, self).__init__()
         self.linear1 = torch.nn.Linear(D_in, D_out)
 
@@ -26,14 +26,14 @@ class OneLayerNet(torch.nn.Module):
         a Variable of output data. We can use Modules defined in the constructor as
         well as arbitrary operators on Variables.
         """
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
         h_relu = self.linear1(x).clamp(min=0)
         y_pred = self.linear1(h_relu)
         return y_pred
 
 
 def test_literal_device():
-    debuginfo(prj='dsUT')
+    gd.debuginfo(prj='dsUT')
     model = OneLayerNet(128, 128)
 
     os.environ['RANK'] = '0'

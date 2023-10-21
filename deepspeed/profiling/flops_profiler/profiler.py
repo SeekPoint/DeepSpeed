@@ -62,7 +62,7 @@ class FlopsProfiler(object):
     """
 
     def __init__(self, model, ds_engine=None, recompute_fwd_factor=0.0):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.model = model
         self.ds_engine = ds_engine
         self.recompute_fwd_factor = recompute_fwd_factor
@@ -77,50 +77,50 @@ class FlopsProfiler(object):
         Args:
             ignore_list (list, optional): the list of modules to ignore while profiling. Defaults to None.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.reset_profile()
         _patch_functionals()
         _patch_tensor_methods()
 
         def register_module_hooks(module, ignore_list):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if ignore_list and type(module) in ignore_list:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 return
 
             # if computing the flops of a module directly
             if type(module) in MODULE_HOOK_MAPPING:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if not hasattr(module, "__flops_handle__"):
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     module.__flops_handle__ = module.register_forward_hook(MODULE_HOOK_MAPPING[type(module)])
                 return
 
             # if computing the flops of the functionals in a module
             def pre_hook(module, input):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module_flop_count.append([])
                 module_mac_count.append([])
 
             if not hasattr(module, "__pre_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__pre_hook_handle__ = module.register_forward_pre_hook(pre_hook)
 
             def post_hook(module, input, output):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 if module_flop_count:
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                     module.__flops__ += sum([elem[1] for elem in module_flop_count[-1]])
                     module_flop_count.pop()
                     module.__macs__ += sum([elem[1] for elem in module_mac_count[-1]])
                     module_mac_count.pop()
 
             if not hasattr(module, "__post_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__post_hook_handle__ = module.register_forward_hook(post_hook)
 
             def start_time_hook(module, input):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 get_accelerator().synchronize()
                 module.__start_time__ = time.time()
 
@@ -128,12 +128,12 @@ class FlopsProfiler(object):
                 module.__start_time_hook_handle__ = module.register_forward_pre_hook(start_time_hook)
 
             def end_time_hook(module, input, output):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 get_accelerator().synchronize()
                 module.__duration__ += time.time() - module.__start_time__
 
             if not hasattr(module, "__end_time_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__end_time_hook_handle__ = module.register_forward_hook(end_time_hook)
 
         self.model.apply(partial(register_module_hooks, ignore_list=ignore_list))
@@ -145,33 +145,33 @@ class FlopsProfiler(object):
 
         All torch.nn.functionals are restored to their originals.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.started and self.func_patched:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             _reload_functionals()
             _reload_tensor_methods()
             self.func_patched = False
 
         def remove_profile_attrs(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__pre_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__pre_hook_handle__.remove()
                 del module.__pre_hook_handle__
             if hasattr(module, "__post_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__post_hook_handle__.remove()
                 del module.__post_hook_handle__
             if hasattr(module, "__flops_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__flops_handle__.remove()
                 del module.__flops_handle__
             if hasattr(module, "__start_time_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__start_time_hook_handle__.remove()
                 del module.__start_time_hook_handle__
             if hasattr(module, "__end_time_hook_handle__"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.__end_time_hook_handle__.remove()
                 del module.__end_time_hook_handle__
 
@@ -182,29 +182,29 @@ class FlopsProfiler(object):
 
         Adds or resets the extra attributes.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         def get_param_count_and_ep(param):
             """
             Return the number of parameters in the layer, whether the layer is an MoE layer,
             and its expert parallelism size if so
             """
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             prefix = 'ep_size_'
             offset = len(prefix)
             expert_parallelism = 0
             if getattr(param, "group_name", "").startswith(prefix):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 try:
                     expert_parallelism = int(param.group_name[offset:])
                 except ValueError:
                     pass
-                    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             is_moe = expert_parallelism > 0
             return param.numel(), is_moe, expert_parallelism
 
         def add_or_reset_attrs(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             parameters = [get_param_count_and_ep(p) for p in module.parameters()]
             module.__flops__ = 0
             module.__macs__ = 0
@@ -223,36 +223,36 @@ class FlopsProfiler(object):
 
         The added attributes and handles are removed recursively on all the modules.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not self.started:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
         self.stop_profile()
         self.started = False
 
         def remove_profile_attrs(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__flops__"):
                 del module.__flops__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__macs__"):
                 del module.__macs__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__params__"):
                 del module.__params__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__expert_params__"):
                 del module.__expert_params__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__model_expert_params__"):
                 del module.__model_expert_params__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__start_time__"):
                 del module.__start_time__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "__duration__"):
                 del module.__duration__
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         self.model.apply(remove_profile_attrs)
 
@@ -265,7 +265,7 @@ class FlopsProfiler(object):
         Returns:
             The number of multiply-accumulate operations of the model forward pass.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_flops = get_module_flops(self.model)
         return num_to_string(total_flops) if as_string else total_flops
 
@@ -278,7 +278,7 @@ class FlopsProfiler(object):
         Returns:
             The number of multiply-accumulate operations of the model forward pass.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_macs = get_module_macs(self.model)
         return macs_to_string(total_macs) if as_string else total_macs
 
@@ -291,7 +291,7 @@ class FlopsProfiler(object):
         Returns:
             The latency of the model forward pass.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_duration = get_module_duration(self.model)
         return duration_to_string(total_duration) if as_string else total_duration
 
@@ -304,12 +304,12 @@ class FlopsProfiler(object):
         Returns:
             The total number of parameters stored per rank.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         total_params = self.model.__expert_params__ + self.model.__params__
         return params_to_string(total_params) if as_string else total_params
 
     def is_expert_tensor_parallelism_enabled(self):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for _, module in self.model.named_modules():
             if isinstance(module, MoE) and hasattr(module, 'enable_expert_tensor_parallelism'):
                 return module.enable_expert_tensor_parallelism
@@ -326,14 +326,14 @@ class FlopsProfiler(object):
             output_file (str, optional): Path to the output file. If None, the profiler prints to stdout.
         """
         if not self.started:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return
         import sys
         import os.path
         original_stdout = None
         f = None
         if output_file and output_file != "":
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             dir_path = os.path.dirname(os.path.abspath(output_file))
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
@@ -348,10 +348,10 @@ class FlopsProfiler(object):
         expert_tensor_parallelism = None  # silence the linters
         total_model_expert_params = total_model_nonexpert_params = 0
         if self.ds_engine:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             total_model_nonexpert_params = self.model.__params__ * self.ds_engine.mp_world_size
             if self.ds_engine.has_moe_layers:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 expert_tensor_parallelism = self.is_expert_tensor_parallelism_enabled()
                 total_model_expert_params = self.model.__model_expert_params__ * (self.ds_engine.mp_world_size
                                                                                   if expert_tensor_parallelism else 1)
@@ -421,7 +421,7 @@ class FlopsProfiler(object):
             print('{:<60}  {:<8.2f}'.format('samples/second: ', samples_per_iter / iter_latency))
 
         def flops_repr(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             params = module.__params__ + module.__expert_params__
             flops = get_module_flops(module)
             macs = get_module_macs(module)
@@ -440,18 +440,18 @@ class FlopsProfiler(object):
             return ", ".join(items)
 
         def add_extra_repr(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             flops_extra_repr = flops_repr.__get__(module)
             if module.extra_repr != flops_extra_repr:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.original_extra_repr = module.extra_repr
                 module.extra_repr = flops_extra_repr
                 assert module.extra_repr != module.original_extra_repr
 
         def del_extra_repr(module):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if hasattr(module, "original_extra_repr"):
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 module.extra_repr = module.original_extra_repr
                 del module.original_extra_repr
 
@@ -485,7 +485,7 @@ class FlopsProfiler(object):
             module_depth (int, optional): the depth of the modules to show. Defaults to -1 (the innermost modules).
             top_modules (int, optional): the number of top modules to show. Defaults to 1.
         """
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         info = {}
         if not hasattr(self.model, "__flops__"):
             print("no __flops__ attribute in the model, call this function after start_profile and before end_profile")
@@ -493,10 +493,10 @@ class FlopsProfiler(object):
 
         def walk_module(module, curr_depth, info):
             if curr_depth not in info:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 info[curr_depth] = {}
             if module.__class__.__name__ not in info[curr_depth]:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 info[curr_depth][module.__class__.__name__] = [
                     0,
                     0,
@@ -507,7 +507,7 @@ class FlopsProfiler(object):
             info[curr_depth][module.__class__.__name__][2] += get_module_duration(module)
             has_children = len(module._modules.items()) != 0
             if has_children:
-                debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 for child in module.children():
                     walk_module(child, curr_depth + 1, info)
 
@@ -515,7 +515,7 @@ class FlopsProfiler(object):
 
         depth = module_depth
         if module_depth == -1:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             depth = len(info) - 1
 
         print(f'Top {top_modules} modules in terms of params, MACs or fwd latency at different model depths:')
@@ -592,12 +592,12 @@ def _pool_flops_compute(input,
                         count_include_pad=True,
                         divisor_override=None,
                         return_indices=None):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     return input.numel(), 0
 
 
 def _conv_flops_compute(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     assert weight.shape[1] * groups == input.shape[1]
 
     batch_size = input.shape[0]
@@ -612,19 +612,19 @@ def _conv_flops_compute(input, weight, bias=None, stride=1, padding=0, dilation=
     dilations = dilation if type(dilation) is tuple else (dilation, ) * length
     if isinstance(padding, str):
         if padding == 'valid':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             paddings = (0, ) * length
         elif padding == 'same':
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             paddings = ()
             for d, k in zip(dilations, kernel_dims):
                 total_padding = d * (k - 1)
                 paddings += (total_padding // 2, )
     elif isinstance(padding, tuple):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         paddings = padding
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         paddings = (padding, ) * length
 
     output_dims = []
@@ -641,7 +641,7 @@ def _conv_flops_compute(input, weight, bias=None, stride=1, padding=0, dilation=
 
     bias_flops = 0
     if bias is not None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         bias_flops = out_channels * active_elements_count
 
     return int(overall_conv_flops + bias_flops), int(overall_conv_macs)
@@ -688,7 +688,7 @@ def _conv_trans_flops_compute(
 
     bias_flops = 0
     if bias is not None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         bias_flops = out_channels * batch_size * int(_prod(output_dims))
 
     return int(overall_conv_flops + bias_flops), int(overall_conv_macs)
@@ -704,10 +704,10 @@ def _batch_norm_flops_compute(
     momentum=0.1,
     eps=1e-05,
 ):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     has_affine = weight is not None
     if training:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # estimation
         return input.numel() * (5 if has_affine else 4), 0
     flops = input.numel() * (2 if has_affine else 1)
@@ -721,7 +721,7 @@ def _layer_norm_flops_compute(
     bias: Optional[Tensor] = None,
     eps: float = 1e-5,
 ):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     has_affine = weight is not None
     # estimation
     return input.numel() * (5 if has_affine else 4), 0
@@ -732,7 +732,7 @@ def _group_norm_flops_compute(input: Tensor,
                               weight: Optional[Tensor] = None,
                               bias: Optional[Tensor] = None,
                               eps: float = 1e-5):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     has_affine = weight is not None
     # estimation
     return input.numel() * (5 if has_affine else 4), 0
@@ -748,7 +748,7 @@ def _instance_norm_flops_compute(
     momentum: float = 0.1,
     eps: float = 1e-5,
 ):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     has_affine = weight is not None
     # estimation
     return input.numel() * (5 if has_affine else 4), 0
@@ -758,29 +758,29 @@ def _upsample_flops_compute(*args, **kwargs):
     input = args[0]
     size = kwargs.get('size', None)
     if size is None and len(args) > 1:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         size = args[1]
 
     if size is not None:
         if isinstance(size, tuple) or isinstance(size, list):
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return int(_prod(size)), 0
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return int(size), 0
 
     scale_factor = kwargs.get('scale_factor', None)
     if scale_factor is None and len(args) > 2:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         scale_factor = args[2]
     assert scale_factor is not None, "either size or scale_factor should be defined"
 
     flops = input.numel()
     if isinstance(scale_factor, tuple) and len(scale_factor) == len(input):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         flops * int(_prod(scale_factor))
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         flops * scale_factor**len(input)
     return flops, 0
 
@@ -825,7 +825,7 @@ def _einsum_flops_compute(equation, *operands):
     """
     Count flops for the einsum operation.
     """
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     equation = equation.replace(" ", "")
     input_shapes = [o.shape for o in operands]
 
@@ -861,7 +861,7 @@ def _add_flops_compute(input, other, *, alpha=1, out=None):
 
 
 def _elementwise_flops_compute(input, other):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if not torch.is_tensor(input):
         if torch.is_tensor(other):
             return _prod(other.shape), 0
@@ -887,7 +887,7 @@ def _elementwise_flops_compute(input, other):
 
 
 def wrapFunc(func, funcFlopCompute):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     oldFunc = func
     name = func.__str__
     old_functions[name] = oldFunc
@@ -906,7 +906,7 @@ def wrapFunc(func, funcFlopCompute):
 
 
 def _patch_functionals():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # FC
     F.linear = wrapFunc(F.linear, _linear_flops_compute)
 
@@ -962,7 +962,7 @@ def _patch_functionals():
 
 
 def _patch_tensor_methods():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     torch.matmul = wrapFunc(torch.matmul, _matmul_flops_compute)
     torch.Tensor.matmul = wrapFunc(torch.Tensor.matmul, _matmul_flops_compute)
     torch.mm = wrapFunc(torch.mm, _matmul_flops_compute)
@@ -985,7 +985,7 @@ def _patch_tensor_methods():
 
 
 def _reload_functionals():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     # torch.nn.functional does not support importlib.reload()
     F.linear = old_functions[F.linear.__str__]
     F.conv1d = old_functions[F.conv1d.__str__]
@@ -1025,7 +1025,7 @@ def _reload_functionals():
 
 
 def _reload_tensor_methods():
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     torch.matmul = old_functions[torch.matmul.__str__]
     torch.Tensor.matmul = old_functions[torch.Tensor.matmul.__str__]
     torch.mm = old_functions[torch.mm.__str__]
@@ -1051,11 +1051,11 @@ def _rnn_flops(flops, rnn_module, w_ih, w_hh, input_size):
     # matrix matrix mult hh state and internal state
     flops += 2 * hidden_size * hidden_size - hidden_size
     if isinstance(rnn_module, (nn.RNN, nn.RNNCell)):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # add both operations
         flops += rnn_module.hidden_size
     elif isinstance(rnn_module, (nn.GRU, nn.GRUCell)):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # hadamard of r
         flops += rnn_module.hidden_size
         # adding operations from both states
@@ -1063,7 +1063,7 @@ def _rnn_flops(flops, rnn_module, w_ih, w_hh, input_size):
         # last two hadamard _product and add
         flops += rnn_module.hidden_size * 3
     elif isinstance(rnn_module, (nn.LSTM, nn.LSTMCell)):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # adding operations from both states
         flops += rnn_module.hidden_size * 4
         # two hadamard _product and add for C state
@@ -1074,7 +1074,7 @@ def _rnn_flops(flops, rnn_module, w_ih, w_hh, input_size):
 
 
 def _rnn_forward_hook(rnn_module, input, output):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     flops = 0
     # input is a tuple containing a sequence to process and (optionally) hidden state
     inp = input[0]
@@ -1103,7 +1103,7 @@ def _rnn_forward_hook(rnn_module, input, output):
 
 
 def _rnn_cell_forward_hook(rnn_cell_module, input, output):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     flops = 0
     inp = input[0]
     batch_size = inp.shape[0]
@@ -1132,7 +1132,7 @@ MODULE_HOOK_MAPPING = {
 
 
 def num_to_string(num, precision=2):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if num // 10**9 > 0:
         return str(round(num / 10.0**9, precision)) + " G"
     elif num // 10**6 > 0:
@@ -1145,7 +1145,7 @@ def num_to_string(num, precision=2):
 
 def macs_to_string(macs, units=None, precision=2):
     if units is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if macs // 10**9 > 0:
             return str(round(macs / 10.0**9, precision)) + " GMACs"
         elif macs // 10**6 > 0:
@@ -1155,7 +1155,7 @@ def macs_to_string(macs, units=None, precision=2):
         else:
             return str(macs) + " MACs"
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if units == "GMACs":
             return str(round(macs / 10.0**9, precision)) + " " + units
         elif units == "MMACs":
@@ -1168,7 +1168,7 @@ def macs_to_string(macs, units=None, precision=2):
 
 def number_to_string(num, units=None, precision=2):
     if units is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if num // 10**9 > 0:
             return str(round(num / 10.0**9, precision)) + " G"
         elif num // 10**6 > 0:
@@ -1178,7 +1178,7 @@ def number_to_string(num, units=None, precision=2):
         else:
             return str(num) + " "
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if units == "G":
             return str(round(num / 10.0**9, precision)) + " " + units
         elif units == "M":
@@ -1191,7 +1191,7 @@ def number_to_string(num, units=None, precision=2):
 
 def flops_to_string(flops, units=None, precision=2):
     if units is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if flops // 10**12 > 0:
             return str(round(flops / 10.0**12, precision)) + " TFLOPS"
         if flops // 10**9 > 0:
@@ -1203,7 +1203,7 @@ def flops_to_string(flops, units=None, precision=2):
         else:
             return str(flops) + " FLOPS"
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if units == "TFLOPS":
             return str(round(flops / 10.0**12, precision)) + " " + units
         if units == "GFLOPS":
@@ -1218,7 +1218,7 @@ def flops_to_string(flops, units=None, precision=2):
 
 def params_to_string(params_num, units=None, precision=2):
     if units is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if params_num // 10**6 > 0:
             return str(round(params_num / 10**6, 2)) + " M"
         elif params_num // 10**3:
@@ -1226,7 +1226,7 @@ def params_to_string(params_num, units=None, precision=2):
         else:
             return str(params_num)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if units == "M":
             return str(round(params_num / 10.0**6, precision)) + " " + units
         elif units == "K":
@@ -1237,7 +1237,7 @@ def params_to_string(params_num, units=None, precision=2):
 
 def duration_to_string(duration, units=None, precision=2):
     if units is None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if duration > 1:
             return str(round(duration, precision)) + " s"
         elif duration * 10**3 > 1:
@@ -1247,7 +1247,7 @@ def duration_to_string(duration, units=None, precision=2):
         else:
             return str(duration)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if units == "us":
             return str(round(duration * 10.0**6, precision)) + " " + units
         elif units == "ms":
@@ -1259,7 +1259,7 @@ def duration_to_string(duration, units=None, precision=2):
     # can not iterate over all submodules using self.model.modules()
     # since modules() returns duplicate modules only once
 def get_module_flops(module):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     sum = module.__flops__
     # iterate over immediate children modules
     for child in module.children():
@@ -1268,7 +1268,7 @@ def get_module_flops(module):
 
 
 def get_module_macs(module):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     sum = module.__macs__
     # iterate over immediate children modules
     for child in module.children():
@@ -1329,7 +1329,7 @@ def get_model_profile(model,
     model.eval()
 
     if input_shape is not None:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert type(input_shape) is tuple, "input_shape must be a tuple"
         assert len(input_shape) >= 1, "input_shape must have at least one element"
         try:
@@ -1357,13 +1357,13 @@ def get_model_profile(model,
     prof.start_profile(ignore_list=ignore_modules)
 
     if kwargs:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if mode == 'forward':
             _ = model(*args, **kwargs)
         if mode == 'generate':
             _ = model.generate(*args, **kwargs)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if mode == 'forward':
             _ = model(*args)
         if mode == 'generate':
@@ -1373,7 +1373,7 @@ def get_model_profile(model,
     macs = prof.get_total_macs()
     params = prof.get_total_params()
     if print_profile:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         prof.print_model_profile(profile_step=warm_up,
                                  module_depth=module_depth,
                                  top_modules=top_modules,
@@ -1382,7 +1382,7 @@ def get_model_profile(model,
 
     prof.end_profile()
     if as_string:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return number_to_string(flops), macs_to_string(macs), params_to_string(params)
 
     return flops, macs, params

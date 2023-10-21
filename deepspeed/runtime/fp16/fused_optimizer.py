@@ -39,7 +39,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                  fused_adam_legacy=False,
                  has_moe_layers=False,
                  timers=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         self.fused_adam_legacy = fused_adam_legacy
         self.timers = timers
@@ -81,17 +81,17 @@ class FP16_Optimizer(DeepSpeedOptimizer):
             self.scale_factor = 2
 
             if dynamic_loss_args is None:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.cur_scale = initial_dynamic_scale
                 self.scale_window = 1000
                 self.min_loss_scale = 1
             else:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.cur_scale = dynamic_loss_args[INITIAL_LOSS_SCALE]
                 self.scale_window = dynamic_loss_args[SCALE_WINDOW]
                 self.min_loss_scale = dynamic_loss_args[MIN_LOSS_SCALE]
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.dynamic_loss_scale = False
             self.cur_iter = 0
             self.cur_scale = static_loss_scale
@@ -107,10 +107,10 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if TORCH_MAJOR == 0 and TORCH_MINOR <= 4:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.clip_grad_norm = torch.nn.utils.clip_grad_norm_
 
         #model parallel object
@@ -121,7 +121,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         self.initialize_optimizer_states()
 
     def initialize_optimizer_states(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for i, group in enumerate(self.fp16_groups):
             self.fp32_groups_flat[i].grad = torch.zeros(self.fp32_groups_flat[i].size(),
                                                         device=self.fp32_groups_flat[i].device)
@@ -134,7 +134,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         return
 
     def zero_grad(self, set_to_none=False):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Zero FP16 parameter grads.
         """
@@ -149,7 +149,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                         p.grad.zero_()
 
     def step_fused_adam(self, closure=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Not supporting closure.
         """
@@ -194,35 +194,35 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         return self.overflow
 
     def start_timers(self, name_list):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is not None:
             for name in name_list:
                 self.timers(name).start()
 
     def stop_timers(self, name_list):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is not None:
             for name in name_list:
                 self.timers(name).stop()
 
     def log_timers(self, name_list):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if self.timers is not None:
             self.timers.log(name_list)
 
     def set_lr(self, lr):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Set the learning rate."""
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = lr
 
     def get_lr(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """Return the current learning rate."""
         return self.optimizer.param_groups[0]["lr"]
 
     def override_loss_scale(self, loss_scale):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if loss_scale != self.external_loss_scale:
             logger.info(f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
         self.custom_loss_scaler = True
@@ -232,10 +232,10 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         """
         Not supporting closure.
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
         if self.fused_adam_legacy:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.step_fused_adam()
 
         COMPUTE_NORM = "compute_norm"
@@ -256,7 +256,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         prev_scale = self.cur_scale
         self._update_scale(self.overflow)
         if self.overflow:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if self.verbose:
                 log_dist(
                     "Overflow detected. Skipping step. Attempted loss "
@@ -292,7 +292,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         self.stop_timers([COMPUTE_NORM])
 
         if self.has_moe_layers:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             all_groups_norm = self._get_norm_with_moe_layers(all_groups_norm)
 
         scaled_global_grad_norm = get_global_norm(norm_list=[all_groups_norm])
@@ -331,10 +331,10 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         #all_groups_norm_old = all_groups_norm
         # Need to allreduce (avg) the norms across different ranks because moe params will not be synced during allreduce
         if self.using_pipeline:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             pg = self.deepspeed.mpu.get_data_parallel_group()
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             pg = groups._get_data_parallel_group()
         scaled_norm = all_groups_norm * 1.0 / float(dist.get_world_size(group=pg))
         scaled_norm_tensor = torch.tensor(scaled_norm, device=self.fp32_groups_flat[0].device, dtype=torch.float)
@@ -344,19 +344,19 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         return all_groups_norm
 
     def unscale_and_clip_grads(self, grad_groups_flat, total_norm, apply_scale=True):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # compute combined scale factor for this group
         combined_scale = self.cur_scale
         if self.clip_grad > 0.:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             # norm is in fact norm*scale
             clip = ((total_norm / self.cur_scale) + 1e-6) / self.clip_grad
             if clip > 1:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 combined_scale = clip * self.cur_scale
 
         if apply_scale:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             for grad in grad_groups_flat:
                 grad.data.mul_(1. / combined_scale)
 
@@ -371,11 +371,11 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
         if self.custom_loss_scaler:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             scaled_loss = self.external_loss_scale * loss
             scaled_loss.backward()
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             scaled_loss = (loss.float()) * self.cur_scale
             scaled_loss.backward(create_graph=create_graph, retain_graph=retain_graph)
 
@@ -383,14 +383,14 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         if self.dynamic_loss_scale:
             prev_scale = self.cur_scale
             if skip:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 self.cur_scale = max(self.cur_scale / self.scale_factor, self.min_loss_scale)
                 self.last_overflow_iter = self.cur_iter
                 if self.verbose:
                     logger.info(f"\nGrad overflow on iteration {self.cur_iter}")
                     logger.info(f"Reducing dynamic loss scale from {prev_scale} to {self.cur_scale}")
             else:
-                debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
                 # Ensure self.scale_window updates since last overflow
                 stable_interval = (self.cur_iter - self.last_overflow_iter) - 1
                 if (stable_interval > 0) and (stable_interval % self.scale_window == 0):
@@ -399,7 +399,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
                         logger.info(f"No Grad overflow for {self.scale_window} iterations")
                         logger.info(f"Increasing dynamic loss scale from {prev_scale} to {self.cur_scale}")
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             if skip:
                 logger.info("Grad overflow on iteration: %s", self.cur_iter)
                 logger.info("Using static loss scale of: %s", self.cur_scale)
@@ -408,11 +408,11 @@ class FP16_Optimizer(DeepSpeedOptimizer):
 
     # Promote state so it can be retrieved or set via "fp16_optimizer_instance.state"
     def _get_state(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.optimizer.state
 
     def _set_state(self, value):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.optimizer.state = value
 
     state = property(_get_state, _set_state)
@@ -420,17 +420,17 @@ class FP16_Optimizer(DeepSpeedOptimizer):
     # Promote param_groups so it can be retrieved or set via "fp16_optimizer_instance.param_groups"
     # (for example, to adjust the learning rate)
     def _get_param_groups(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return self.optimizer.param_groups
 
     def _set_param_groups(self, value):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.optimizer.param_groups = value
 
     param_groups = property(_get_param_groups, _set_param_groups)
 
     def state_dict(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         """
         Returns a dict containing the current state of this :class:`FP16_Optimizer` instance.
         This dict contains attributes of :class:`FP16_Optimizer`, as well as the state_dict
@@ -456,7 +456,7 @@ class FP16_Optimizer(DeepSpeedOptimizer):
 
     # Refresh fp32 master params from fp16 copies
     def refresh_fp32_params(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         for current, saved in zip(self.fp32_groups_flat, self.fp16_groups_flat):
             current.data.copy_(saved.data)
 
@@ -476,18 +476,18 @@ class FP16_Optimizer(DeepSpeedOptimizer):
             model.load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
         """
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # I think it should actually be ok to reload the optimizer before the model.
         self.dynamic_loss_scale = state_dict['dynamic_loss_scale']
         self.cur_scale = state_dict['cur_scale']
         self.cur_iter = state_dict['cur_iter']
         if state_dict['dynamic_loss_scale']:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.last_overflow_iter = state_dict['last_overflow_iter']
             self.scale_factor = state_dict['scale_factor']
             self.scale_window = state_dict['scale_window']
         if load_optimizer_states:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             self.optimizer.load_state_dict(state_dict[OPTIMIZER_STATE_DICT])
         self.clip_grad = state_dict[CLIP_GRAD]
         # At this point, the optimizer's references to the model's fp32 parameters are up to date.
@@ -508,20 +508,20 @@ class FP16_Optimizer(DeepSpeedOptimizer):
             current.data.copy_(saved.data)
 
     def __repr__(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return repr(self.optimizer)
 
     # Promote loss scale so it can be retrieved or set via "fp16_optimizer_instance.loss_scale"
     def _get_loss_scale(self):
         if self.custom_loss_scaler:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.external_loss_scale
         else:
-            debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             return self.cur_scale
 
     def _set_loss_scale(self, value):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         self.loss_scaler.cur_scale = value
 
     loss_scale = property(_get_loss_scale, _set_loss_scale)

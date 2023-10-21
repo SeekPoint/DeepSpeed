@@ -9,7 +9,7 @@ from ..runtime.config_utils import get_scalar_param, get_list_param
 from pydebug import debuginfo, infoTensor
 
 def get_compression_config(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     #
     output = {}
 
@@ -29,7 +29,7 @@ def get_compression_config(param_dict):
 
 
 def get_layer_reduction(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     output[LAYER_REDUCTION_ENABLED] = LAYER_REDUCTION_ENABLED_DEFAULT
     if get_layer_reduction_enabled(param_dict):
@@ -41,28 +41,28 @@ def get_layer_reduction(param_dict):
 
 def get_layer_reduction_enabled(param_dict):
     if LAYER_REDUCTION in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return get_scalar_param(param_dict[LAYER_REDUCTION], LAYER_REDUCTION_ENABLED, LAYER_REDUCTION_ENABLED_DEFAULT)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_layer_reduction_params(param_dict):
     if LAYER_REDUCTION in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         layer_reduction_params = copy.copy(param_dict[LAYER_REDUCTION])
         layer_reduction_params.pop(LAYER_REDUCTION_ENABLED)
         return layer_reduction_params
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
 
 def get_quantize_enabled(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     if COMPRESSION_TRAINING not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return False
 
     sub_param_dict = param_dict[COMPRESSION_TRAINING]
@@ -71,7 +71,7 @@ def get_quantize_enabled(param_dict):
 
 
 def get_weight_quantization(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if WEIGHT_QUANTIZATION not in param_dict.keys():
         param_dict[WEIGHT_QUANTIZATION] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
@@ -87,7 +87,7 @@ def get_weight_quantization(param_dict):
 
 
 def get_weight_quantization_shared_parameters(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if SHARED_PARAMETERS in param_dict.keys():
         sub_param_dict = param_dict[SHARED_PARAMETERS]
@@ -115,7 +115,7 @@ def get_weight_quantization_shared_parameters(param_dict):
             WEIGHT_QUANTIZE_NEAREST_ROUNDING, WEIGHT_QUANTIZE_STOCHASTIC_ROUNDING
         ], f"Invalid weight quantize rounding. Supported types: [{WEIGHT_QUANTIZE_NEAREST_ROUNDING}, {WEIGHT_QUANTIZE_STOCHASTIC_ROUNDING}]"
         if WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE in sub_param_dict.keys():
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output[WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE] = get_scalar_param(
                 sub_param_dict[WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE], WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE_ENABLED,
                 WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE_ENABLED_DEFAULT)
@@ -123,11 +123,11 @@ def get_weight_quantization_shared_parameters(param_dict):
                 sub_param_dict[WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE], WEIGHT_QUANTIZE_CHANGE_RATIO,
                 WEIGHT_QUANTIZE_CHANGE_RATIO_DEFAULT)
         else:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output[WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE] = WEIGHT_QUANTIZE_FP16_MIXED_QUANTIZE_ENABLED_DEFAULT
             output[WEIGHT_QUANTIZE_CHANGE_RATIO] = WEIGHT_QUANTIZE_CHANGE_RATIO_DEFAULT
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[WEIGHT_QUANTIZE_ENABLED] = WEIGHT_QUANTIZE_ENABLED_DEFAULT
         output[WEIGHT_QUANTIZE_KERNEL] = WEIGHT_QUANTIZE_KERNEL_DEFAULT
         output[WEIGHT_QUANTIZE_SCHEDULE_OFFSET] = WEIGHT_QUANTIZE_SCHEDULE_OFFSET_DEFAULT
@@ -141,12 +141,12 @@ def get_weight_quantization_shared_parameters(param_dict):
 
 
 def get_weight_quantization_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
     def get_params(name, group_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert WEIGHT_QUANTIZE_START_BITS in group_dict.keys(
         ), f"{WEIGHT_QUANTIZE_START_BITS} must be specified for weight quantization group {name}"
         assert WEIGHT_QUANTIZE_TARGET_BITS in group_dict.keys(
@@ -167,10 +167,10 @@ def get_weight_quantization_different_groups(param_dict):
 
 
 def get_activation_quantization(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if ACTIVATION_QUANTIZATION not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict[ACTIVATION_QUANTIZATION] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
     sub_param_dict = param_dict[ACTIVATION_QUANTIZATION]
     # shared parameters
@@ -186,7 +186,7 @@ def get_activation_quantization(param_dict):
 def get_activation_quantization_shared_parameters(param_dict):
     output = {}
     if SHARED_PARAMETERS in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sub_param_dict = param_dict[SHARED_PARAMETERS]
         output[ACTIVATION_QUANTIZATION_ENABLED] = get_scalar_param(sub_param_dict, ACTIVATION_QUANTIZATION_ENABLED,
                                                                    ACTIVATION_QUANTIZATION_ENABLED_DEFAULT)
@@ -204,7 +204,7 @@ def get_activation_quantization_shared_parameters(param_dict):
                                                                        ACTIVATION_QUANTIZE_SCHEDULE_OFFSET,
                                                                        ACTIVATION_QUANTIZE_SCHEDULE_OFFSET_DEFAULT)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[ACTIVATION_QUANTIZATION_ENABLED] = ACTIVATION_QUANTIZATION_ENABLED_DEFAULT
         output[ACTIVATION_QUANTIZE_TYPE] = ACTIVATION_QUANTIZE_TYPE_DEFAULT
         output[ACTIVATION_QUANTIZE_RANGE] = ACTIVATION_QUANTIZE_RANGE_DEFAULT
@@ -213,12 +213,12 @@ def get_activation_quantization_shared_parameters(param_dict):
 
 
 def get_activation_quantization_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
     def get_params(name, group_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert ACTIVATION_QUANTIZE_BITS in group_dict.keys(
         ), f"{ACTIVATION_QUANTIZE_BITS} must be specified for activation quantization group {name}"
         return group_dict
@@ -235,10 +235,10 @@ def get_activation_quantization_different_groups(param_dict):
 
 
 def get_sparse_pruning(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if SPARSE_PRUNING not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict[SPARSE_PRUNING] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
     sub_param_dict = param_dict[SPARSE_PRUNING]
     # shared parameters
@@ -253,7 +253,7 @@ def get_sparse_pruning(param_dict):
 
 
 def get_sparse_pruning_shared_parameters(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
 
     if SHARED_PARAMETERS in param_dict.keys():
@@ -268,7 +268,7 @@ def get_sparse_pruning_shared_parameters(param_dict):
         output[SPARSE_PRUNING_SCHEDULE_OFFSET] = get_scalar_param(sub_param_dict, SPARSE_PRUNING_SCHEDULE_OFFSET,
                                                                   SPARSE_PRUNING_SCHEDULE_OFFSET_DEFAULT)
         if output[SPARSE_PRUNING_METHOD] == SPARSE_PRUNING_METHOD_SNIP_MOMENTUM:
-            debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
             output[SPARSE_PRUNING_BLOCK_PATTERN] = get_scalar_param(sub_param_dict, SPARSE_PRUNING_BLOCK_PATTERN,
                                                                     SPARSE_PRUNING_BLOCK_PATTERN_DEFAULT)
             output[SPARSE_PRUNING_DENSE_RATIO] = get_scalar_param(sub_param_dict, SPARSE_PRUNING_DENSE_RATIO,
@@ -285,7 +285,7 @@ def get_sparse_pruning_shared_parameters(param_dict):
             assert output[SPARSE_PRUNING_SCHEDULE_OFFSET] <= output[
                 SPARSE_PRUNING_SCHEDULE_OFFSET_END], f"Invalid schedule_offset and schedule_offset_end values"
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[SPARSE_PRUNING_ENABLED] = SPARSE_PRUNING_ENABLED_DEFAULT
         output[SPARSE_PRUNING_METHOD] = SPARSE_PRUNING_METHOD_DEFAULT
         output[SPARSE_PRUNING_SCHEDULE_OFFSET] = SPARSE_PRUNING_SCHEDULE_OFFSET_DEFAULT
@@ -293,7 +293,7 @@ def get_sparse_pruning_shared_parameters(param_dict):
 
 
 def get_sparse_pruning_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
@@ -314,10 +314,10 @@ def get_sparse_pruning_different_groups(param_dict):
 
 
 def get_row_pruning(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if ROW_PRUNING not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict[ROW_PRUNING] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
     sub_param_dict = param_dict[ROW_PRUNING]
     # shared parameters
@@ -333,7 +333,7 @@ def get_row_pruning(param_dict):
 def get_row_pruning_shared_parameters(param_dict):
     output = {}
     if SHARED_PARAMETERS in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sub_param_dict = param_dict[SHARED_PARAMETERS]
         output[ROW_PRUNING_ENABLED] = get_scalar_param(sub_param_dict, ROW_PRUNING_ENABLED,
                                                        ROW_PRUNING_ENABLED_DEFAULT)
@@ -344,7 +344,7 @@ def get_row_pruning_shared_parameters(param_dict):
         output[ROW_PRUNING_SCHEDULE_OFFSET] = get_scalar_param(sub_param_dict, ROW_PRUNING_SCHEDULE_OFFSET,
                                                                ROW_PRUNING_SCHEDULE_OFFSET_DEFAULT)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[ROW_PRUNING_ENABLED] = ROW_PRUNING_ENABLED_DEFAULT
         output[ROW_PRUNING_METHOD] = ROW_PRUNING_METHOD_DEFAULT
         output[ROW_PRUNING_SCHEDULE_OFFSET] = ROW_PRUNING_SCHEDULE_OFFSET_DEFAULT
@@ -352,12 +352,12 @@ def get_row_pruning_shared_parameters(param_dict):
 
 
 def get_row_pruning_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
     def get_params(name, group_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert ROW_PRUNING_DENSE_RATIO in group_dict.keys(
         ), f"{ROW_PRUNING_DENSE_RATIO} must be specified for row pruning group {name}"
         return group_dict
@@ -373,10 +373,10 @@ def get_row_pruning_different_groups(param_dict):
 
 
 def get_head_pruning(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if HEAD_PRUNING not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict[HEAD_PRUNING] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
     sub_param_dict = param_dict[HEAD_PRUNING]
     # shared parameters
@@ -392,7 +392,7 @@ def get_head_pruning(param_dict):
 def get_head_pruning_shared_parameters(param_dict):
     output = {}
     if SHARED_PARAMETERS in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sub_param_dict = param_dict[SHARED_PARAMETERS]
         output[HEAD_PRUNING_ENABLED] = get_scalar_param(sub_param_dict, HEAD_PRUNING_ENABLED,
                                                         HEAD_PRUNING_ENABLED_DEFAULT)
@@ -408,7 +408,7 @@ def get_head_pruning_shared_parameters(param_dict):
             ), f"{HEAD_PRUNING_NUM_HEADS} must be specified for head pruning"
             output[HEAD_PRUNING_NUM_HEADS] = sub_param_dict[HEAD_PRUNING_NUM_HEADS]
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[HEAD_PRUNING_ENABLED] = HEAD_PRUNING_ENABLED_DEFAULT
         output[HEAD_PRUNING_METHOD] = HEAD_PRUNING_METHOD_DEFAULT
         output[HEAD_PRUNING_SCHEDULE_OFFSET] = HEAD_PRUNING_SCHEDULE_OFFSET_DEFAULT
@@ -416,7 +416,7 @@ def get_head_pruning_shared_parameters(param_dict):
 
 
 def get_head_pruning_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
@@ -436,10 +436,10 @@ def get_head_pruning_different_groups(param_dict):
 
 
 def get_channel_pruning(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     if CHANNEL_PRUNING not in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         param_dict[CHANNEL_PRUNING] = {SHARED_PARAMETERS: {}, DIFFERENT_GROUPS: {}}
     sub_param_dict = param_dict[CHANNEL_PRUNING]
     # shared parameters
@@ -455,7 +455,7 @@ def get_channel_pruning(param_dict):
 def get_channel_pruning_shared_parameters(param_dict):
     output = {}
     if SHARED_PARAMETERS in param_dict.keys():
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         sub_param_dict = param_dict[SHARED_PARAMETERS]
         output[CHANNEL_PRUNING_ENABLED] = get_scalar_param(sub_param_dict, CHANNEL_PRUNING_ENABLED,
                                                            CHANNEL_PRUNING_ENABLED_DEFAULT)
@@ -467,7 +467,7 @@ def get_channel_pruning_shared_parameters(param_dict):
         output[CHANNEL_PRUNING_SCHEDULE_OFFSET] = get_scalar_param(sub_param_dict, CHANNEL_PRUNING_SCHEDULE_OFFSET,
                                                                    CHANNEL_PRUNING_SCHEDULE_OFFSET_DEFAULT)
     else:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         output[CHANNEL_PRUNING_ENABLED] = CHANNEL_PRUNING_ENABLED_DEFAULT
         output[CHANNEL_PRUNING_METHOD] = CHANNEL_PRUNING_METHOD_DEFAULT
         output[CHANNEL_PRUNING_SCHEDULE_OFFSET] = CHANNEL_PRUNING_SCHEDULE_OFFSET_DEFAULT
@@ -475,12 +475,12 @@ def get_channel_pruning_shared_parameters(param_dict):
 
 
 def get_channel_pruning_different_groups(param_dict):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     output = {}
     sub_param_dict = param_dict[DIFFERENT_GROUPS]
 
     def get_params(name, group_dict):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         assert CHANNEL_PRUNING_DENSE_RATIO in group_dict.keys(
         ), f"{CHANNEL_PRUNING_DENSE_RATIO} must be specified for channel pruning group {name}"
         return group_dict

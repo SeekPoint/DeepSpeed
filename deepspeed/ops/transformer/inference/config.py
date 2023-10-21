@@ -11,7 +11,7 @@ from pydebug import debuginfo, infoTensor
 class TransformerConfig():
 
     def __init__(self, hidden_size, intermediate_size, heads, num_hidden_layers):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         self.layer_id = -1
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
@@ -82,7 +82,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
                  transposed_mode=False,
                  use_triton=False,
                  triton_autotune=False):
-        debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=self.__class__.__name__)
         super(DeepSpeedInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers)
@@ -119,7 +119,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
 
     @classmethod
     def from_dict(cls, json_object):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         config = DeepSpeedInferenceConfig()
         for key, value in json_object.items():
             config.__dict__[key] = value
@@ -127,7 +127,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
 
     @classmethod
     def from_json_file(cls, json_file):
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         with open(json_file, "r", encoding='utf-8') as reader:
             text = reader.read()
         return cls.from_dict(json.loads(text))

@@ -26,43 +26,43 @@ class TestSparseCheckpoint(DistributedTest):
     ])
     def test_non_strict_load_sparse(self, tmpdir, to_save_model_has_embedding, to_save_model_sparse,
                                     destination_has_embedding, destination_sparse):
-        debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+        gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
 
         class ModelNoEmbedding(torch.nn.Module):
 
             def __init__(self):
-                debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+                gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
                 super().__init__()
                 self.linear = torch.nn.Linear(3, 1)
 
             def forward(self, x):
-                debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+                gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
                 return self.linear(x)
 
         class ModelEmbedding(torch.nn.Module):
 
             def __init__(self):
-                debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+                gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
                 super().__init__()
                 self.emb = torch.nn.Embedding(10, 3)
                 self.linear = torch.nn.Linear(3, 1)
 
             def forward(self, x, offsets):
-                debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+                gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
                 return self.linear(self.emb(x, offsets))
 
         if to_save_model_has_embedding:
-            debuginfo(prj='dsUT')
+            gd.debuginfo(prj='dsUT')
             model_to_save = ModelEmbedding()
         else:
-            debuginfo(prj='dsUT')
+            gd.debuginfo(prj='dsUT')
             model_to_save = ModelNoEmbedding()
 
         if destination_has_embedding:
-            debuginfo(prj='dsUT')
+            gd.debuginfo(prj='dsUT')
             model_destination = ModelEmbedding()
         else:
-            debuginfo(prj='dsUT')
+            gd.debuginfo(prj='dsUT')
             model_destination = ModelNoEmbedding()
 
         engine_to_save, _, _, _ = deepspeed.initialize(model=model_to_save,

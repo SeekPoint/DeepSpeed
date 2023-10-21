@@ -11,16 +11,16 @@ class QuantizerBuilder(CUDAOpBuilder):
     NAME = "quantizer"
 
     def __init__(self, name=None):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return f'deepspeed.ops.quantizer.{self.NAME}_op'
 
     def sources(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return [
             'csrc/quantization/pt_binding.cpp',
             'csrc/quantization/fake_quantizer.cu',
@@ -31,9 +31,9 @@ class QuantizerBuilder(CUDAOpBuilder):
         ]
 
     def include_paths(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['csrc/includes']
 
     def extra_ldflags(self):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return ['-lcurand']

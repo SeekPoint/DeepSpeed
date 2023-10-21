@@ -26,7 +26,7 @@ import deepspeed
 from pydebug import debuginfo, infoTensor
 
 def _gather_tokens(input_, dim=0):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Gather tensors and concatenate them along a dimension"""
     mpu = deepspeed.utils.groups.mpu
 
@@ -45,7 +45,7 @@ def _gather_tokens(input_, dim=0):
 
 
 def _drop_tokens(input_, dim=0):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     """Divide a tensor among the tensor parallel ranks"""
     mpu = deepspeed.utils.groups.mpu
 
@@ -63,18 +63,18 @@ class _GatherTokens(torch.autograd.Function):
 
     @staticmethod
     def symbolic(graph, input_, dim):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return _gather_tokens(input_, dim)
 
     @staticmethod
     def forward(ctx, input_, dim):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         ctx.dim = dim
         return _gather_tokens(input_, dim)
 
     @staticmethod
     def backward(ctx, grad_output):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return _drop_tokens(grad_output, ctx.dim), None
 
 
@@ -83,36 +83,36 @@ class _DropTokens(torch.autograd.Function):
 
     @staticmethod
     def symbolic(graph, input_, dim):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return _drop_tokens(input_, dim)
 
     @staticmethod
     def forward(ctx, input_, dim):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         ctx.dim = dim
         return _drop_tokens(input_, dim)
 
     @staticmethod
     def backward(ctx, input_):
-        debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         return _gather_tokens(input_, ctx.dim), None
 
 
 def gather_tokens(input_, dim=0):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     mpu = deepspeed.utils.groups.mpu
     if mpu is None or mpu.get_tensor_model_parallel_world_size() == 1:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # no tensor parallelism for non-experts
         return input_
     return _GatherTokens.apply(input_, dim)
 
 
 def drop_tokens(input_, dim=0):
-    debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     mpu = deepspeed.utils.groups.mpu
     if mpu is None or mpu.get_tensor_model_parallel_world_size() == 1:
-        debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         # no tensor parallelism for non-experts
         return input_
     return _DropTokens.apply(input_, dim)
