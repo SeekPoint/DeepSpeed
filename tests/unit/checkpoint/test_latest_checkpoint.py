@@ -9,7 +9,7 @@ from unit.common import DistributedTest
 from unit.simple_model import *
 
 from unit.checkpoint.common import checkpoint_correctness_verification
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TestLatestCheckpoint(DistributedTest):
     world_size = 1

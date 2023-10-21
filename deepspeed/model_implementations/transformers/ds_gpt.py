@@ -5,7 +5,7 @@
 
 from deepspeed.model_implementations.transformers.ds_transformer import DeepSpeedTransformerInference
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class DeepSpeedGPTInference(DeepSpeedTransformerInference):
     """Initialize the DeepSpeed GPT Transformer Layer.
     """

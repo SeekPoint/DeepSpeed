@@ -7,7 +7,7 @@ from .compress import get_module_name
 from .constants import *
 from .helper import recursive_getattr
 from deepspeed.utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class compression_scheduler():
     '''

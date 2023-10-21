@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from .builder import CUDAOpBuilder, installed_cuda_version
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class InferenceBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_TRANSFORMER_INFERENCE"

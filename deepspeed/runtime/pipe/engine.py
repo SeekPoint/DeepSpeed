@@ -33,7 +33,7 @@ def is_even(number):
 
 mem_alloced = 0
 mem_cached = 0
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _tensor_bytes(tensor):
     return tensor.numel() * tensor.element_size()

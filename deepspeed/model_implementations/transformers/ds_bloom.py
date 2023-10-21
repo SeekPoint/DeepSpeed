@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from deepspeed.model_implementations.transformers.ds_transformer import DeepSpeedTransformerInference
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedBloomInference(DeepSpeedTransformerInference):
     """Initialize the DeepSpeed Bloom Transformer Layer.

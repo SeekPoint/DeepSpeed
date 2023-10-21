@@ -21,7 +21,8 @@ except ImportError as e:
     dsa2 = None
 
 ds_accelerator = None
-from pydebug import debuginfo, infoTensor
+qq
+
 
 def _validate_accelerator(accel_obj):
     # because abstract_accelerator has different path during

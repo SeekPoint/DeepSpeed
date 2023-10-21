@@ -64,7 +64,7 @@ from .swap_tensor.aio_config import get_aio_config
 from .data_pipeline.config import get_data_efficiency_enabled, get_data_efficiency_config, get_curriculum_enabled_legacy, get_curriculum_params_legacy
 from .data_pipeline.constants import *
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 TENSOR_CORE_ALIGN_SIZE = 8
 

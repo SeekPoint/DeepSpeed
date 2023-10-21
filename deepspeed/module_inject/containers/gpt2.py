@@ -6,7 +6,7 @@
 from .base import *
 from deepspeed.model_implementations.transformers.ds_gpt import DeepSpeedGPTInference
 from ..policy import TransformerPolicy
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_GPT2Container(BaseTransformerContainer):
 

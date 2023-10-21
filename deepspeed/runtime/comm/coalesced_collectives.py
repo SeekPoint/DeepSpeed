@@ -20,7 +20,7 @@ from torch.distributed import ProcessGroup, all_to_all_single
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils import instrument_w_nvtx
 from deepspeed.ops import op_builder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _torch_reduce_scatter_fn(input_tensor: Tensor, output_tensor: Tensor, group=None, async_op=False, prof=False):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

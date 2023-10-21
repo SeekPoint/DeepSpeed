@@ -12,7 +12,7 @@ from .op_binding import LinearOp, VectorMatMulOp, SoftmaxContextOp, QKVGemmOp, S
 
 minus_inf = -10000.0
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedSelfAttention(nn.Module):
     num_layers = 0

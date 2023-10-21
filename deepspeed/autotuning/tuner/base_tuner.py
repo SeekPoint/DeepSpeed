@@ -8,7 +8,7 @@ import sys
 from deepspeed.autotuning.constants import *
 from deepspeed.autotuning.utils import write_experiments
 from deepspeed.utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BaseTuner:
 

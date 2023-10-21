@@ -5,7 +5,7 @@
 
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def instrument_w_nvtx(func):
     """decorator that causes an NVTX range to be recorded for the duration of the
     function call."""

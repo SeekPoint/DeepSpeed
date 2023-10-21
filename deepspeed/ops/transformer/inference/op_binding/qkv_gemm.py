@@ -11,7 +11,7 @@ from .base import BaseOp
 import deepspeed
 from deepspeed.utils.types import NormType
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class QKVGemmOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):

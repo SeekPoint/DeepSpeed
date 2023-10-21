@@ -10,8 +10,8 @@ from deepspeed.profiling.flops_profiler import get_model_profile
 from unit.simple_model import SimpleModel, random_dataloader
 from unit.common import DistributedTest
 from unit.util import required_minimum_torch_version
-from pydebug import debuginfo, infoTensor
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
+from pydebug import gd, infoTensor
 
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=3),
                                 reason='requires Pytorch version 1.3 or above')

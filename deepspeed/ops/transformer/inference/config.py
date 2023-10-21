@@ -6,7 +6,7 @@
 import json
 import torch
 from deepspeed.utils.types import ActivationFuncType, NormType
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TransformerConfig():
 

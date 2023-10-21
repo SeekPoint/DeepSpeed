@@ -7,7 +7,7 @@ import torch
 from torch import autograd
 import math
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class TopKBinarizer(autograd.Function):
     """
     Top-k Binarizer.

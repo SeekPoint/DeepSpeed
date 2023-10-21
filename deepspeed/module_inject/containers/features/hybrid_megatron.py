@@ -7,7 +7,7 @@ import torch
 
 from .hybrid_engine import HybridEngineContainer
 from .megatron import MegatronContainer
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
 

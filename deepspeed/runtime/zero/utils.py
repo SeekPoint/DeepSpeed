@@ -15,7 +15,7 @@ from deepspeed.ops.adam import FusedAdam
 from deepspeed.utils.nvtx import instrument_w_nvtx
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _initialize_parameter_parallel_groups(parameter_parallel_size=None):
     data_parallel_size = int(dist.get_world_size())

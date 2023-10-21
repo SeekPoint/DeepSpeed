@@ -7,7 +7,7 @@ import numpy as np
 import itertools
 from ..utils import *
 import collections.abc
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def index_to_feature(p, dims):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

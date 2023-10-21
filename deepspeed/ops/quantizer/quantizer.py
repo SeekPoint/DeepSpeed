@@ -6,7 +6,7 @@
 import torch
 
 from deepspeed.ops.op_builder import QuantizerBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 # Cuda modules will be imported if needed
 quantizer_cuda_module = None
 

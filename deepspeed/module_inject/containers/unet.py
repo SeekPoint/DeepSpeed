@@ -8,7 +8,7 @@ from torch.nn.parameter import Parameter
 
 from ..policy import DSPolicy
 from ...model_implementations.diffusers.unet import DSUNet
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class UNetPolicy(DSPolicy):
 

@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class NPU_Accelerator(DeepSpeedAccelerator):
 

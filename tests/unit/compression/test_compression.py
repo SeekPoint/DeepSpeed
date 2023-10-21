@@ -16,7 +16,7 @@ from deepspeed.compression.helper import convert_conv1d_to_linear
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 from unit.util import required_minimum_torch_version, required_maximum_torch_version
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 pytestmark = pytest.mark.skipif(not required_minimum_torch_version(major_version=1, minor_version=5),
                                 reason='Megatron-LM package requires Pytorch version 1.5 or above')

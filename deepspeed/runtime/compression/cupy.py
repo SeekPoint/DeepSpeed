@@ -6,7 +6,7 @@
 import cupy
 from torch.utils.dlpack import to_dlpack
 from torch.utils.dlpack import from_dlpack
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CupyBackend(object):
 

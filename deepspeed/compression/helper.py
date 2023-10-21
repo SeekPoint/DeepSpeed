@@ -12,7 +12,7 @@ try:
     from neural_compressor.compression import pruner as nc_pruner
 except ImportError as e:
     nc_pruner = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def recursive_getattr(model, module_name):
     """

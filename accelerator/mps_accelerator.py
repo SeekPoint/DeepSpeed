@@ -14,7 +14,7 @@ try:
 except ImportError:
     pass
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MPS_Accelerator(DeepSpeedAccelerator):
 

@@ -21,7 +21,7 @@ from .topology import PipeDataParallelTopology, PipelineParallelGrid
 from deepspeed.runtime.state_dict_factory import SDLoaderFactory
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class PipelineError(Exception):
     """Errors related to the use of deepspeed.PipelineModule """

@@ -15,7 +15,7 @@ from deepspeed.accelerator import get_accelerator
 # If the intermediate size attribute is set DEFAULT_INTERMEDIATE_SIZE
 # it is assumed the intermediate size is 4x the embedding dimension
 DEFAULT_INTERMEDIATE_SIZE = -1
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BaseConvolutionContainer(ABC):
     # not implemented

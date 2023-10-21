@@ -7,7 +7,7 @@ import os
 import torch
 from .constants import (MODEL_FILE_PREFIX, MODEL_FILE_SUFFIX, OPTIM_FILE_SUFFIX, ZERO_FILE_PREFIX)
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def get_model_ckpt_name_for_rank(base_folder, mp_rank_str):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     ckpt_name = os.path.join(

@@ -17,7 +17,7 @@ from deepspeed.utils import groups, logger, log_dist
 from deepspeed import comm as dist
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT, CLIP_GRAD
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class FP16_Optimizer(DeepSpeedOptimizer):
     """

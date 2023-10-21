@@ -17,7 +17,7 @@ from .weight_quantizer import WeightQuantization
 
 AUTO_MODULE_KEY = 'auto'
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class SDLoaderFactory:
 
     @staticmethod

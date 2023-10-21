@@ -8,7 +8,7 @@ from numpy import mean
 from deepspeed.utils.logging import log_dist
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 try:
     import psutil
 

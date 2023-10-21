@@ -18,7 +18,7 @@ from ..policy import (
     maybe_copy_geglu,
     maybe_get_lora,
 )
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 

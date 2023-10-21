@@ -7,6 +7,6 @@ from .transformer import DeepSpeedTransformerLayer, DeepSpeedTransformerConfig
 from .inference.config import DeepSpeedInferenceConfig
 from ...model_implementations.transformers.ds_transformer import DeepSpeedTransformerInference
 from .inference.moe_inference import DeepSpeedMoEInferenceConfig, DeepSpeedMoEInference
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 gd.debuginfo(prj='ds', info='transformer __init__')

@@ -6,7 +6,7 @@
 import torch
 from deepspeed.ops.op_builder import CPUAdagradBuilder
 from deepspeed.utils.logging import should_log_le
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedCPUAdagrad(torch.optim.Optimizer):
     optimizer_id = 0

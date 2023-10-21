@@ -15,7 +15,7 @@ from torch.utils.data import BatchSampler, SequentialSampler, DataLoader, Subset
 from deepspeed.utils import logger
 from .indexed_dataset import MMapIndexedDataset
 from .utils import split_dataset, split_index, create_mmap_dataset_builder, close_mmap_dataset_builder, find_fit_int_dtype
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DataAnalyzer(object):
 

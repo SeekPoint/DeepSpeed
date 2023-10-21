@@ -5,7 +5,7 @@
 
 from pydantic import BaseModel
 from .constants import *
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CommsConfig(BaseModel):
 

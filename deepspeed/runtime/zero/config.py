@@ -10,7 +10,7 @@ from enum import Enum
 from deepspeed.runtime.config_utils import get_scalar_param, pp_int, DeepSpeedConfigModel
 from deepspeed.utils import logger
 from .offload_config import DeepSpeedZeroOffloadParamConfig, DeepSpeedZeroOffloadOptimizerConfig, OffloadDeviceEnum
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # ZeRO optimization. By default, this optimization is not enabled.
 # Users have to configure the desired optimization (0 means disabled) in params.json as below example:

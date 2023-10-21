@@ -26,7 +26,7 @@ from deepspeed.checkpoint.constants import (DS_VERSION, PARTITION_COUNT, BASE_OP
 
 setattr(sys.modules[__name__], 'fragment_address', fragment_address)
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BF16_Optimizer(ZeROOptimizer):
 

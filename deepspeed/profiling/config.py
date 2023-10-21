@@ -6,7 +6,7 @@
 from deepspeed.runtime.config_utils import get_scalar_param, DeepSpeedConfigObject
 from deepspeed.profiling.constants import *
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedFlopsProfilerConfig(DeepSpeedConfigObject):
 

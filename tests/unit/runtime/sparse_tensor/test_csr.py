@@ -7,7 +7,7 @@ import torch
 import random
 from deepspeed.runtime.sparse_tensor import SparseTensor
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def test_csr_addition_self():
     row_count = 10
     random.seed(1234)

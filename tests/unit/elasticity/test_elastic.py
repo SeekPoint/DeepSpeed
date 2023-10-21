@@ -9,7 +9,7 @@ from unit.common import DistributedTest
 from deepspeed.git_version_info import version as ds_version
 import os
 from unit.simple_model import SimpleModel
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @pytest.fixture
 def ds_config():

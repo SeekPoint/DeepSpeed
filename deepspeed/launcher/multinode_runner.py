@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from deepspeed.accelerator import get_accelerator
 from ..utils import logger, get_numactl_cmd
 from .constants import PDSH_MAX_FAN_OUT, MVAPICH_TMP_HOSTFILE
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MultiNodeRunner(ABC):
 

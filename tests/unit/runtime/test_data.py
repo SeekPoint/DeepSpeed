@@ -11,7 +11,7 @@ from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 from unit.simple_model import SimpleModel, random_dataset
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def test_repeating_loader():
     loader = [1, 2, 3]
     loader = RepeatingLoader(loader)

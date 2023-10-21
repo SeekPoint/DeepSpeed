@@ -13,7 +13,7 @@ from unit.simple_model import SimpleModel
 from deepspeed.accelerator import get_accelerator
 
 import pytest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TestInit(DistributedTest):
     gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)

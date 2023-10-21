@@ -31,7 +31,7 @@ from deepspeed.accelerator import get_accelerator
 # with gradient partitioning and without
 pg_correctness_test = False
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def print_rank_0(message, debug=False, force=False):
     rank = dist.get_rank()

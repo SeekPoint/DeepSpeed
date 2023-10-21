@@ -13,7 +13,7 @@ from io import open
 import deepspeed
 from pathlib import Path
 import atexit
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 # -----------------------------------------------------------------------------
 # util class/functions for triton

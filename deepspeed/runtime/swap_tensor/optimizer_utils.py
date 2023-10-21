@@ -16,7 +16,7 @@ from deepspeed.runtime.swap_tensor.utils import swap_in_tensors, swap_out_tensor
     MIN_AIO_BYTES, AIO_ALIGNED_BYTES, get_sized_buffers
 from deepspeed.runtime.swap_tensor.utils import SwapBufferManager, SwapBufferPool
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class FlattenedTensorSwapInfo(object):
 

@@ -12,7 +12,7 @@ from .reshape_meg_2d import (reshape_meg_2d_parallel, meg_2d_parallel_map)
 PP_DIM = 'PP'
 TP_DIM = 'TP'
 DP_DIM = 'DP'
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class model_3d_desc(object):
 

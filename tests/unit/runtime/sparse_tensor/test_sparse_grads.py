@@ -9,7 +9,7 @@ from unit.common import DistributedTest
 
 import deepspeed.utils.groups as groups
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class Model(torch.nn.Module):
 
     def __init__(self):

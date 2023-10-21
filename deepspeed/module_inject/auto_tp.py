@@ -8,7 +8,7 @@ import re
 
 from torch import nn
 from .replace_policy import replace_policies
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class AutoTP():
 

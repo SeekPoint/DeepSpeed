@@ -41,7 +41,7 @@ PDSH_MAX_FAN_OUT = 1024
 # exporting rank-0 env variables in case of heterogeneous compute.
 EXCLUDE_ENVS = {'AISC_JOB_NAME': ['NCCL_IB_HCA', 'UCX_NET_DEVICES']}
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def parse_args(args=None):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
     parser = argparse.ArgumentParser(description="DeepSpeed runner to help launch distributed "

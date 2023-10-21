@@ -20,7 +20,7 @@ In the future, directly use NCCL/MPI/Gloo/etc without requiring torch.distribute
 # Backend is the base class
      -- NcclBackend, MpiBackend, and TorchBackend are the main subclasses. TorchBackend is the only officially supported backend for now.
 """
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class Backend(object):
 

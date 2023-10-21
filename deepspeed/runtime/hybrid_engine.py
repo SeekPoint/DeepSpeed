@@ -27,7 +27,7 @@ try:
 except:
     OPTLearnedPositionalEmbedding = None
 inference_cuda_module = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DeepSpeedHybridEngine(DeepSpeedEngine):
     r"""DeepSpeed engine for training and inference."""

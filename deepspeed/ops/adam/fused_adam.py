@@ -14,7 +14,7 @@ multi_tensor_applier = MultiTensorApply(2048 * 32)
 from deepspeed.accelerator import get_accelerator
 from deepspeed.ops.op_builder import FusedAdamBuilder
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class FusedAdam(torch.optim.Optimizer):
     """Implements Adam algorithm.
 

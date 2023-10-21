@@ -5,7 +5,7 @@
 
 from ..policy import DSPolicy
 from ...model_implementations.diffusers.vae import DSVAE
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class VAEPolicy(DSPolicy):
 

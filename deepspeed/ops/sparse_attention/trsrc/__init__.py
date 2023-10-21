@@ -5,7 +5,7 @@
 
 import sys
 import os
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 gd.debuginfo(prj='ds', info='trsrc __init__')
 

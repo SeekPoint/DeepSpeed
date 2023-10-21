@@ -11,7 +11,7 @@ from typing import List
 from deepspeed.runtime import config as ds_config
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class SimpleConf(DeepSpeedConfigModel):
     gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
     param_1: int = 0

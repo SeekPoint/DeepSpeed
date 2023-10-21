@@ -7,7 +7,7 @@ import random
 
 from .base_tuner import BaseTuner
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class RandomTuner(BaseTuner):
     """Explore the search space in random order"""
 

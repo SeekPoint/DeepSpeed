@@ -5,7 +5,7 @@
 
 from .builder import CUDAOpBuilder
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class RandomLTDBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_RANDOM_LTD"
     NAME = "random_ltd"

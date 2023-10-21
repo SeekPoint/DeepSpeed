@@ -8,7 +8,7 @@ from deepspeed.ops.adagrad import DeepSpeedCPUAdagrad
 import time
 
 NUM_ITERS = 100
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _test_perf(param, optimizer_func):
     optimizer = optimizer_func(param)

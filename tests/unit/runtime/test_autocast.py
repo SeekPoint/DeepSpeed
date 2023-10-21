@@ -9,7 +9,7 @@ from deepspeed.runtime.zero.linear import LinearModuleForZeroStage3
 from deepspeed.accelerator import get_accelerator
 from unit.common import DistributedTest
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 @pytest.mark.parametrize('half_op', [False, True])
 class TestAutoCastDisable(DistributedTest):
 

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class HybridEngineContainer(ABC):
     """

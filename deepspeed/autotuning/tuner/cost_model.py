@@ -9,7 +9,7 @@ try:
     import xgboost as xgb
 except ImportError:
     xgb = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class XGBoostCostModel():
 

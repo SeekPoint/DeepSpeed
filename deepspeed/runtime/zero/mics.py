@@ -20,7 +20,7 @@ from deepspeed.utils import instrument_w_nvtx, log_dist
 from deepspeed.accelerator import get_accelerator
 from torch import Tensor
 from torch.nn import Parameter
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def has_hierarchical_all_gather_groups(comm_groups: MiCS_CommGroups):
     gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')

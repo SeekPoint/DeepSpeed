@@ -35,7 +35,7 @@ from deepspeed.checkpoint import enable_universal_checkpoint
 # with gradient partitioning and without
 pg_correctness_test = False
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def input(msg):
     return

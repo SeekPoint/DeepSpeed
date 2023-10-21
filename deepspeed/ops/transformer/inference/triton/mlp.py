@@ -9,7 +9,7 @@ import torch.nn as nn
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
 from ..op_binding import MLPGemmOp, VectorMatMulOp, GELUGemmOp, ResidualAddOp
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TritonMLP(nn.Module):
 

@@ -8,7 +8,7 @@ from deepspeed.pt.deepspeed_linear import LinearModuleForZeroStage3
 from deepspeed.pt.log_utils import logger
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 def see_memory_usage(message):
 
     # Print message except when distributed but not rank 0

@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ZeroOneAdam(torch.optim.Optimizer):
     """Implements the 0/1 Adam algorithm. Currently GPU-only.

@@ -8,7 +8,7 @@ import torch
 import deepspeed
 from deepspeed.accelerator import get_accelerator
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class OneLayerNet(torch.nn.Module):
 
     def __init__(self, D_in, D_out):

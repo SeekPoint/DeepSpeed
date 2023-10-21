@@ -12,7 +12,7 @@ from .utils import TopKBinarizer, SymQuantizer, AsymQuantizer, TernaryQuantizer,
 from deepspeed.utils import logger
 
 g_mpu = None
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class QuantAct(nn.Module):
     """

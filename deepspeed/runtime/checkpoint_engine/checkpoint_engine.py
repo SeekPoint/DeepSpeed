@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import os
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CheckpointEngine(object):
 

@@ -9,7 +9,7 @@ from pytest import approx
 from unit.common import DistributedTest
 from unit.multi_output_model import MultiOutputModel, multi_output_dataloader
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TestTwoOutputModel(DistributedTest):
     world_size = 1

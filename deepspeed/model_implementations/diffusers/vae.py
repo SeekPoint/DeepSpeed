@@ -5,7 +5,7 @@
 
 import torch
 from ..features.cuda_graph import CUDAGraph
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DSVAE(CUDAGraph, torch.nn.Module):
 

@@ -7,7 +7,7 @@ import torch
 from dataclasses import dataclass
 from deepspeed import comm as dist
 from typing import Dict
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @dataclass
 class fragment_address:

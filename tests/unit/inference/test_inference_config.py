@@ -9,7 +9,7 @@ import deepspeed
 from unit.common import DistributedTest
 from unit.simple_model import create_config_from_dict
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 @pytest.mark.inference
 class TestInferenceConfig(DistributedTest):
     world_size = 1

@@ -7,7 +7,7 @@ import triton
 import triton.language as tl
 from .gelu import gelu_functor
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 AUTOTUNE_TOP_K = 10
 SKIP_AUTOTUNE = False
 

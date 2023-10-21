@@ -7,7 +7,7 @@ from abc import abstractmethod
 
 from .hybrid_engine import HybridEngineContainer
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class HybridGatedMLPContainer(HybridEngineContainer):
     """

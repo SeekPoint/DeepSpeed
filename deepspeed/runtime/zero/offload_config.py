@@ -7,7 +7,7 @@ from pydantic import Field, validator
 from enum import Enum
 from pathlib import Path
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel, pp_int
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class OffloadDeviceEnum(str, Enum):
     """ Enum for valid offload devices """

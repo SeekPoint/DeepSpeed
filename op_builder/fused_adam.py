@@ -6,7 +6,7 @@
 from .builder import CUDAOpBuilder
 
 import sys
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class FusedAdamBuilder(CUDAOpBuilder):
     BUILD_VAR = "DS_BUILD_FUSED_ADAM"

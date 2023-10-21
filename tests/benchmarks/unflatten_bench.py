@@ -21,7 +21,7 @@ from deepspeed.ops.op_builder import UtilsBuilder
 
 from apex_C import flatten as flatten_apex
 from apex_C import unflatten as unflatten_apex
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 util_ops = UtilsBuilder().load()
 flatten = util_ops.flatten
 unflatten = util_ops.unflatten

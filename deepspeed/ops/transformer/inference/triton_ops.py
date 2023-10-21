@@ -10,7 +10,7 @@ https://github.com/openai/triton/blob/b244db06da24a87453a40ad35b085ee37dac3705/p
 import torch
 import triton
 import triton.language as tl
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @triton.jit
 def _fwd_kernel(

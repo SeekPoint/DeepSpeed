@@ -11,7 +11,7 @@ from unit.simple_model import SimplePRMoEModel, SimpleMoEModel, sequence_dataloa
 from deepspeed.moe.utils import split_params_into_different_moe_groups_for_optimizer, is_moe_param
 from unit.util import required_torch_version
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 @pytest.mark.parametrize("ep_size", [2, 4])
 @pytest.mark.parametrize("zero_stage", [0, 1, 2])
 @pytest.mark.parametrize("use_residual", [True, False])

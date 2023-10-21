@@ -8,7 +8,7 @@ import numpy as np
 
 from deepspeed.utils import logger
 from .indexed_dataset import MMapIndexedDatasetBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def find_fit_int_dtype(min_value, max_value):
     if min_value >= 0:

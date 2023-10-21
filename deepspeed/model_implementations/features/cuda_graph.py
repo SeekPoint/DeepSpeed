@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 from abc import ABC, abstractmethod
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CUDAGraph(ABC):
 

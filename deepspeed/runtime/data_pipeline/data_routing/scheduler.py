@@ -10,7 +10,7 @@ from deepspeed.utils import logger
 from ..constants import *
 
 #####based on the paper random-ltd: https://arxiv.org/abs/2211.11586
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BaseScheduler(object):
 

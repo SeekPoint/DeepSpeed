@@ -6,7 +6,7 @@
 Copyright NVIDIA/apex
 This file is adapted from NVIDIA/apex, commit a109f85
 """
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MultiTensorApply(object):
 

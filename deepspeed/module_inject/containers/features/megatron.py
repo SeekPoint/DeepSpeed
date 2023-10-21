@@ -5,7 +5,7 @@
 
 import torch
 from abc import ABC
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MegatronContainer(ABC):
 

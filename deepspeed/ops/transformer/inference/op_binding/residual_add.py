@@ -8,7 +8,7 @@ import torch
 from typing import Optional
 from ..config import DeepSpeedInferenceConfig
 from .base import BaseOp
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class ResidualAddOp(BaseOp):
 

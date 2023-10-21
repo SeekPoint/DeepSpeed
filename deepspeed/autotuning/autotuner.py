@@ -21,7 +21,7 @@ from .scheduler import ResourceManager
 from .tuner import GridSearchTuner, RandomTuner, ModelBasedTuner
 from .utils import *
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 try:
     from tabulate import tabulate
 except ImportError:

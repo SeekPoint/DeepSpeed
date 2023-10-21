@@ -15,7 +15,7 @@ from ..policy import maybe_copy
 from ..policy import maybe_copy_qkv
 
 from ..policy import maybe_get_lora
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_GPTNEOContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 

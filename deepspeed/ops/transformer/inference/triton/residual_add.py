@@ -7,7 +7,7 @@ import torch
 import triton
 import triton.language as tl
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 @triton.jit
 def residual_add_bias_kernel(

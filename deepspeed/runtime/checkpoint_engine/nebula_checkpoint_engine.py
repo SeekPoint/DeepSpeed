@@ -11,7 +11,7 @@ from deepspeed.runtime.checkpoint_engine.checkpoint_engine import \
     CheckpointEngine
 from deepspeed.utils import logger, log_dist
 from deepspeed.nebula.constants import *
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def _get_tag_from_path(path):
     return os.path.basename(os.path.dirname(path))

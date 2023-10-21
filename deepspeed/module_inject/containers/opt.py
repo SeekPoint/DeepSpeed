@@ -14,7 +14,7 @@ from ..policy import maybe_copy
 from ..policy import maybe_copy_qkv
 from ..policy import maybe_get_lora
 from deepspeed.utils.types import ActivationFuncType
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_OPTContainer(MetaTensorContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 

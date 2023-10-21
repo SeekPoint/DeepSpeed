@@ -14,7 +14,7 @@ from unit.simple_model import *
 from unit.checkpoint.common import *
 
 import pytest
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TestMiCSCheckpoint(DistributedTest):
     world_size = 4

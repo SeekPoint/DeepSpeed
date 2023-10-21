@@ -8,7 +8,7 @@ from .monitor import Monitor
 import os
 
 import deepspeed.comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class TensorBoardMonitor(Monitor):
 

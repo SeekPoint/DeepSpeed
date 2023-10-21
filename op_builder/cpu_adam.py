@@ -5,7 +5,7 @@
 
 import os
 from .builder import TorchCPUOpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class CPUAdamBuilder(TorchCPUOpBuilder):
     BUILD_VAR = "DS_BUILD_CPU_ADAM"

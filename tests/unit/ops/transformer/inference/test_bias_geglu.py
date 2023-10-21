@@ -10,7 +10,7 @@ from deepspeed.ops.op_builder import InferenceBuilder
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.types import ActivationFuncType
 from .inference_test_utils import allclose, get_dtypes
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 if not deepspeed.ops.__compatible_ops__[InferenceBuilder.NAME]:
     pytest.skip("Inference ops are not available on this system", allow_module_level=True)
 

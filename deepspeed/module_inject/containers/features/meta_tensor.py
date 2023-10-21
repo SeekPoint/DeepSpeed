@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 from packaging import version as pkg_version
 import torch
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MetaTensorContainer(ABC):
     """

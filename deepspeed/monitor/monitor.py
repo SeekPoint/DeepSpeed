@@ -8,7 +8,7 @@ Support different forms of monitoring such as wandb and tensorboard
 
 from abc import ABC, abstractmethod
 import deepspeed.comm as dist
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class Monitor(ABC):
 

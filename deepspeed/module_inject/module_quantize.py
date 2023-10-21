@@ -5,7 +5,7 @@
 
 import torch
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def quantize_transformer_layer(orig_layer_impl, model, megatron=False, preln=False):
     """ Quantize bert-style transformer layers with DeepSpeed's transformer layer

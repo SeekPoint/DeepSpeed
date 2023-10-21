@@ -6,5 +6,5 @@
 
 from .comm import CCLCommBuilder
 from .no_impl import NotImplementedBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info='op_builder cpu __init__')

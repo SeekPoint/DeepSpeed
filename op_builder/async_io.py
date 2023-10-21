@@ -7,7 +7,7 @@ import distutils.spawn
 import subprocess
 
 from .builder import OpBuilder
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class AsyncIOBuilder(OpBuilder):
     BUILD_VAR = "DS_BUILD_AIO"

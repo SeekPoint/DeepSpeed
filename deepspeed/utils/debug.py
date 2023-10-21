@@ -9,7 +9,7 @@ fcntl = None
 # for debug purposes map module and param objects to their fully qualified names
 module_names = {}
 param_names = {}
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 def debug_extract_module_and_param_names(model):

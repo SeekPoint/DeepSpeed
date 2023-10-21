@@ -6,7 +6,7 @@
 from .basic_layer import RandomLayerTokenDrop
 from collections import OrderedDict
 from deepspeed.compression.helper import recursive_getattr, recursive_setattr
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def convert_to_random_ltd(model, convert_type):
     if hasattr(model, 'module'):

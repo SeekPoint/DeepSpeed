@@ -5,7 +5,7 @@
 
 import torch
 import copy
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class Experts(torch.nn.Module):
 

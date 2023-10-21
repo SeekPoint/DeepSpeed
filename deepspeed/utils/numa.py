@@ -14,7 +14,7 @@ import os
 import psutil
 import subprocess
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 # return a list of list for cores to numa mapping

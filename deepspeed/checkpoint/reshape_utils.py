@@ -7,7 +7,7 @@ import os
 import torch
 from collections import OrderedDict
 from .constants import (ZERO_FILE_PREFIX, FP16_ZERO_FILE_PREFIX, BF16_ZERO_FILE_PREFIX)
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def basic_folder_validation(dir):
     assert os.path.exists(dir), f'{dir} path does not exist'

@@ -9,7 +9,7 @@ import torch
 from torch.nn.parameter import Parameter
 from ..policy import TransformerPolicy
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 class DS_BERTContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):

@@ -10,7 +10,7 @@ from deepspeed.model_implementations.transformers.ds_megatron_gpt import DeepSpe
 import torch
 from .megatron_gpt import MegatronLayerPolicy
 from packaging import version as pkg_version
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class DS_MegatronGPTMoEContainer(MegatronContainer, BaseTransformerMoEContainer):
 

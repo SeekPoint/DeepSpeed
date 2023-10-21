@@ -6,7 +6,7 @@
 from torch import nn
 from deepspeed.ops.sparse_attention import SparseSelfAttention, FixedSparsityConfig
 
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class BertSparseSelfAttention(nn.Module):
     """Implements Sparse Self Attention layer of Bert model based on https://github.com/microsoft/DeepSpeedExamples/blob/master/bing_bert/nvidia/modelingpreln.py#L373

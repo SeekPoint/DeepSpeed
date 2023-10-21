@@ -12,7 +12,7 @@ import itertools
 import copy
 
 from ..utils import logger
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 def search_error(filename):
     gd.debuginfo(prj='ds', info=f'filename:{filename}')

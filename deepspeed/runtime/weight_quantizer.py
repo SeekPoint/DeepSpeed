@@ -6,7 +6,7 @@
 import torch
 from ..module_inject.replace_policy import HFBertLayerPolicy, replace_policies
 from deepspeed.accelerator import get_accelerator
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class WeightQuantization(object):
 

@@ -10,7 +10,7 @@ import numpy as np
 from mpi4py import MPI
 
 from deepspeed.runtime.compression.cupy import CupyBackend
-from pydebug import debuginfo, infoTensor
+from pydebug import gd, infoTensor
 
 class MpiBackend(object):
 
