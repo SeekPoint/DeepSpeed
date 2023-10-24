@@ -51,7 +51,7 @@ def read_zero_config_deprecated(param_dict):
     zero_config_dict = {}
     zero_config_dict["stage"] = 1 if param_dict[ZERO_OPTIMIZATION] else 0
     if zero_config_dict["stage"] > 0:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         zero_config_dict["allgather_bucket_size"] = get_scalar_param(param_dict, "allgather_size", 5e8)
     logger.warning(
         "DeepSpeedConfig: this format of ZeRO optimization setup is deprecated. Please use the following format: {}".
@@ -61,13 +61,13 @@ def read_zero_config_deprecated(param_dict):
 
 def get_zero_config(param_dict):
     if ZERO_OPTIMIZATION in param_dict:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         zero_config_dict = param_dict[ZERO_OPTIMIZATION]
         if isinstance(zero_config_dict, bool):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             zero_config_dict = read_zero_config_deprecated(param_dict)
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         zero_config_dict = {}
     return DeepSpeedZeroConfig(**zero_config_dict)
 
@@ -282,7 +282,7 @@ class DeepSpeedZeroConfig(DeepSpeedConfigModel):
     # Validators
     @validator("overlap_comm")
     def overlap_comm_valid(cls, field_value, values):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if field_value is None:
             assert ("stage" in values), "DeepSpeedZeroConfig: 'stage' must be defined before 'overlap_comm'"
             field_value = values["stage"] == ZeroStageEnum.weights

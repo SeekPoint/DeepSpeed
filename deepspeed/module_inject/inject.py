@@ -9,7 +9,7 @@ from deepspeed.ops.transformer import DeepSpeedTransformerLayer, DeepSpeedTransf
 from pydebug import gd, infoTensor
 
 def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, seed, preln, fp16=True):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     for name, child in model.named_children():
         if isinstance(child, layer_obj):
             cuda_config = DeepSpeedTransformerConfig(batch_size=micro_batch_size,
@@ -71,7 +71,7 @@ def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, se
 
 
 def test_hi():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     from turing.nvidia_modelingpreln import BertConfig as BertConfigPreLN
     from turing.nvidia_modelingpreln import BertForQuestionAnswering as BertForQuestionAnsweringPreLN
     from turing.nvidia_modelingpreln import BertLayer

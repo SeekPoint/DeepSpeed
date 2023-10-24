@@ -51,15 +51,15 @@ class DeepSpeedConfigModel(BaseModel):
     """
 
     def __init__(self, strict=False, **data):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if (not strict):  # This is temporary until we refactor all DS configs, allows HF to load models
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             data = {k: v for k, v in data.items() if (v != "auto" or k == "replace_method")}
         super().__init__(**data)
         self._deprecated_fields_check(self)
 
     def _process_deprecated_field(self, pydantic_config, field):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # Get information about the deprecated field
         fields_set = pydantic_config.__fields_set__
         dep_param = field.name
@@ -75,7 +75,7 @@ class DeepSpeedConfigModel(BaseModel):
             if new_param and kwargs.get("set_new_param", True):
                 # Remove the deprecate field if there is a replacing field
                 try:
-                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     delattr(pydantic_config, dep_param)
                 except Exception as e:
                     logger.error(f"Tried removing deprecated '{dep_param}' from config")
@@ -84,7 +84,7 @@ class DeepSpeedConfigModel(BaseModel):
                 # Set new param value
                 new_param_nested = new_param.split(".")
                 if len(new_param_nested) > 1:
-                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     # If the new param exists in a subconfig, we need to get
                     # the fields set for that subconfig
                     pydantic_config = reduce(getattr, new_param_nested[:-1], pydantic_config)
@@ -95,7 +95,7 @@ class DeepSpeedConfigModel(BaseModel):
                 ), f"Cannot provide deprecated parameter '{dep_param}' and replacing parameter '{new_param}' together"
                 # A custom function for converting the old param value to new param value can be provided
                 try:
-                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     setattr(pydantic_config, new_param_name, param_value)
                 except Exception as e:
                     logger.error(f"Tried setting value for '{new_param}' with value from deprecated '{dep_param}'")

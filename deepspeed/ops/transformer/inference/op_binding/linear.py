@@ -12,7 +12,7 @@ from pydebug import gd, infoTensor
 class LinearOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(LinearOp, self).__init__(config)
         try:
             if self.config.dtype in [torch.float16, torch.int8]:
@@ -44,14 +44,14 @@ class LinearOp(BaseOp):
                 num_heads: int,
                 external_cache: bool = None,
                 num_layers: int = None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         qkv_out = self.linear_func(input, weight, bias, add_bias, do_flash_attn, num_heads,
                                    self.config.transposed_mode)
         return qkv_out
 
     @staticmethod
     def _triton_autotune(min_seqlen, max_seqlen, hidden_size, dtype=torch.float16):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.ops.transformer.inference.triton.matmul_ext import Fp16Matmul, matmul
         seqlen = [(min_seqlen + i)
                   for i in range(0, max_seqlen - min_seqlen + Fp16Matmul._cache_stride + 1, Fp16Matmul._cache_stride)]

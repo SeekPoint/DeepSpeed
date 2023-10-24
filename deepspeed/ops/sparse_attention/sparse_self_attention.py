@@ -31,7 +31,7 @@ class SparseSelfAttention(nn.Module):
             attn_mask_mode: optional: a string determining if attention mask needs to be added, `add`, or be multiplied, `mul`.
             max_seq_length: optional: the maximum sequence length this sparse attention module will be applied to; it controls the size of the master_layout.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__()
 
         # sparsity information
@@ -49,10 +49,10 @@ class SparseSelfAttention(nn.Module):
     ops = dict()
 
     def get_layout(self, L):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # if layout is never synchronized across GPUs, broadcast the layout from global rank 0
         if self._need_layout_synchronization and dist.is_initialized():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             dist.broadcast(self.master_layout, src=0)
             self._need_layout_synchronization = False
 
@@ -65,7 +65,7 @@ class SparseSelfAttention(nn.Module):
 
     # add to cache
     def get_ops(self, H, L):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.ops.sparse_attention.matmul import MatMul
         from deepspeed.ops.sparse_attention.softmax import Softmax
         if L not in SparseSelfAttention.ops:
@@ -84,15 +84,15 @@ class SparseSelfAttention(nn.Module):
         return SparseSelfAttention.ops[L]
 
     def transpose_key_for_scores(self, x, L):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         bsz, num_heads, seq_len, head_dim = x.size()
         if seq_len != L:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return x.permute(0, 1, 3, 2)
         return x
 
     def transpose_mask_for_sparse(self, qtype, x, is_key_padding_mask=False):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         x = x.type(qtype)
         if is_key_padding_mask:
             xdim = x.dim()
@@ -118,7 +118,7 @@ class SparseSelfAttention(nn.Module):
         Return:
              attn_output: a dense tensor containing attention context
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         assert query.dtype == torch.half, "sparse attention only supports training in fp16 currently, please file a github issue if you need fp32 support"
         bsz, num_heads, tgt_len, head_dim = query.size()
 
@@ -131,12 +131,12 @@ class SparseSelfAttention(nn.Module):
 
         # squeeze key_padding_mask if it is given
         if key_padding_mask is not None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             key_padding_mask = self.transpose_mask_for_sparse(query.dtype, key_padding_mask, is_key_padding_mask=True)
 
         # squeeze attn_mask if it is given
         if attn_mask is not None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             attn_mask = self.transpose_mask_for_sparse(query.dtype, attn_mask)
 
         # cache look-up table computations etc

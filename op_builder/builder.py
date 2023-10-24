@@ -40,7 +40,7 @@ else:
 
 
 def installed_cuda_version(name=""):
-    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     import torch.utils.cpp_extension
     cuda_home = torch.utils.cpp_extension.CUDA_HOME
     assert cuda_home is not None, "CUDA_HOME does not exist, unable to compile CUDA op(s)"
@@ -55,17 +55,17 @@ def installed_cuda_version(name=""):
 
 
 def get_default_compute_capabilities():
-    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     compute_caps = DEFAULT_COMPUTE_CAPABILITIES
     import torch.utils.cpp_extension
     if torch.utils.cpp_extension.CUDA_HOME is not None and installed_cuda_version()[0] >= 11:
         if installed_cuda_version()[0] == 11 and installed_cuda_version()[1] == 0:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             # Special treatment of CUDA 11.0 because compute_86 is not supported.
             compute_caps += ";8.0"
         else:
             compute_caps += ";8.0;8.6"
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
     return compute_caps
 
 
@@ -83,7 +83,7 @@ cuda_minor_mismatch_ok = {
 
 
 def assert_no_cuda_mismatch(name=""):
-    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     cuda_major, cuda_minor = installed_cuda_version(name)
     sys_cuda_version = f'{cuda_major}.{cuda_minor}'
     torch_cuda_version = ".".join(torch.version.cuda.split('.')[:2])
@@ -140,7 +140,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def validate_torch_version(torch_info):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         install_torch_version = torch_info['version']
         current_torch_version = ".".join(torch.__version__.split('.')[:2])
         if install_torch_version != current_torch_version:
@@ -153,7 +153,7 @@ class OpBuilder(ABC):
     @staticmethod
     def validate_torch_op_version(torch_info):
         if not OpBuilder.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             current_cuda_version = ".".join(torch.version.cuda.split('.')[:2])
             install_cuda_version = torch_info['cuda_version']
             if install_cuda_version != current_cuda_version:
@@ -163,7 +163,7 @@ class OpBuilder(ABC):
                                    f"Install CUDA version={install_cuda_version}, "
                                    f"Runtime CUDA version={current_cuda_version}")
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             current_hip_version = ".".join(torch.version.hip.split('.')[:2])
             install_hip_version = torch_info['hip_version']
             if install_hip_version != current_hip_version:
@@ -173,10 +173,10 @@ class OpBuilder(ABC):
                                    f"Install HIP version={install_hip_version}, "
                                    f"Runtime HIP version={current_hip_version}")
 
-    @staticmethod
+    @staticmethod #==不能有self
     def is_rocm_pytorch():
         if OpBuilder._is_rocm_pytorch is not None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return OpBuilder._is_rocm_pytorch
 
         _is_rocm_pytorch = False
@@ -195,7 +195,7 @@ class OpBuilder(ABC):
 
     @staticmethod
     def installed_rocm_version():
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if OpBuilder._rocm_version:
             return OpBuilder._rocm_version
 
@@ -221,36 +221,36 @@ class OpBuilder(ABC):
         '''
         Returns list of include paths, relative to root of deepspeed package (i.e., DeepSpeed/deepspeed)
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return []
 
     def nvcc_args(self):
         '''
         Returns optional list of compiler flags to forward to nvcc when building CUDA sources
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return []
 
     def cxx_args(self):
         '''
         Returns optional list of compiler flags to forward to the build
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return []
 
     def is_compatible(self, verbose=True):
         '''
         Check if all non-python dependencies are satisfied to build this op
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return True
 
     def extra_ldflags(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return []
 
     def libraries_installed(self, libraries):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         valid = False
         check_cmd = 'dpkg -l'
         for lib in libraries:
@@ -267,7 +267,7 @@ class OpBuilder(ABC):
         and then distutils is used to compile that program and link it with the specified libraries.
         Returns True if both the compile and link are successful, False otherwise.
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         tempdir = None  # we create a temporary directory to hold various files
         filestderr = None  # handle to open file to which we redirect stderr
         oldstderr = None  # file descriptor for stderr
@@ -330,7 +330,7 @@ class OpBuilder(ABC):
             return False
 
         finally:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             # Restore stderr file descriptor and close the stderr redirect file.
             if oldstderr is not None:
                 os.dup2(oldstderr, sys.stderr.fileno())
@@ -341,15 +341,17 @@ class OpBuilder(ABC):
             if tempdir is not None:
                 shutil.rmtree(tempdir)
 
+    # 去掉空字符串
     def strip_empty_entries(self, args):
         '''
         Drop any empty strings from the list of compile and link flags
         '''
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return [x for x in args if len(x) > 0]
 
+    #返回cpu架构的字符串
     def cpu_arch(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -371,8 +373,9 @@ class OpBuilder(ABC):
             return '-mcpu=native'
         return '-march=native'
 
+    # 返回CUDA是否可用的字符串
     def is_cuda_enable(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         try:
             assert_no_cuda_mismatch(self.name)
             return '-D__ENABLE_CUDA__'
@@ -382,6 +385,7 @@ class OpBuilder(ABC):
             return '-D__DISABLE_CUDA__'
         return '-D__DISABLE_CUDA__'
 
+    # 返回cpu信息
     def _backup_cpuinfo(self):
         # Construct cpu_info dict from lscpu that is similar to what py-cpuinfo provides
         if not self.command_exists('lscpu'):
@@ -398,23 +402,24 @@ class OpBuilder(ABC):
         if 'genuineintel' in result or 'authenticamd' in result:
             cpu_info['arch'] = 'X86_64'
             if 'avx512' in result:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 cpu_info['flags'] += 'avx512,'
             elif 'avx512f' in result:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 cpu_info['flags'] += 'avx512f,'
             if 'avx2' in result:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 cpu_info['flags'] += 'avx2'
         elif 'ppc64le' in result:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             cpu_info['arch'] = "PPC_"
 
-        gd.debuginfo(prj='ds', info=str(cpu_info))
+        # gd.debuginfo(prj='ds', info=str(cpu_info))
         return cpu_info
 
+    #返回simd信息字符串
     def simd_width(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -440,10 +445,10 @@ class OpBuilder(ABC):
 
     def command_exists(self, cmd):
         if '|' in cmd:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             cmds = cmd.split("|")
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             cmds = [cmd]
         valid = False
         for cmd in cmds:
@@ -469,8 +474,15 @@ class OpBuilder(ABC):
             return os.path.join(Path(__file__).parent.parent.absolute(), code_path)
 
     def builder(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         from torch.utils.cpp_extension import CppExtension
+
+        # pytorch 的扩展 https://pytorch.org/docs/stable/cpp_extension.html
+        gd.debuginfo(prj='ds', info=f'self.absolute_name() = {self.absolute_name()}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.sources()) = {self.strip_empty_entries(self.sources())}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.include_paths()) = {self.strip_empty_entries(self.include_paths())}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.cxx_args()) = {self.strip_empty_entries(self.cxx_args())}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.extra_ldflags()) = {self.strip_empty_entries(self.extra_ldflags())}')
+
         return CppExtension(name=self.absolute_name(),
                             sources=self.strip_empty_entries(self.sources()),
                             include_dirs=self.strip_empty_entries(self.include_paths()),
@@ -480,20 +492,20 @@ class OpBuilder(ABC):
     def load(self, verbose=True):
         from deepspeed.git_version_info import installed_ops, torch_info
         if installed_ops.get(self.name, False):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             # Ensure the op we're about to load was compiled with the same
             # torch/cuda versions we are currently using at runtime.
             self.validate_torch_version(torch_info)
             if torch.cuda.is_available() and isinstance(self, CUDAOpBuilder):
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 self.validate_torch_op_version(torch_info)
 
             return importlib.import_module(self.absolute_name())
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return self.jit_load(verbose)
 
     def jit_load(self, verbose=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
         if not self.is_compatible(verbose):
             raise RuntimeError(
                 f"Unable to JIT load the {self.name} op due to it not being compatible due to hardware/software issue. {self.error_log}"
@@ -517,6 +529,9 @@ class OpBuilder(ABC):
         sources = [self.deepspeed_src_path(path) for path in self.sources()]
         extra_include_paths = [self.deepspeed_src_path(path) for path in self.include_paths()]
 
+        gd.debuginfo(prj="ds", info=f"sources files: {sources}")
+        gd.debuginfo(prj="ds", info=f"extra_include_paths: {extra_include_paths}")
+
         # Torch will try and apply whatever CCs are in the arch list at compile time,
         # we have already set the intended targets ourselves we know that will be
         # needed at runtime. This prevents CC collisions such as multiple __half
@@ -529,11 +544,15 @@ class OpBuilder(ABC):
         nvcc_args = self.strip_empty_entries(self.nvcc_args())
         cxx_args = self.strip_empty_entries(self.cxx_args())
 
+        gd.debuginfo(prj="ds", info=f"nvcc_args is: {nvcc_args}")
+        gd.debuginfo(prj="ds", info=f"cxx_args is: {cxx_args}")
+
         if isinstance(self, CUDAOpBuilder):
+            gd.debuginfo(prj="ds")
             if not self.build_for_cpu and self.enable_bf16:
                 cxx_args.append("-DBF16_AVAILABLE")
                 nvcc_args.append("-DBF16_AVAILABLE")
-
+        gd.debuginfo(prj="ds", info='真正开始编译................')
         op_module = load(name=self.name,
                          sources=self.strip_empty_entries(sources),
                          extra_include_paths=self.strip_empty_entries(extra_include_paths),
@@ -541,7 +560,7 @@ class OpBuilder(ABC):
                          extra_cuda_cflags=nvcc_args,
                          extra_ldflags=self.strip_empty_entries(self.extra_ldflags()),
                          verbose=verbose)
-
+        gd.debuginfo(prj="ds", info=f"op_module = {op_module}")
         build_duration = time.time() - start_build
         if verbose:
             print(f"Time to load {self.name} op: {build_duration} seconds")
@@ -575,7 +594,7 @@ class CUDAOpBuilder(OpBuilder):
         """
         ccs = []
         if self.jit_mode:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             # Compile for underlying architectures since we know those at runtime
             for i in range(torch.cuda.device_count()):
                 CC_MAJOR, CC_MINOR = torch.cuda.get_device_capability(i)
@@ -587,7 +606,7 @@ class CUDAOpBuilder(OpBuilder):
         else:
             # Cross-compile mode, compile for various architectures
             # env override takes priority
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             cross_compile_archs_env = os.environ.get('TORCH_CUDA_ARCH_LIST', None)
             if cross_compile_archs_env is not None:
                 if cross_compile_archs is not None:
@@ -620,7 +639,7 @@ class CUDAOpBuilder(OpBuilder):
         return args
 
     def filter_ccs(self, ccs: List[str]):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         """
         Prune any compute capabilities that are not compatible with the builder. Should log
         which CCs have been pruned.
@@ -632,19 +651,19 @@ class CUDAOpBuilder(OpBuilder):
         version_ge_1_1 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 0):
             version_ge_1_1 = ['-DVERSION_GE_1_1']
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
         version_ge_1_3 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 2):
             version_ge_1_3 = ['-DVERSION_GE_1_3']
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
         version_ge_1_5 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 4):
             version_ge_1_5 = ['-DVERSION_GE_1_5']
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return version_ge_1_1 + version_ge_1_3 + version_ge_1_5
 
     def is_compatible(self, verbose=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return super().is_compatible(verbose)
 
     def builder(self):
@@ -657,10 +676,10 @@ class CUDAOpBuilder(OpBuilder):
             self.build_for_cpu = True
 
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             from torch.utils.cpp_extension import CppExtension as ExtensionBuilder
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             from torch.utils.cpp_extension import CUDAExtension as ExtensionBuilder
 
         compile_args = {'cxx': self.strip_empty_entries(self.cxx_args())} if self.build_for_cpu else \
@@ -668,9 +687,15 @@ class CUDAOpBuilder(OpBuilder):
                            'nvcc': self.strip_empty_entries(self.nvcc_args())}
 
         if not self.build_for_cpu and self.enable_bf16:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             compile_args['cxx'].append("-DBF16_AVAILABLE")
 
+        gd.debuginfo(prj='ds', info=f'self.absolute_name() = {self.absolute_name()}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.sources()) = {self.strip_empty_entries(self.sources())}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.include_paths()) = {self.strip_empty_entries(self.include_paths())}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.libraries_args()) = {self.strip_empty_entries(self.libraries_args())}')
+        gd.debuginfo(prj='ds', info=f'compile_args = {compile_args}')
+        gd.debuginfo(prj='ds', info=f'self.strip_empty_entries(self.extra_ldflags()) = {self.strip_empty_entries(self.extra_ldflags())}')
         cuda_ext = ExtensionBuilder(name=self.absolute_name(),
                                     sources=self.strip_empty_entries(self.sources()),
                                     include_dirs=self.strip_empty_entries(self.include_paths()),
@@ -681,7 +706,7 @@ class CUDAOpBuilder(OpBuilder):
         gd.debuginfo(prj='ds', info = ' cuda_ext:'+ str(cuda_ext))
 
         if self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             # hip converts paths to absolute, this converts back to relative
             sources = cuda_ext.sources
             curr_file = Path(__file__).parent.parent  # ds root
@@ -696,7 +721,7 @@ class CUDAOpBuilder(OpBuilder):
         return cuda_ext
 
     def hipify_extension(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         if self.is_rocm_pytorch():
             from torch.utils.hipify import hipify_python
             hipify_python.hipify(
@@ -712,19 +737,19 @@ class CUDAOpBuilder(OpBuilder):
 
     def cxx_args(self):
         if sys.platform == "win32":
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['-O2']
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['-O3', '-std=c++17', '-g', '-Wno-reorder']
 
     def nvcc_args(self):
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return []
         args = ['-O3']
         if self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             ROCM_MAJOR, ROCM_MINOR = self.installed_rocm_version()
             args += [
                 '-std=c++17', '-U__HIP_NO_HALF_OPERATORS__', '-U__HIP_NO_HALF_CONVERSIONS__',
@@ -733,7 +758,7 @@ class CUDAOpBuilder(OpBuilder):
                 '-DROCM_VERSION_MINOR=%s' % ROCM_MINOR
             ]
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             cuda_major, _ = installed_cuda_version()
             args += [
                 '-allow-unsupported-compiler' if sys.platform == "win32" else '', '--use_fast_math',
@@ -741,7 +766,7 @@ class CUDAOpBuilder(OpBuilder):
                 '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__'
             ]
             if os.environ.get('DS_DEBUG_CUDA_BUILD', '0') == '1':
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 args.append('--ptxas-options=-v')
             args += self.compute_capability_args()
 
@@ -751,14 +776,14 @@ class CUDAOpBuilder(OpBuilder):
 
     def libraries_args(self):
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return []
 
         if sys.platform == "win32":
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['cublas', 'curand']
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return []
 
 
@@ -766,11 +791,11 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
 
     def extra_ldflags(self):
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['-fopenmp']
 
         if not self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['-lcurand']
 
         return []
@@ -780,10 +805,10 @@ class TorchCPUOpBuilder(CUDAOpBuilder):
         args = []
         if not self.build_for_cpu:
             if not self.is_rocm_pytorch():
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.CUDA_HOME, "lib64")
             else:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds", info=self.__class__.__name__)
                 CUDA_LIB64 = os.path.join(torch.utils.cpp_extension.ROCM_HOME, "lib")
 
             args += super().cxx_args()

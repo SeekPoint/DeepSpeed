@@ -24,7 +24,7 @@ def is_torch_two():
     else:
         return False
 
-
+# torch是否大于1.13
 def torch_ver_ge_1_13():
     if is_torch_two():
         return True
@@ -37,53 +37,53 @@ def torch_ver_ge_1_13():
 
 
 def has_coalescing_manager():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     has_c10d = hasattr(torch.distributed, 'distributed_c10d')
     return has_c10d and hasattr(torch.distributed.distributed_c10d, '_coalescing_manager')
 
 
 def has_all_reduce_coalesced():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     return hasattr(torch.distributed, "all_reduce_coalesced") and torch_ver_ge_1_13()
 
 
 def get_coalescing_manager(group, device, reqs):
     if is_torch_two():
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.distributed_c10d._coalescing_manager(group, device=device, reqs=reqs)
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.distributed_c10d._coalescing_manager(group, reqs)
 
 
 ##Utilities to turn comm off
 ##TODO: move to base comm (wrapper)
 def all_gather_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     global DS_COMM_ALL_GATHER_OFF
     DS_COMM_ALL_GATHER_OFF = flag
 
 
 def reduce_scatter_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     global DS_COMM_REDUCE_SCATTER_OFF
     DS_COMM_REDUCE_SCATTER_OFF = flag
 
 
 def broadcast_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     global DS_COMM_BROADCAST_OFF
     DS_COMM_BROADCAST_OFF = flag
 
 
 def all_reduce_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     global DS_COMM_ALL_REDUCE_OFF
     DS_COMM_ALL_REDUCE_OFF = flag
 
 
 def reduce_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     global DS_COMM_REDUCE_OFF
     DS_COMM_REDUCE_OFF = flag
 
@@ -91,13 +91,12 @@ def reduce_comm_off(flag=False):
 #assumption: all_gather and reduce scatter
 ## are what we care about
 def backward_comm_off(flag=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds", info = '关闭' if flag else '打开', level = 2)
     all_gather_comm_off(flag)
     reduce_scatter_comm_off(flag)
 
 
 class Noop:
-
     def wait(self):
         return None
 
@@ -112,7 +111,7 @@ class TorchBackend(Backend):
     """
 
     def __init__(self, backend, timeout, init_method, rank=-1, world_size=-1, name='torch'):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(TorchBackend, self).__init__()
         self.has_all_reduce_coalesced = has_all_reduce_coalesced()
         self.has_coalescing_manager = has_coalescing_manager()
@@ -129,35 +128,35 @@ class TorchBackend(Backend):
     @classmethod
     def get_all_gather_function(self):
         if hasattr(torch.distributed, "all_gather_into_tensor"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed.all_gather_into_tensor
         elif hasattr(torch.distributed, "_all_gather_base"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed._all_gather_base
         return None
 
     @classmethod
     def get_reduce_scatter_function(self):
         if hasattr(torch.distributed, "reduce_scatter_tensor"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed.reduce_scatter_tensor
         elif hasattr(torch.distributed, "_reduce_scatter_base"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed._reduce_scatter_base
         return None
 
     def has_all_gather_into_tensor(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return self.all_gather_function is not None
 
     def has_reduce_scatter_tensor(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=f"has_reduce_scatter_tensor return {self.reduce_scatter_function}", level = 2)
         return self.reduce_scatter_function is not None
 
     def init_process_group(self, backend, timeout, init_method, rank, world_size):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if not torch.distributed.is_initialized():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             torch.distributed.init_process_group(backend,
                                                  timeout=timeout,
                                                  init_method=init_method,
@@ -166,7 +165,7 @@ class TorchBackend(Backend):
         self.using_mpi = torch.distributed.get_backend() == 'mpi'
 
     def all_reduce(self, tensor, op=torch.distributed.ReduceOp.SUM, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         op = self._reduce_op(op)
         return torch.distributed.all_reduce(tensor=tensor, op=op, group=group, async_op=async_op)
 
@@ -174,7 +173,7 @@ class TorchBackend(Backend):
         """ proxy func to torch.distributed.all_reduce_coalesced,
         which is included in PyTorch 1.13 and above
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if not self.has_all_reduce_coalesced:
             raise RuntimeError(f"Current torch version does not have all_reduce_coalesced "
                                f"api (torch.__version__: {torch.__version__})")
@@ -182,7 +181,7 @@ class TorchBackend(Backend):
         return torch.distributed.all_reduce_coalesced(tensors=tensors, op=op, group=group, async_op=async_op)
 
     def reduce(self, tensor, dst, op=ReduceOp.SUM, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if DS_COMM_REDUCE_OFF:
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("REDUCE is OFF")
@@ -191,12 +190,12 @@ class TorchBackend(Backend):
 
     def reduce_scatter(self, output, input_list, op=ReduceOp.SUM, group=None, async_op=False):
         if DS_COMM_REDUCE_SCATTER_OFF:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("REDUCE SCATTER  is OFF")
             return Noop()
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed.reduce_scatter(output=output,
                                                     input_list=input_list,
                                                     op=self._reduce_op(op),
@@ -205,27 +204,27 @@ class TorchBackend(Backend):
 
     def broadcast(self, tensor, src, group=None, async_op=False):
         if DS_COMM_BROADCAST_OFF:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("BROADCAST  is OFF")
             return Noop()
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 
     def all_gather(self, tensor_list, tensor, group=None, async_op=False):
         if DS_COMM_ALL_GATHER_OFF:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("All Gather is OFF")
             return Noop()
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return torch.distributed.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)
 
     def all_gather_into_tensor(self, output_tensor, input_tensor, group=None, async_op=False):
         if self.has_all_gather_into_tensor():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.all_gather_function(output_tensor=output_tensor,
                                             input_tensor=input_tensor,
                                             group=group,
@@ -233,13 +232,13 @@ class TorchBackend(Backend):
 
     def all_gather_base(self, output_tensor, input_tensor, group=None, async_op=False):
         if DS_COMM_ALL_GATHER_OFF:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.warning("All Gather is OFF")
             return Noop()
         else:
             if self.has_allgather_base:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 return torch.distributed.distributed_c10d._all_gather_base(output_tensor=output_tensor,
                                                                            input_tensor=input_tensor,
                                                                            group=group,
@@ -254,14 +253,14 @@ class TorchBackend(Backend):
         """"""
         assert len(output_tensors) == len(input_tensors), ""
         if hasattr(torch.distributed.distributed_c10d, '_all_gather_base_coalesced'):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             # customized PyTorch
             return torch.distributed.distributed_c10d._all_gather_base_coalesced(output_tensors,
                                                                                  input_tensors,
                                                                                  group=group,
                                                                                  async_op=async_op)
         elif has_coalescing_manager():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             reqs = []
             with get_coalescing_manager(group, input_tensors[0].device, reqs):
                 for output, input in zip(output_tensors, input_tensors):
@@ -271,15 +270,15 @@ class TorchBackend(Backend):
                                                                                        async_op=True)
                     reqs.append(handle)
             if async_op:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 return reqs[-1]
             else:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 reqs[-1].wait()
 
     def reduce_scatter_tensor(self, output_tensor, input_tensor, op=ReduceOp.SUM, group=None, async_op=False):
         if self.has_reduce_scatter_tensor():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.reduce_scatter_function(output_tensor,
                                                 input_tensor,
                                                 op=self._reduce_op(op),
@@ -298,7 +297,7 @@ class TorchBackend(Backend):
                           input_split_sizes=None,
                           group=None,
                           async_op=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.all_to_all_single(output=output,
                                                    input=input,
                                                    output_split_sizes=output_split_sizes,
@@ -307,23 +306,23 @@ class TorchBackend(Backend):
                                                    async_op=async_op)
 
     def send(self, tensor, dst, group=None, tag=0):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.send(tensor=tensor, dst=dst, group=group, tag=tag)
 
     def recv(self, tensor, src=None, group=None, tag=0):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.recv(tensor=tensor, src=src, group=group, tag=tag)
 
     def isend(self, tensor, dst, group=None, tag=0):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.isend(tensor=tensor, dst=dst, group=group, tag=tag)
 
     def irecv(self, tensor, src=None, group=None, tag=0):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.irecv(tensor=tensor, src=src, group=group, tag=tag)
 
     def gather(self, tensor, gather_list=None, dst=0, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.gather(tensor=tensor,
                                         gather_list=gather_list,
                                         dst=dst,
@@ -331,7 +330,7 @@ class TorchBackend(Backend):
                                         async_op=async_op)
 
     def scatter(self, tensor, scatter_list=None, src=0, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.scatter(tensor=tensor,
                                          scatter_list=scatter_list,
                                          src=src,
@@ -340,53 +339,53 @@ class TorchBackend(Backend):
 
     def barrier(self, group=torch.distributed.GroupMember.WORLD, async_op=False, device_ids=None):
         if group is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             group = torch.distributed.GroupMember.WORLD
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.barrier(group=group, async_op=async_op, device_ids=device_ids)
 
     def monitored_barrier(self, group=torch.distributed.GroupMember.WORLD, timeout=None, wait_all_ranks=False):
         if group is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             group = torch.distributed.GroupMember.WORLD
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.monitored_barrier(group=group, timeout=timeout, wait_all_ranks=wait_all_ranks)
 
     def get_rank(self, group=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return torch.distributed.get_rank(group=group)
 
     def get_world_size(self, group=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return torch.distributed.get_world_size(group=group)
 
     def is_initialized(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return torch.distributed.is_initialized()
 
     def get_backend(self, group=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return torch.distributed.get_backend(group=group)
 
     def new_group(self, ranks):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.new_group(ranks)
 
     def get_global_rank(self, group, group_rank):
         if hasattr(torch.distributed.distributed_c10d, "get_global_rank"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            # gd.debuginfo(prj="ds")
             from torch.distributed.distributed_c10d import get_global_rank as _get_global_rank
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            # gd.debuginfo(prj="ds")
             from torch.distributed.distributed_c10d import _get_global_rank
         return _get_global_rank(group, group_rank)
 
     def get_world_group(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # gd.debuginfo(prj="ds")
         return torch.distributed.group.WORLD
 
     def destroy_process_group(self, group=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return torch.distributed.destroy_process_group(group=group)
 
     def _reduce_op(self, op):

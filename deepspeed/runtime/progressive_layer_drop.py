@@ -18,7 +18,7 @@ class ProgressiveLayerDrop(object):
     """
 
     def __init__(self, theta=0.5, gamma=0.001):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__()
 
         self.theta = theta
@@ -27,16 +27,16 @@ class ProgressiveLayerDrop(object):
         log_dist(f'Enabled progressive layer dropping (theta = {self.theta})', ranks=[0])
 
     def get_state(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         kwargs = {'progressive_layer_drop': True, 'pld_theta': self.get_theta()}
         return kwargs
 
     def get_theta(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.current_theta
 
     def update_state(self, global_step):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         def _prob(x, gamma, p):
             return (1. - p) * np.exp(-gamma * x) + p

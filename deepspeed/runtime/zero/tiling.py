@@ -18,7 +18,7 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
         contiguous_split_chunks: If True, make each chunk contiguous
                                  in memory.
     """
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     # Get the size and dimension.
     last_dim = tensor.dim() - 1
 
@@ -26,7 +26,7 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
     tensor_list = torch.split(tensor, partitions, dim=last_dim)
     # Note: torch.split does not create contiguous tensors by default.
     if contiguous_split_chunks:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return tuple(chunk.contiguous() for chunk in tensor_list)
 
     return tensor_list
@@ -45,7 +45,7 @@ class TiledLinear(torch.nn.Module):
                  linear_cls=torch.nn.Linear,
                  init_linear=None,
                  **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         """A replacement for ``torch.nn.Linear`` that works with ZeRO-3 to reduce
         memory requirements via tiling.
 
@@ -126,22 +126,22 @@ class TiledLinear(torch.nn.Module):
 
         # Optionally initialize with a known tensor
         if init_linear is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.copy_params_from(init_linear)
 
     def forward(self, input_):
         if self.in_splits > 1 and not self.input_is_already_split:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             input_parts = partition(input_.shape[-1], self.in_splits)
             split_sizes = [input_parts[p + 1] - input_parts[p] for p in range(self.in_splits)]
             inputs = self._split_global_input(input_, split_sizes)
         elif self.in_splits > 1:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             inputs = input_
             assert len(
                 inputs) == self.in_splits, f"Col splits {self.in_splits} does not match input splits {len(inputs)}"
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             # no splits
             inputs = [input_]
 
@@ -156,7 +156,7 @@ class TiledLinear(torch.nn.Module):
                                                             new_out=local_output)
 
         if self.combine_out_splits:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self._combine_output_splits(outputs)
 
         return outputs
@@ -173,7 +173,7 @@ class TiledLinear(torch.nn.Module):
         Returns:
             List[Any]: A list of the chunks of ``input``.
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return split_tensor_along_last_dim(input, split_sizes)
 
     def _reduce_local_output(self, in_id, out_id, current_out, new_out):
@@ -195,12 +195,12 @@ class TiledLinear(torch.nn.Module):
         """
 
         if current_out is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             #this clone is necessary to preserve auto grad
             #there is some issue with inplace update for outputs that are views
             return new_out.clone()
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return current_out + new_out
 
     def _combine_output_splits(self, outputs):
@@ -212,7 +212,7 @@ class TiledLinear(torch.nn.Module):
         Returns:
             Any: The combined outputs.
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         assert len(outputs) == self.out_splits
         return torch.cat(outputs, dim=-1)
 
@@ -244,12 +244,12 @@ class TiledLinear(torch.nn.Module):
         assert hasattr(other, 'weight')
         assert other.weight.size() == (self.out_features, self.in_features)
         if self.use_bias:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             assert hasattr(other, 'bias')
             assert other.bias is not None
             assert other.bias.size() == (self.out_features, )
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             assert other.bias is None
 
         for row in range(self.out_splits):
@@ -278,10 +278,10 @@ class TiledLinearReturnBias(TiledLinear):
     def _reduce_local_output(self, in_id, out_id, current_out, new_out):
         """Reduces output tensors, but not the returned bias. """
         if current_out is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             old_tensor, old_bias = current_out
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             old_tensor, old_bias = None, None
 
         assert isinstance(new_out, tuple)
@@ -293,7 +293,7 @@ class TiledLinearReturnBias(TiledLinear):
         tensor = super()._reduce_local_output(in_id=in_id, out_id=out_id, current_out=old_tensor, new_out=tensor)
 
         if bias is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             bias = old_bias
 
         return tensor, bias
@@ -306,10 +306,10 @@ class TiledLinearReturnBias(TiledLinear):
         # stack biases if applicable
         biases = [o[1] for o in outputs if o[1] is not None]
         if len(biases) > 0:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             bias = super()._combine_output_splits(biases)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             bias = None
 
         return tensor, bias

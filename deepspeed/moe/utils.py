@@ -9,7 +9,7 @@ from .layer import MoE
 from pydebug import gd, infoTensor
 
 def has_moe_layers(m):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     has_moe = False
     num_experts = 0
 
@@ -22,16 +22,16 @@ def has_moe_layers(m):
 
 
 def is_moe_param(param: torch.Tensor) -> bool:
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     if hasattr(param, "allreduce") and not param.allreduce:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return True
     return False
 
 
 def split_params_into_shared_and_expert_params(
         params: List[torch.nn.Parameter]) -> Tuple[torch.nn.Parameter, torch.nn.Parameter]:
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     shared_params, expert_params = [], []
     for p in params:
         if is_moe_param(p):
@@ -55,7 +55,7 @@ def split_params_grads_into_shared_and_expert_params(
         Tuple[List[torch.nn.Parameter], List[torch.nn.Parameter]]:
         list of gradients for non MoE params, list of gradients of MoE params
     """
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     expert_grads = []
     shared_grads = []
     for p in group:
@@ -80,10 +80,10 @@ def split_params_into_different_moe_groups_for_optimizer(param_groups: Tuple[Dic
         list of MoE/non-MoE groups for optimizer
     """
     if isinstance(param_groups, tuple):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         param_groups = list(param_groups)  # Tuple cannot be modified
     elif isinstance(param_groups, dict):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         param_groups = [param_groups]
     elif not isinstance(param_groups, list):
         raise ValueError(f"Unknown param group type of {type(param_groups)}")
@@ -122,7 +122,7 @@ def split_params_into_different_moe_groups_for_optimizer(param_groups: Tuple[Dic
 
     # Flatten the moe groups
     if max_group_size is not None:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for k, v in group_moe.items():
             for k1, v1 in v.items():
                 cur_group = []
@@ -146,7 +146,7 @@ def split_params_into_different_moe_groups_for_optimizer(param_groups: Tuple[Dic
                     new_dict['params'] = group
                     param_groups.append(new_dict)
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for k, v in group_moe.items():
             for k1, v1 in v.items():
                 param_groups.append(v1)

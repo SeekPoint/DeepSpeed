@@ -21,7 +21,7 @@ class Eigenvalue(object):
                  layer_name='',
                  layer_num=0):
         super().__init__()
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         self.verbose = verbose
         self.max_iter = max_iter
@@ -40,14 +40,14 @@ class Eigenvalue(object):
     # Replace all nan/pos-inf/neg-inf to zero
     # TODO: Pytorch new version may add this function, replace this one by then.
     def nan_to_num(self, x):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         device = x.device
         x = x.cpu().numpy()
         x = np.nan_to_num(x=x, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
         return torch.from_numpy(x).to(device)
 
     def normalize(self, v):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         norm_squared = self.inner_product(v, v)
         norm = norm_squared**0.5 + self.stability
         normalized_vectors = [vector / norm for vector in v]
@@ -55,11 +55,11 @@ class Eigenvalue(object):
         return normalized_vectors
 
     def inner_product(self, xs, ys):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return sum([torch.sum(x * y) for (x, y) in zip(xs, ys)])
 
     def get_layers(self, module):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         scope_names = self.layer_name.split('.')
         assert len(scope_names) > 0
 
@@ -71,7 +71,7 @@ class Eigenvalue(object):
         return m
 
     def compute_eigenvalue(self, module, device=None, scale=1.0):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         block_eigenvalue = []
         param_keys = []
         layers = self.get_layers(module)
@@ -152,6 +152,6 @@ class Eigenvalue(object):
     # 1. Map all eigenvalues to [0, 1.0].
     # 2. Some layers can't generate valid eigenvalues on fp16 precision, use 1.0 instead.
     def post_process(self, value_list):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         max_value = abs(max(value_list, key=abs))
         return [abs(v) / max_value if v != 0.0 else 1.0 for v in value_list]

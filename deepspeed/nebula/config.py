@@ -20,16 +20,16 @@ class DeepSpeedNebulaConfig(DeepSpeedConfigObject):
         self.enable_nebula_load = None
 
         if NEBULA in param_dict.keys():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             nebula_dict = param_dict[NEBULA]
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             nebula_dict = {}
 
         self._initialize(nebula_dict)
 
     def _initialize(self, nebula_dict):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.enabled = get_scalar_param(nebula_dict, NEBULA_ENABLED, NEBULA_ENABLED_DEFAULT)
 
         self.load_path = get_scalar_param(nebula_dict, NEBULA_LOAD_PATH, NEBULA_LOAD_PATH_DEFAULT)

@@ -15,7 +15,7 @@ from pydebug import gd, infoTensor
 class DS_MegatronGPTMoEContainer(MegatronContainer, BaseTransformerMoEContainer):
 
     def __init__(self, policy, config, model_config, layer_id):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(policy, config, model_config, layer_id)
 
         # All model specific things should be defined here instead of the base class.
@@ -39,29 +39,29 @@ class MegatronMoELayerPolicy(MegatronLayerPolicy):
     version = 0
     moe_type = 'standard'
     num_experts = 1
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
 
     def __init__(self, client_module, inference=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(inference)
         self.client_module = client_module
         # we use megatron version to differentiate between the old and new
         # megatron-lm source code
         if MegatronMoELayerPolicy._orig_layer_class is None:
             if pkg_version.parse(torch.__version__) <= pkg_version.parse("1.2"):
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 MegatronMoELayerPolicy._orig_layer_class = None
             else:
                 try:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     from megatron.model.transformer import ParallelTransformerLayer
                     MegatronMoELayerPolicy._orig_layer_class = ParallelTransformerLayer
                 except ImportError:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     MegatronMoELayerPolicy._orig_layer_class = None
 
     def get_num_experts(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.num_experts
 
     def mlp(self, moe_type='standard', enable_training=False):
@@ -77,13 +77,13 @@ class MegatronMoELayerPolicy(MegatronLayerPolicy):
         self.num_experts = num_experts
 
         if moe_type == 'standard':
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return [moe_experts[i].dense_h_to_4h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_h_to_4h.bias for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.bias for i in range(num_experts)]
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return [moe_experts[i].dense_h_to_4h.weight for i in range(num_experts)], \
                     [moe_experts[i].dense_h_to_4h.bias for i in range(num_experts)], \
                     [moe_experts[i].dense_4h_to_h.weight for i in range(num_experts)], \

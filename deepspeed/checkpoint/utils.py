@@ -9,7 +9,7 @@ from .constants import (MODEL_FILE_PREFIX, MODEL_FILE_SUFFIX, OPTIM_FILE_SUFFIX,
 
 from pydebug import gd, infoTensor
 def get_model_ckpt_name_for_rank(base_folder, mp_rank_str):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     ckpt_name = os.path.join(
         base_folder,
         MODEL_FILE_PREFIX + mp_rank_str + MODEL_FILE_SUFFIX,
@@ -18,7 +18,7 @@ def get_model_ckpt_name_for_rank(base_folder, mp_rank_str):
 
 
 def get_zero_ckpt_name_for_rank(base_folder, dp_rank, mp_rank):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     zero_prefix = f'{ZERO_FILE_PREFIX}{dp_rank}'
     mp_rank_string = f'_{MODEL_FILE_PREFIX}{mp_rank:02d}'
     zero_ckpt_name = os.path.join(
@@ -29,7 +29,7 @@ def get_zero_ckpt_name_for_rank(base_folder, dp_rank, mp_rank):
 
 
 def get_layer_ckpt_name_for_rank(base_folder, layer_id, tp_rank):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     ckpt_file = f'{layer_id}-model_{tp_rank:02d}{MODEL_FILE_SUFFIX}'
     ckpt_path = os.path.join(base_folder, ckpt_file)
     return ckpt_path
@@ -53,7 +53,7 @@ def clone_tensors_for_torch_save(item, device=torch.device('cpu')):
     Returns:
         - copy of ``item`` with cloned tensors on target device
     """
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     if torch.is_tensor(item):
         return item.detach().clone().to(device)
     elif isinstance(item, list):

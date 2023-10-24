@@ -23,7 +23,7 @@ from deepspeed.ops import op_builder
 from pydebug import gd, infoTensor
 
 def _torch_reduce_scatter_fn(input_tensor: Tensor, output_tensor: Tensor, group=None, async_op=False, prof=False):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     return instrument_w_nvtx(dist.reduce_scatter_fn)(output_tensor, input_tensor, group=group, async_op=False)
 
 
@@ -37,12 +37,12 @@ quantizer_module = None
 @instrument_w_nvtx
 @torch.no_grad()
 def all_to_all_quant_reduce(tensors: List[Tensor], groups: {}) -> List[Tensor]:
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     # quantizer_module是一个全局的量化模块对象，主要用于执行量化和反量化的操作。
     global quantizer_module
     # 如果量化模块未初始化，则使用QuantizerBuilder对象加载一个量化模块。
     if quantizer_module is None:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         quantizer_module = op_builder.QuantizerBuilder().load()
     # 获取当前节点（服务器）的设备数量。
     local_world_size = get_accelerator().device_count()
@@ -129,12 +129,12 @@ def reduce_scatter_coalesced(
     padded_partition_sz_for_each_tensor = tuple(math.ceil(t.numel() / world_sz) for t in tensors)
 
     if len(tensors) == 1 and tensors[0].numel() % world_sz == 0:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # if there's only one tensor being reduced and we don't need to pad
         # we have an opportunity to avoid a memory allocation
         tensor_partition_flat_buffer = tensors[0].view(-1)
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # interleave tensor partitions such that the correct reduced partitions of each tensor
         # end up at each rank
         tensor_partitions_lst_with_padding = []

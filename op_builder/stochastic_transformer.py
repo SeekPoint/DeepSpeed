@@ -11,15 +11,15 @@ class StochasticTransformerBuilder(TransformerBuilder):
     NAME = "stochastic_transformer"
 
     def __init__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return f'deepspeed.ops.transformer.{self.NAME}_op'
 
     def nvcc_args(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         args = super().nvcc_args()
         args.append('-D__STOCHASTIC_MODE__')
         gd.debuginfo(prj='ds', info=' args: ' + str(args))

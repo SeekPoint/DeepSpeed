@@ -23,7 +23,7 @@ class Quantizer(object):
                  q_eigenvalue=False,
                  use_quantizer_kernel=False,
                  layer_num=0):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.q_groups = q_groups
         self.q_mixed_fp16 = q_mixed_fp16
         self.q_change_ratio = q_change_ratio
@@ -37,10 +37,10 @@ class Quantizer(object):
         self.layer_num = layer_num
 
     def any_precision_switch(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # Temporary disabled functionality
         if self.layer_num == 0:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return True
         result = False
         for index in range(self.layer_num):
@@ -51,7 +51,7 @@ class Quantizer(object):
         return result
 
     def quantize(self, parameter_group, overflow, eigenvalue_enabled, block_eigenvalue={}):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         if overflow and not eigenvalue_enabled:
             return
@@ -76,7 +76,7 @@ class Quantizer(object):
                         p.data = self.compute_quantization(p, layer_id)
 
     def step(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.qsteps += 1
 
     def quantize_highbit(self, inputs, num_bits):
@@ -88,19 +88,19 @@ class Quantizer(object):
 
         # Random number generator (Uniform)
         if self.q_rounding == 'nearest':
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             p = 0.
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             p = input_flat.new(input_flat.shape).uniform_(-0.5, 0.5)
 
         if self.q_type == 'symmetric':
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             scale = 2 * torch.max(torch.abs(g_min), torch.abs(g_max)) / q_range
             zero_point = 0.
             input_flat = (input_flat / scale + p).round().clamp(-(q_range >> 1), (q_range >> 1) - 1) * scale
         elif self.q_type == 'asymmetric':
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             scale = (g_max - g_min) / q_range
             zero_point = (g_min / scale).round() * scale
             input_flat = ((input_flat - zero_point) / scale + p).round().clamp(0, (q_range - 1)) * scale + zero_point
@@ -108,7 +108,7 @@ class Quantizer(object):
         return output
 
     def quantize_tenary(self, inputs):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         input_flat = inputs.reshape(self.q_groups, -1)
         n = input_flat.shape[1]
         m = input_flat.norm(p=1, dim=1).div(n)
@@ -122,7 +122,7 @@ class Quantizer(object):
         return output
 
     def quantize_binary(self, inputs):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         input_flat = inputs.reshape(self.q_groups, -1)
         n = input_flat.shape[1]
         m = input_flat.norm(p=1, dim=1, keepdim=True).div(n)
@@ -131,14 +131,14 @@ class Quantizer(object):
         return output
 
     def mixed_fp16_quantize(self, input, input_q, index):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if self.q_mixed_fp16 and self.q_start_bits[index] >= (self.q_target_bits - 1):
             input_q = input * self.quantize_real_ratio + (1 - self.quantize_real_ratio) * input_q
             return input_q
         return input_q
 
     def compute_quantization(self, input, index=0, factor=1):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # fixing the quantization bits based on the training steps
         # when reducing 1 bit at each period, we increase the period
         # to go slowly toward the target quantization bits
@@ -158,7 +158,7 @@ class Quantizer(object):
             'Quantization bit is lower than target precision bits!'
 
         if self.use_quantizer_kernel:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if input.start_bits <= 2:
                 raise ValueError('Quantization bit is too low, please do it without quantization kernel!')
             input_q = ds_quantizer(input.data.clone(),
@@ -168,35 +168,35 @@ class Quantizer(object):
                                    sr=False if self.q_rounding == 'nearest_neighbor' else True)
         else:
             if input.start_bits >= 3:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 input_flat = self.quantize_highbit(input.data, input.start_bits)
             elif input.start_bits == 2:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 assert self.q_type == 'symmetric', 'Quantization type is not symmetric!'
                 assert self.q_rounding == 'nearest', 'Quantization rounding is not nearest_neighbor!'
                 input_flat = self.quantize_tenary(input.data)
             elif input.start_bits == 1:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 assert self.q_type == 'symmetric', 'Quantization type is not symmetric!'
                 assert self.q_rounding == 'nearest', 'Quantization rounding is not nearest_neighbor!'
                 input_flat = self.quantize_binary(input.data)
         if self.use_quantizer_kernel:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.mixed_fp16_quantize(input.data, input_q, index)
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if self.q_mixed_fp16 and input.start_bits >= input.target_bits - 1:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 input_flat = self.quantize_real_ratio * input.data + \
                               (1 - self.quantize_real_ratio) * input_flat
             return input_flat
 
     def update_fp16_ratio(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if self.q_mixed_fp16:
             if self.quantize_real_ratio > 0:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.quantize_real_ratio -= self.q_change_ratio
             else:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.quantize_real_ratio = 0.000

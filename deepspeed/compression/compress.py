@@ -19,10 +19,10 @@ from pydebug import gd, infoTensor
 
 def check_deepspeed_config(config):
     if isinstance(config, dict):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return config
     elif os.path.exists(config):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return json.load(open(config, "r"), object_pairs_hook=dict_raise_error_on_duplicate_keys)
     else:
         raise ValueError(
@@ -33,7 +33,7 @@ def get_module_name(group_name, model, key_word, exist_module_name, mpu=None, ve
     '''
     get the associated module name from the model based on the key_word provided by users
     '''
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     return_module_name = []
     for name, module in model.named_modules():
 
@@ -52,7 +52,7 @@ def get_module_name(group_name, model, key_word, exist_module_name, mpu=None, ve
 
 def get_compress_methods(model, compress_methods, mpu=None):
     # extract the compression module for each method in compress_methods
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     layer_added_compress_methods = []
     for method, method_content in compress_methods.items():
         if LAYER_REDUCTION in method:
@@ -114,10 +114,10 @@ def init_compression(model, deepspeed_config, teacher_model=None, mpu=None):
     """
     compress_methods = get_compression_config(check_deepspeed_config(deepspeed_config))
     if hasattr(model, 'module'):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model.module
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model
 
     # For layer reduction
@@ -164,10 +164,10 @@ def redundancy_clean(model, deepspeed_config, mpu=None):
     """
     compress_methods = get_compression_config(check_deepspeed_config(deepspeed_config))
     if hasattr(model, 'module'):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model.module
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model
 
     layer_added_compress_methods_tmp = get_compress_methods(c_model, compress_methods, mpu=mpu)
@@ -208,7 +208,7 @@ def student_initialization(student_model, teacher_model, deepspeed_config):
         deepspeed_config (`DeepSpeedConfig`)
             The path of ds_config
     '''
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     config = get_compression_config(check_deepspeed_config(deepspeed_config))
     compress_methods = config[LAYER_REDUCTION]
 

@@ -11,7 +11,7 @@ class NotImplementedBuilder(CPUOpBuilder):
     NAME = "deepspeed_not_implemented"
 
     def __init__(self, name=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         name = self.NAME if name is None else name
         super().__init__(name=name)
 

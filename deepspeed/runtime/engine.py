@@ -151,7 +151,7 @@ class EngineTimers(object):
     r"""Wallclock timers for DeepSpeedEngine"""
 
     def __init__(self, enable_micro_timers, enable_global_timers):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         self.forward_timers = []
         self.backward_timers = []
         self.backward_inner_timers = []
@@ -203,6 +203,8 @@ class DeepSpeedEngine(Module):
         config_class=None,
         dont_change_device=False,
     ):
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+
         super(DeepSpeedEngine, self).__init__()
         self.dont_change_device = dont_change_device
         self.client_optimizer = optimizer

@@ -13,23 +13,24 @@ class FusedAdamBuilder(CUDAOpBuilder):
     NAME = "fused_adam"
 
     def __init__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__, level = 2)
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info = f'abs name is: deepspeed.ops.adam.{self.NAME}_op', level = 2)
         return f'deepspeed.ops.adam.{self.NAME}_op'
 
     def sources(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=f"source files: 'csrc/adam/fused_adam_frontend.cpp,\
+                                                      'csrc/adam/multi_tensor_adam.cu", level = 2)
         return ['csrc/adam/fused_adam_frontend.cpp', 'csrc/adam/multi_tensor_adam.cu']
 
     def include_paths(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return ['csrc/includes', 'csrc/adam']
 
     def cxx_args(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         args = super().cxx_args()
         return args + self.version_dependent_macros()
 

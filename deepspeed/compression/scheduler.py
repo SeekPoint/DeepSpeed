@@ -15,7 +15,7 @@ class compression_scheduler():
     '''
 
     def __init__(self, model, compression_config):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         self.model = model
         self.compression_config = compression_config
         self.make_init()
@@ -32,7 +32,7 @@ class compression_scheduler():
         }
 
     def make_init(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.different_compression_methods = {}
         for method, method_content in self.compression_config.items():
             if LAYER_REDUCTION in method:
@@ -65,13 +65,13 @@ class compression_scheduler():
         # check weight quantization
         wq = self.different_compression_methods[WEIGHT_QUANTIZATION]
         if not wq[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = wq[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in wq[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -86,13 +86,13 @@ class compression_scheduler():
         # check activation quantization
         aq = self.different_compression_methods[ACTIVATION_QUANTIZATION]
         if not aq[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = aq[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in aq[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -105,14 +105,14 @@ class compression_scheduler():
         # check sparse pruning
         sp = self.different_compression_methods[SPARSE_PRUNING]
         if not sp[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = sp[SHARED_PARAMETERS]
             if shared_parameters[TECHNIQUE_SCHEDULE_OFFSET] <= self.training_steps <= shared_parameters[
                     TECHNIQUE_SCHEDULE_OFFSET_END]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in sp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -125,13 +125,13 @@ class compression_scheduler():
         # check head pruning
         hp = self.different_compression_methods[HEAD_PRUNING]
         if not hp[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = hp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in hp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -144,13 +144,13 @@ class compression_scheduler():
         # check row pruning
         rp = self.different_compression_methods[ROW_PRUNING]
         if not rp[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = rp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in rp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -163,13 +163,13 @@ class compression_scheduler():
         # check channel pruning
         cp = self.different_compression_methods[CHANNEL_PRUNING]
         if not cp[TECHNIQUE_ENABLED]:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             shared_parameters = cp[SHARED_PARAMETERS]
             if self.training_steps >= shared_parameters[TECHNIQUE_SCHEDULE_OFFSET]:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for group_name, module_name_list, method_parameters in cp[DIFFERENT_GROUPS]:
                     for module_name in module_name_list:
                         module = recursive_getattr(self.model, module_name)
@@ -179,7 +179,7 @@ class compression_scheduler():
                     self.verbose[CHANNEL_PRUNING] = True
 
     def check_all_modules(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # check all different compression methods we have
         self.check_weight_quantization()
         self.check_activation_quantization()
@@ -189,8 +189,8 @@ class compression_scheduler():
         self.check_channel_pruning()
 
     def step(self, step_zero_check=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if not step_zero_check:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.training_steps += 1
         self.check_all_modules()

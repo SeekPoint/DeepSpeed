@@ -40,7 +40,7 @@ def builder_closure(member_name):
 
         return _builder
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # during runtime, return op builder class directly
         from deepspeed.accelerator import get_accelerator
         builder = get_accelerator().get_op_builder(member_name)

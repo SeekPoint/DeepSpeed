@@ -23,13 +23,13 @@ from pydebug import gd, infoTensor
 class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
 
     def create_module(self, config=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         _config = config if config is not None else self.ds_model_config
 
         _config.rotate_half = True
@@ -43,7 +43,7 @@ class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTr
         """
         Necessary to implement for `HybridEngineContainer`
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.lora_params = [
             maybe_get_lora(p) for p in [
                 self.policy.client_module.mlp.up_proj.weight, self.policy.client_module.mlp.gate_proj.weight,
@@ -54,7 +54,7 @@ class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTr
         ]
 
     def get_lora_matched_pair(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         up_proj_lora, gate_proj_lora, down_proj_lora, q_lora, k_lora, v_lora, out_lora = self.get_lora_params()
         ret = [(up_proj_lora, self.inter_up_w), (gate_proj_lora, self.inter_gate_w), (down_proj_lora, self._4hh_w),
                (out_lora, self.dense_w), (q_lora, self.qw), (k_lora, self.kw), (v_lora, self.vw)]
@@ -64,7 +64,7 @@ class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTr
         """
         Necessary to implement for `HybridSplitQKVContainer`
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.qw = self.policy.client_module.self_attn.q_proj.weight
         self.qb = None
         self.kw = self.policy.client_module.self_attn.k_proj.weight
@@ -76,14 +76,14 @@ class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTr
         """
         Necessary to implement for `HybridGatedMLPContainer`
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.inter_up_w = self.policy.client_module.mlp.up_proj.weight
         self.inter_up_b = None
         self.inter_gate_w = self.policy.client_module.mlp.gate_proj.weight
         self.inter_gate_b = None
 
     def load_params(self, module, sd, weight_quantizer, mp_replace, prefix):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         param_names = (
             'self_attn.q_proj.weight', \
             'self_attn.k_proj.weight', \
@@ -116,7 +116,7 @@ class DS_LLAMAContainer(HybridGatedMLPContainer, HybridSplitQKVContainer, BaseTr
 class LLAMALayerPolicy(TransformerPolicy):
 
     def __init__(self, client_module, inference=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(
             inference,
             mlp_act_func_type=ActivationFuncType.GATED_SILU,
@@ -124,22 +124,22 @@ class LLAMALayerPolicy(TransformerPolicy):
         )
         self.client_module = client_module
         try:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             import transformers
             LLAMALayerPolicy._orig_layer_class = transformers.models.llama.modeling_llama.LlamaDecoderLayer  # type: ignore
         except:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             LLAMALayerPolicy._orig_layer_class = None
 
     def get_hidden_heads(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.client_module.self_attn.q_proj.weight.shape[1], \
                 self.client_module.self_attn.num_heads, \
                 self.client_module.input_layernorm.variance_epsilon, \
                 self.client_module.mlp.gate_proj.weight.shape[0]
 
     def attention(self, enable_training=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         qw = self.client_module.self_attn.q_proj.weight
         kw = self.client_module.self_attn.k_proj.weight
         vw = self.client_module.self_attn.v_proj.weight
@@ -152,7 +152,7 @@ class LLAMALayerPolicy(TransformerPolicy):
                 None
 
     def mlp(self, enable_training=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         mlp1_up = self.client_module.mlp.up_proj.weight
         mlp1_gate = self.client_module.mlp.gate_proj.weight
         mlp2 = self.client_module.mlp.down_proj.weight
@@ -162,7 +162,7 @@ class LLAMALayerPolicy(TransformerPolicy):
         return mlp1, None, mlp2, None
 
     def layernorm(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.client_module.post_attention_layernorm.weight, \
                None, \
                self.client_module.input_layernorm.weight, \

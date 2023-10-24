@@ -10,10 +10,10 @@ from pydebug import gd, infoTensor
 
 def convert_to_random_ltd(model, convert_type):
     if hasattr(model, 'module'):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model.module
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model
 
     for name, module in c_model.named_modules():
@@ -29,10 +29,10 @@ def convert_to_random_ltd(model, convert_type):
 
 def save_without_random_ltd(model):
     if hasattr(model, 'module'):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model.module
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         c_model = model
 
     model_dic = c_model.state_dict()
@@ -40,7 +40,7 @@ def save_without_random_ltd(model):
 
 
 def remove_random_ltd_state_dict(state_dict):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     new_state_dict = OrderedDict()
     for key, value in state_dict.items():
         if '.random_ltd_layer' in key:

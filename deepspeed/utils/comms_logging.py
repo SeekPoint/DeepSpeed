@@ -6,7 +6,6 @@
 import math
 from deepspeed.utils import log_dist
 from pydebug import gd, infoTensor
-gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 
 def get_caller_func(frame=3):
     import sys
@@ -16,7 +15,7 @@ def get_caller_func(frame=3):
 def print_rank_0(message):
     import deepspeed.comm as dist
     if dist.get_rank() == 0:
-        print(message)
+        gd.debuginfo(prj='ds', info=message, level=2)
 
 
 # Helper function to pretty-print message sizes
@@ -70,7 +69,7 @@ def calc_bw_log(comm_op, size, duration):
 class CommsLogger:
 
     def __init__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.comm.constants import COMMS_LOGGER_VERBOSE_DEFAULT, COMMS_LOGGER_DEBUG_DEFAULT, COMMS_LOGGER_PROF_OPS_DEFAULT, COMMS_LOGGER_PROF_ALL_DEFAULT, COMMS_LOGGER_ENABLED_DEFAULT
         self.comms_dict = {}
         self.verbose = COMMS_LOGGER_VERBOSE_DEFAULT

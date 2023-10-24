@@ -10,7 +10,7 @@ from pydebug import gd, infoTensor
 class DSUNet(CUDAGraph, torch.nn.Module):
 
     def __init__(self, unet, enable_cuda_graph=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         self.unet = unet
         # SD pipeline accesses this attribute
@@ -24,7 +24,7 @@ class DSUNet(CUDAGraph, torch.nn.Module):
         self.cuda_graph_created = False
 
     def _graph_replay(self, *inputs, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for i in range(len(inputs)):
             if torch.is_tensor(inputs[i]):
                 self.static_inputs[i].copy_(inputs[i])
@@ -37,19 +37,19 @@ class DSUNet(CUDAGraph, torch.nn.Module):
     def forward(self, *inputs, **kwargs):
         if self.enable_cuda_graph:
             if self.cuda_graph_created:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 outputs = self._graph_replay(*inputs, **kwargs)
             else:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self._create_cuda_graph(*inputs, **kwargs)
                 outputs = self._graph_replay(*inputs, **kwargs)
             return outputs
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self._forward(*inputs, **kwargs)
 
     def _create_cuda_graph(self, *inputs, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # warmup to create the workspace and cublas handle
         cuda_stream = torch.cuda.Stream()
         cuda_stream.wait_stream(torch.cuda.current_stream())
@@ -70,12 +70,12 @@ class DSUNet(CUDAGraph, torch.nn.Module):
 
     def _forward(self, sample, timestamp, encoder_hidden_states, return_dict=True, cross_attention_kwargs=None):
         if cross_attention_kwargs:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.unet(sample,
                              timestamp,
                              encoder_hidden_states,
                              return_dict,
                              cross_attention_kwargs=cross_attention_kwargs)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.unet(sample, timestamp, encoder_hidden_states, return_dict)

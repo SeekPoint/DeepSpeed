@@ -15,10 +15,22 @@ from pydebug import gd, infoTensor
 class CPUOpBuilder(OpBuilder):
 
     def builder(self):
-        gd.debuginfo(prj='ds', info='CPUOpBuilder builder')
+
         from torch.utils.cpp_extension import CppExtension as ExtensionBuilder
 
         compile_args = {'cxx': self.strip_empty_entries(self.cxx_args())}
+
+        gd.debuginfo(prj='ds',
+                     info=f'self.absolute_name() = {self.absolute_name()}')
+        gd.debuginfo(prj='ds',
+                     info=f'self.strip_empty_entries(self.sources()) = {self.strip_empty_entries(self.sources())}')
+        gd.debuginfo(prj='ds',
+                     info=f'self.strip_empty_entries(self.include_paths()) = {self.strip_empty_entries(self.include_paths())}')
+        gd.debuginfo(prj='ds',
+                     info=f'self.strip_empty_entries(self.libraries_args()) = {self.strip_empty_entries(self.libraries_args())}')
+        gd.debuginfo(prj='ds', info=f'compile_args = {compile_args}')
+        gd.debuginfo(prj='ds',
+                     info=f'self.strip_empty_entries(self.extra_ldflags()) = {self.strip_empty_entries(self.extra_ldflags())}')
 
         cpp_ext = ExtensionBuilder(name=self.absolute_name(),
                                    sources=self.strip_empty_entries(self.sources()),
@@ -29,9 +41,9 @@ class CPUOpBuilder(OpBuilder):
         return cpp_ext
 
     def cxx_args(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return ['-O3', '-g', '-Wno-reorder']
 
     def libraries_args(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return []

@@ -16,7 +16,7 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
         Internal helper for accepting the head-contiguous weight matrix and chunking
         the query, key, and value components.
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         attention_head_size = x.shape[0] // self.num_attention_heads
         new_x_shape = (self.num_attention_heads, attention_head_size) + x.size()[1:]
         x_1 = x.view(*new_x_shape)
@@ -39,7 +39,7 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
         layout and transform it to the inference layout.
         """
         if hasattr(self.qkvw, 'ds_id'):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             from deepspeed.runtime.zero import GatheredParameters
             from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
             param_list = [self.qkvw, self.qkvb]
@@ -49,7 +49,7 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
                 self._align_qkv(self.qkvw)
                 self._align_qkv(self.qkvb)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self._align_qkv(self.qkvw)
             self._align_qkv(self.qkvb)
 
@@ -63,10 +63,10 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
         new_x_shape = (self.num_attention_heads, attention_head_size) + x.size()[1:]
         q, k, v = [data.view(*new_x_shape) for data in q_k_v]
         if len(q.shape) > 2:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             x.data.copy_(torch.cat((q, k, v), dim=-2).reshape(-1, q.shape[-1]))
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             x.data.copy_(torch.cat((q, k, v), dim=-1).reshape(-1))
 
     def transform_for_training(self):
@@ -79,7 +79,7 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
         """
         # If parameter is distributed, handle gathering it
         if hasattr(self.qkvw, 'ds_id'):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             from deepspeed.runtime.zero import GatheredParameters
             from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
             param_list = [self.qkvw, self.qkvb]
@@ -89,6 +89,6 @@ class HybridMegatronContainer(MegatronContainer, HybridEngineContainer):
                 self._partition_qkv(self.qkvw)
                 self._partition_qkv(self.qkvb)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self._partition_qkv(self.qkvw)
             self._partition_qkv(self.qkvb)

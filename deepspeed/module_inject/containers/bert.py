@@ -13,7 +13,7 @@ from pydebug import gd, infoTensor
 class DS_BERTContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super().__init__(**kwargs)
 
         # All model specific things should be defined here instead of the base class.
@@ -22,7 +22,7 @@ class DS_BERTContainer(BaseTransformerContainer):
         self.use_triton = kwargs['config'].use_triton and deepspeed.HAS_TRITON
 
     def create_module(self, config=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         _config = config if config is not None else self.ds_model_config
         self.module = DeepSpeedBERTInference(_config, mp_group=self.mp_group)
         self.module.config.scale_attention = self.scale_attention
@@ -32,7 +32,7 @@ class DS_BERTContainer(BaseTransformerContainer):
 class HFBertLayerPolicy(TransformerPolicy):
 
     def __init__(self, client_module, inference=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super().__init__(inference, pre_attn_norm=False)
         self.client_module = client_module
         self.cuda_graph_supported = True
@@ -49,10 +49,10 @@ class HFBertLayerPolicy(TransformerPolicy):
 
     def get_hidden_heads(self):
         if self.pre_attn_norm:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             attention_layernorm = self.client_module.PostAttentionLayerNorm
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             attention_layernorm = self.client_module.attention.output.LayerNorm
         return self.client_module.attention.self.query.weight.shape[1], \
                 self.client_module.attention.self.num_attention_heads, \
@@ -60,7 +60,7 @@ class HFBertLayerPolicy(TransformerPolicy):
                 DEFAULT_INTERMEDIATE_SIZE
 
     def attention(self, enable_training=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         qw = self.client_module.attention.self.query.weight
         qb = self.client_module.attention.self.query.bias
         kw = self.client_module.attention.self.key.weight
@@ -78,10 +78,10 @@ class HFBertLayerPolicy(TransformerPolicy):
 
     def mlp(self, enable_training=False):
         if self.pre_attn_norm:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             intermediate_ff = self.client_module.intermediate.dense_act
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             intermediate_ff = self.client_module.intermediate.dense
 
         return intermediate_ff.weight, intermediate_ff.bias, \
@@ -90,11 +90,11 @@ class HFBertLayerPolicy(TransformerPolicy):
 
     def layernorm(self):
         if self.pre_attn_norm:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             attention_layernorm = self.client_module.PostAttentionLayerNorm
             transformer_layernorm = self.client_module.PreAttentionLayerNorm
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             attention_layernorm = self.client_module.attention.output.LayerNorm
             transformer_layernorm = self.client_module.output.LayerNorm
         return attention_layernorm.weight, \

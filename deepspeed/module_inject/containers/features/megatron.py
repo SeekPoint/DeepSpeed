@@ -10,12 +10,12 @@ from pydebug import gd, infoTensor
 class MegatronContainer(ABC):
 
     def __init__(self, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(**kwargs)
         self.megatron_v2 = self.policy.is_megatron_v2
 
     def _align_qkv_transposed(self, x):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         attention_head_size = x.shape[-1] // self.num_attention_heads
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, attention_head_size)
         x_1 = x.view(*new_x_shape)
@@ -27,7 +27,7 @@ class MegatronContainer(ABC):
             return torch.cat((q.reshape(-1), k.reshape(-1), v.reshape(-1)), dim=-1).reshape(x.shape)
 
     def transpose(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().transpose()
         if self.megatron_v2:
             self.qkvw = torch.nn.parameter.Parameter(self._align_qkv_transposed(self.qkvw).contiguous())

@@ -23,7 +23,7 @@ class TritonSelfAttention(nn.Module):
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, qkv_merging=False):
         super(TritonSelfAttention, self).__init__()
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         self.config = config
         data_type = self.config.dtype
         data_type_fp = torch.half if self.config.dtype == torch.int8 else self.config.dtype
@@ -35,7 +35,7 @@ class TritonSelfAttention(nn.Module):
 
         assert config.mp_size == 1, "mp_size has to be 1 with triton attention yet"
         if self.config.set_empty_params:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attn_qw = None
             self.attn_qb = None
             self.attn_kw = None
@@ -47,7 +47,7 @@ class TritonSelfAttention(nn.Module):
             self.attn_ow = None
             self.attn_ob = None
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             qkv_size_per_partition = (self.config.hidden_size // self.config.mp_size) * 3
             self.attn_qkvw = nn.Parameter(torch.empty(self.config.hidden_size,
                                                       qkv_size_per_partition,
@@ -81,11 +81,11 @@ class TritonSelfAttention(nn.Module):
 
         self.norm_factor = math.sqrt(self.config.hidden_size // self.config.heads)
         if not config.use_mup:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.norm_factor = math.sqrt(self.norm_factor)
 
         if self.config.scale_attn_by_inverse_layer_idx is True:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.norm_factor *= math.sqrt(self.config.layer_id + 1)
             # https://github.com/huggingface/transformers/blob/v4.24.0/src/transformers/models/gpt2/modeling_gpt2.py#L191
 
@@ -115,7 +115,7 @@ class TritonSelfAttention(nn.Module):
                          triangular_masking,
                          scale,
                          dtype=torch.float16):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.ops.transformer.inference.triton.matmul_ext import Fp16Matmul, score_4d_matmul, context_4d_matmul
         seqlen = [(min_seqlen + i)
                   for i in range(0, max_seqlen - min_seqlen + Fp16Matmul._cache_stride + 1, Fp16Matmul._cache_stride)]
@@ -127,15 +127,15 @@ class TritonSelfAttention(nn.Module):
         Fp16Matmul._update_autotune_table()
 
     def ds_compute_attention(self, qkv_out, input_mask, layer_past, alibi):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if isinstance(qkv_out, list):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             qkv_out = qkv_out[0]
 
         no_masking = input_mask is None
 
         if no_masking:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             input_mask = torch.empty(1)
 
         attn_key_value = self.score_context_func(
@@ -168,7 +168,7 @@ class TritonSelfAttention(nn.Module):
             use_triton_attention=True):
 
         if not self.config.pre_layer_norm:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             qkv_out = self.linear_func(input=input,
                                        weight=self.attn_qkvw,
                                        bias=self.attn_qkvb,
@@ -178,7 +178,7 @@ class TritonSelfAttention(nn.Module):
                                        num_layers=TritonSelfAttention.num_layers)
             qkv = qkv_out
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             qkv_out = self.qkv_func(input=input,
                                     weight=self.attn_qkvw,
                                     bias=(self.attn_qkvb if self.attn_qkvb is not None else norm_b),
@@ -187,7 +187,7 @@ class TritonSelfAttention(nn.Module):
             qkv = qkv_out[0]
 
         if use_triton_attention and (alibi is None):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             context_layer = compute_attention(qkv=qkv,
                                               input_mask=input_mask,
                                               scale=self.scale,
@@ -199,7 +199,7 @@ class TritonSelfAttention(nn.Module):
                                               triangular=self.triangular_masking)
             key_layer, value_layer = qkv[:, :, self.hidden_size:2 * self.hidden_size], qkv[:, :, 2 * self.hidden_size:]
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             context_layer, key_layer, value_layer = self.ds_compute_attention(qkv_out=qkv_out,
                                                                               input_mask=input_mask,
                                                                               layer_past=layer_past,
@@ -209,7 +209,7 @@ class TritonSelfAttention(nn.Module):
         inp_norm = qkv_out[-1]
 
         if self.config.mlp_after_attn and self.mp_group is not None and dist.get_world_size(group=self.mp_group) > 1:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             dist.all_reduce(output, group=self.mp_group)
 
         return (output, key_layer, value_layer, context_layer, inp_norm)
@@ -230,17 +230,17 @@ def compute_attention(qkv,
                       use_ds_attention=False):
                       
     if isinstance(qkv, list):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         qkv = qkv[0]
 
     #assert layer_past is None, "layer_past not supported in triton yet"
     assert alibi is None, "layer_past not supported in alibi yet"
     output = score_4d_matmul(qkv, head_size, triangular, scale)
     if triangular:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         output = softmax(output)
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         output = softmax(output, input_mask)
     output = context_4d_matmul(output, qkv, head_size)
 

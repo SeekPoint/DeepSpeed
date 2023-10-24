@@ -14,7 +14,7 @@ from pydebug import gd, infoTensor
 class CPU_Accelerator(DeepSpeedAccelerator):
 
     def __init__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self._name = 'cpu'
         self._communication_backend_name = 'ccl'
         self.max_mem = psutil.Process().memory_info().rss
@@ -41,10 +41,10 @@ class CPU_Accelerator(DeepSpeedAccelerator):
     def device_count(self):
         device_count = int(os.environ.get('LOCAL_SIZE', 0))
         if device_count > 0:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return device_count
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             from deepspeed.utils.numa import get_numa_cores
             # Count NUMA node for number of cpu accelerators. On machine with HBM
             # In flat mode, HBM is in separate NUMA node with no cores on this node.
@@ -91,7 +91,7 @@ class CPU_Accelerator(DeepSpeedAccelerator):
         return None
 
     def stream(self, stream):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.runtime.utils import noop_decorator
         return noop_decorator
 
@@ -110,14 +110,14 @@ class CPU_Accelerator(DeepSpeedAccelerator):
         return
 
     def get_rss(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         mem = psutil.Process().memory_info().rss
         if mem > self.max_mem:
             self.max_mem = mem
         return mem
 
     def reset_rss(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         mem = psutil.Process().memory_info().rss
         self.max_mem = mem
         return mem
@@ -225,7 +225,7 @@ class CPU_Accelerator(DeepSpeedAccelerator):
         return tensor
 
     def op_builder_dir(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         try:
             # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
             # if successful this also means we're doing a local install and not JIT compile path
@@ -235,7 +235,7 @@ class CPU_Accelerator(DeepSpeedAccelerator):
             return "deepspeed.ops.op_builder.cpu"
 
     def on_accelerator(self, tensor):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         device_str = str(tensor.device)
         if device_str.startswith('cpu'):
             return True
@@ -244,7 +244,7 @@ class CPU_Accelerator(DeepSpeedAccelerator):
 
     # create an instance of op builder and return, name specified by class_name
     def create_op_builder(self, op_name):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         builder_class = self.get_op_builder(op_name)
         if builder_class != None:
             return builder_class()
@@ -252,7 +252,7 @@ class CPU_Accelerator(DeepSpeedAccelerator):
 
     # return an op builder class, name specified by class_name
     def get_op_builder(self, class_name):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         try:
             # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
             # if successful this also means we're doing a local install and not JIT compile path
@@ -268,6 +268,6 @@ class CPU_Accelerator(DeepSpeedAccelerator):
             return NotImplementedBuilder
 
     def build_extension(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from torch.utils.cpp_extension import BuildExtension
         return BuildExtension

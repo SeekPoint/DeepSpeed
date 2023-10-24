@@ -14,14 +14,14 @@ from pydebug import gd, infoTensor
 class XGBoostCostModel():
 
     def __init__(self, loss_type, num_threads=None, log_interval=25, upper_model=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
 
         assert xgb is not None, "missing requirements, please install deepspeed w. 'autotuning_ml' extra."
 
         self.loss_type = loss_type
 
         if loss_type == "reg":
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.xgb_params = {
                 "max_depth": 3,
                 "gamma": 0.0001,
@@ -33,7 +33,7 @@ class XGBoostCostModel():
                 "objective": "reg:linear",
             }
         elif loss_type == "rank":
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.xgb_params = {
                 "max_depth": 3,
                 "gamma": 0.0001,
@@ -52,7 +52,7 @@ class XGBoostCostModel():
             self.xgb_params["nthread"] = num_threads
 
     def fit(self, xs, ys):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         x_train = np.array(xs, dtype=np.float32)
         y_train = np.array(ys, dtype=np.float32)
         y_max = np.max(y_train)
@@ -64,7 +64,7 @@ class XGBoostCostModel():
         self.bst = xgb.train(self.xgb_params, dtrain)
 
     def predict(self, xs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         features = xgb.DMatrix(xs)
 

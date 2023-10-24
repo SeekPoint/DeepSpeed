@@ -31,7 +31,7 @@ class OnDevice(object):
     _orig_torch_full = torch.full
 
     def __init__(self, dtype, device="meta", enabled=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.dtype = dtype
         self.enabled = enabled
         self.device = device

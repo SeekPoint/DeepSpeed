@@ -17,20 +17,20 @@ class CCLCommBuilder(CPUOpBuilder):
         super().__init__(name=name)
 
     def absolute_name(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return f'deepspeed.ops.comm.{self.NAME}_op'
 
     def sources(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return ['csrc/cpu/comm/ccl.cpp']
 
     def include_paths(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         includes = ['csrc/cpu/includes']
         return includes
 
     def is_compatible(self, verbose=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # TODO: add soft compatibility check for private binary release.
         #  a soft check, as in we know it can be trivially changed.
         return super().is_compatible(verbose)
@@ -43,5 +43,5 @@ class CCLCommBuilder(CPUOpBuilder):
             )
             return []
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return ['-lccl', f'-L{ccl_root_path}/lib']

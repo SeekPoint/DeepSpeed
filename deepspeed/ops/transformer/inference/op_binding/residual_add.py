@@ -13,7 +13,7 @@ from pydebug import gd, infoTensor
 class ResidualAddOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(ResidualAddOp, self).__init__(config)
         try:
             if self.config.dtype in [torch.float16, torch.int8]:
@@ -40,12 +40,12 @@ class ResidualAddOp(BaseOp):
 
         if self.residual_add_func is not None:
             if final_bias is None:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 residual = self._vector_add(residual, hidden_state, 1.0 / self.config.mp_size)
             else:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 if not self.config.pre_layer_norm and residual_add is not None:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     # only use residual add if its set and we are not pre layer norm
                     residual = residual_add
 
@@ -54,14 +54,14 @@ class ResidualAddOp(BaseOp):
                                        self.config.pre_layer_norm)
         else:
             # fallback
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if os.environ.get('DS_KI_FALLBACK') == 'True' and self.config.mlp_after_attn:
                 if self.config.pre_layer_norm:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     tmp = (residual.float() + attention_output.float() + attention_bias.float() +
                            final_bias.float()) / self.config.mp_size + hidden_state.float()
                 else:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     tmp = residual.float() + hidden_state.float() + final_bias.float()
 
                 input_dtype = hidden_state.dtype

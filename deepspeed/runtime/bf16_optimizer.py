@@ -39,7 +39,7 @@ class BF16_Optimizer(ZeROOptimizer):
                  allgather_bucket_size=5000000000,
                  dp_process_group=None,
                  timers=None):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__()
         see_memory_usage('begin bf16_optimizer', force=True)
         self.timers = timers
@@ -86,7 +86,7 @@ class BF16_Optimizer(ZeROOptimizer):
         see_memory_usage('end bf16_optimizer', force=True)
 
     def _setup_for_real_optimizer(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
         self.partition_count = [dp_world_size for i in range(len(self.optimizer.param_groups))]
 
@@ -166,12 +166,12 @@ class BF16_Optimizer(ZeROOptimizer):
         self._param_slice_mappings = self._create_param_mapping()
 
     def _enable_universal_checkpoint(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for lp_param_group in self.bf16_groups:
             enable_universal_checkpoint(param_list=lp_param_group)
 
     def _create_param_mapping(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         param_mapping = []
         for i, _ in enumerate(self.optimizer.param_groups):
             param_mapping_per_group = OrderedDict()
@@ -184,7 +184,7 @@ class BF16_Optimizer(ZeROOptimizer):
         return param_mapping
 
     def _link_all_hp_params(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
         for i, _ in enumerate(self.optimizer.param_groups):
             # Link bf16 and fp32 params in partition
@@ -203,7 +203,7 @@ class BF16_Optimizer(ZeROOptimizer):
                            dp_group=self.real_dp_process_group[i])
 
     def initialize_optimizer_states(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         """Take an optimizer step with zero-valued gradients to allocate internal
         optimizer state.
 
@@ -219,7 +219,7 @@ class BF16_Optimizer(ZeROOptimizer):
         self.clear_hp_grads()
 
     def _split_flat_tensor(self, flat_tensor, num_elem_list):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         assert sum(num_elem_list) <= flat_tensor.numel()
         tensor_list = []
         offset = 0
@@ -231,18 +231,18 @@ class BF16_Optimizer(ZeROOptimizer):
         return tensor_list
 
     def _update_storage_to_flattened_tensor(self, tensor_list, flat_tensor):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         updated_params = self.unflatten(flat_tensor, tensor_list)
         for p, q in zip(tensor_list, updated_params):
             p.data = q.data
 
     def _flatten_dense_tensors_aligned(self, tensor_list, alignment):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.flatten(align_dense_tensors(tensor_list, alignment))
 
     @torch.no_grad()
     def step(self, closure=None):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if closure is not None:
             raise NotImplementedError(f'{self.__class__} does not support closure.')
 
@@ -253,7 +253,7 @@ class BF16_Optimizer(ZeROOptimizer):
 
         assert all_groups_norm > 0.
         if self.clip_grad > 0.:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             clip_tensors_by_global_norm(input_tensors=self.get_grads_for_norm(for_clipping=True),
                                         max_norm=self.clip_grad,
                                         global_norm=all_groups_norm,
@@ -275,17 +275,17 @@ class BF16_Optimizer(ZeROOptimizer):
 
         The low-precision grads are deallocated during this procedure.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.clear_lp_grads()
         loss.backward(**bwd_kwargs)
 
         if update_hp_grads:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.update_hp_grads(clear_lp_grads=clear_lp_grads)
 
     @torch.no_grad()
     def update_hp_grads(self, clear_lp_grads=False):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for i, group in enumerate(self.bf16_groups):
             for j, lp in enumerate(group):
                 if lp.grad is None:
@@ -305,12 +305,12 @@ class BF16_Optimizer(ZeROOptimizer):
 
     @torch.no_grad()
     def get_grads_for_reduction(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.fp32_groups_gradients_flat
 
     @torch.no_grad()
     def get_grads_for_norm(self, for_clipping=False):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         grads = []
         tensor_mp_rank = bwc_tensor_model_parallel_rank(mpu=self.mpu)
         for i, group in enumerate(self.bf16_groups):
@@ -331,7 +331,7 @@ class BF16_Optimizer(ZeROOptimizer):
 
     @torch.no_grad()
     def update_lp_params(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for i, (bf16_partitions,
                 fp32_partition) in enumerate(zip(self.bf16_partitioned_groups, self.fp32_groups_flat_partition)):
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
@@ -346,7 +346,7 @@ class BF16_Optimizer(ZeROOptimizer):
                              allgather_bucket_size=self.allgather_bucket_size)
 
     def clear_hp_grads(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for flat_gradients in self.fp32_groups_gradients_flat:
             flat_gradients.zero_()
 
@@ -354,13 +354,13 @@ class BF16_Optimizer(ZeROOptimizer):
             self.fp32_groups_has_gradients[i] = [False] * len(group)
 
     def clear_lp_grads(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for group in self.bf16_groups:
             for param in group:
                 param.grad = None
 
     def state_dict(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         state_dict = {}
         state_dict[CLIP_GRAD] = self.clip_grad
         state_dict[BASE_OPTIMIZER_STATE] = self.optimizer.state_dict()
@@ -374,14 +374,14 @@ class BF16_Optimizer(ZeROOptimizer):
 
     # Restore base optimizer fp32 weights bfloat16 weights
     def _restore_from_bit16_weights(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for i, group in enumerate(self.bf16_groups):
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
             for bf16_partitions, fp32_partition in zip(self.bf16_partitioned_groups, self.fp32_groups_flat_partition):
                 fp32_partition.data.copy_(bf16_partitions[partition_id].data)
 
     def refresh_fp32_params(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self._restore_from_bit16_weights()
 
     def load_state_dict(self,
@@ -390,14 +390,14 @@ class BF16_Optimizer(ZeROOptimizer):
                         load_optimizer_states=True,
                         load_from_fp32_weights=False):
         if checkpoint_folder:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self._load_universal_checkpoint(checkpoint_folder, load_optimizer_states, load_from_fp32_weights)
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self._load_legacy_checkpoint(state_dict_list, load_optimizer_states, load_from_fp32_weights)
 
     def _load_legacy_checkpoint(self, state_dict_list, load_optimizer_states=True, load_from_fp32_weights=False):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         dp_rank = dist.get_rank(group=self.dp_process_group)
         current_rank_sd = state_dict_list[dp_rank]
@@ -409,32 +409,32 @@ class BF16_Optimizer(ZeROOptimizer):
         self.clip_grad = current_rank_sd.get(CLIP_GRAD, self.clip_grad)
 
         if load_optimizer_states:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.optimizer.load_state_dict(current_rank_sd[BASE_OPTIMIZER_STATE])
 
         if load_from_fp32_weights:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             for current, saved in zip(self.fp32_groups_flat_partition,
                                       current_rank_sd[SINGLE_PARTITION_OF_FP32_GROUPS]):
                 src_tensor = _get_padded_tensor(saved, current.numel())
                 current.data.copy_(src_tensor.data)
 
         if load_optimizer_states:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self._link_all_hp_params()
 
     def _load_universal_checkpoint(self, checkpoint_folder, load_optimizer_states, load_from_fp32_weights):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self._load_hp_checkpoint_state(checkpoint_folder)
 
     @property
     def param_groups(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         """Forward the wrapped optimizer's parameters."""
         return self.optimizer.param_groups
 
     def _load_hp_checkpoint_state(self, checkpoint_dir):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         checkpoint_dir = os.path.join(checkpoint_dir, "zero")
         tp_rank = bwc_tensor_model_parallel_rank(mpu=self.mpu)
         tp_world_size = self.mpu.get_slice_parallel_world_size()
@@ -448,9 +448,9 @@ class BF16_Optimizer(ZeROOptimizer):
 
 
 def _get_padded_tensor(src_tensor, size):
-    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     if src_tensor.numel() >= size:
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return src_tensor
     padded_tensor = torch.zeros(size, dtype=src_tensor.dtype, device=src_tensor.device)
     slice_tensor = torch.narrow(padded_tensor, 0, 0, src_tensor.numel())

@@ -30,14 +30,14 @@ class SparseAttentionUtils:
         """
 
         if hasattr(model, 'bert'):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             original_max_position = model.bert.embeddings.position_embeddings.weight.size(0)
             assert max_position > original_max_position
             extend_multiples = max(1, max_position // original_max_position)
             model.bert.embeddings.position_embeddings.weight.data = model.bert.embeddings.position_embeddings.weight.repeat(
                 extend_multiples, 1)
         elif hasattr(model, 'roberta'):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             # RoBERTa has positions 0 & 1 reserved, so embedding size is max position + 2
             original_max_position, embed_size = model.roberta.embeddings.position_embeddings.weight.shape
             original_max_position -= 2
@@ -72,7 +72,7 @@ class SparseAttentionUtils:
         Return:
             tokenizer: updated tokenizer; in which model maximum length has been extended based on new size
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         tokenizer.model_max_length = max_position
         tokenizer.init_kwargs['model_max_length'] = max_position
@@ -100,12 +100,12 @@ class SparseAttentionUtils:
         """
 
         if hasattr(model, 'bert'):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             model.config.max_position_embeddings = max_position
             model.replace_self_attention_layer_with_sparse_self_attention_layer(model.config, model.bert.encoder.layer,
                                                                                 sparsity_config)
         elif hasattr(model, 'roberta'):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             model.config.max_position_embeddings = max_position + 2
             model.replace_self_attention_layer_with_sparse_self_attention_layer(model.config,
                                                                                 model.roberta.encoder.layer,
@@ -133,7 +133,7 @@ class SparseAttentionUtils:
         Return:
             layers: updated attention layers; in which self attention layers have been replaced with DeepSpeed Sparse Self Attention layer.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         for layer in layers:
             deepspeed_sparse_self_attn = BertSparseSelfAttention(config, sparsity_config)
@@ -173,22 +173,22 @@ class SparseAttentionUtils:
                 position_ids: if position_ids are not none padded position_ids otherwise none.
                 inputs_embeds: if inputs_embeds are not none padded inputs_embeds otherwise none.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         batch_size, seq_len = input_ids.shape if input_ids is not None else inputs_embeds.shape[:-1]
 
         pad_len = (block_size - seq_len % block_size) % block_size
         if pad_len > 0:
             if inputs_embeds is not None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 pad_input_ids = inputs_embeds.new_full((batch_size, pad_len), pad_token_id, dtype=torch.long)
                 pad_inputs_embeds = model_embeddings(pad_input_ids)
                 inputs_embeds = torch.cat([inputs_embeds, pad_inputs_embeds], dim=-2)
             # may not be needed as input_ids are not used if inputs_embeds are given
             if input_ids is not None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 input_ids = F.pad(input_ids, (0, pad_len), value=pad_token_id)
             if position_ids is not None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 # pad position_id with pad_token_id
                 position_ids = F.pad(position_ids, (0, pad_len), value=pad_token_id)
             # pad attention mask without attention on the padding tokens
@@ -211,9 +211,9 @@ class SparseAttentionUtils:
            Return:
                sequence_output: unpaded sequence output of the encoder layer.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         if (pad_len > 0):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             sequence_output = sequence_output[:, :-pad_len]
         return sequence_output

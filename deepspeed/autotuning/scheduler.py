@@ -33,7 +33,7 @@ from pydebug import gd, infoTensor
 class ResourceManager:
 
     def __init__(self, args, hosts, num_gpus_per_node, results_dir, exps_dir, arg_mappings):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.results_dir = results_dir
         self.exps_dir = exps_dir
 
@@ -91,7 +91,7 @@ class ResourceManager:
                     self.experiment_queue.append(exp)
 
     def run_job(self, exp: dict, reservations):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         exp_id = exp["exp_id"]
         exp["master_port"] = self.args.master_port + exp_id
         exp["result_dir"] = os.path.join(self.results_dir, exp['name'])
@@ -114,7 +114,7 @@ class ResourceManager:
         self.running_experiments[exp_id] = (t, exp, reservations, time.time())
 
     def experiment_check(self, pbar):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         finished_exps = []
         for exp_id, exp_data in self.running_experiments.items():
             thread, exp_json, reservations, start_time = exp_data
@@ -136,7 +136,7 @@ class ResourceManager:
         time.sleep(TIMEOUT)
 
     def resource_request(self, exp):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         num_gpus, num_nodes = exp['num_gpus'], exp['num_nodes']
         slot_request = num_gpus
         reservations = []
@@ -163,7 +163,7 @@ class ResourceManager:
         return status[:-1]
 
     def run(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         pbar = tqdm(total=len(self.experiment_queue))
 
         while len(self.experiment_queue) > 0:
@@ -203,7 +203,7 @@ class ResourceManager:
             path (str)
 
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         should_log = not dist.is_initialized()
         ranks = ranks or []
         my_rank = dist.get_rank() if dist.is_initialized() else -1
@@ -226,7 +226,7 @@ class ResourceManager:
         Returns:
             The path to the result folder of the experiment with the optimal configuration.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         max_throughput = sys.float_info.min
         best_exp_id = -1
         for exp_id, (exp, err) in self.finished_experiments.items():
@@ -256,7 +256,7 @@ class ResourceManager:
     def clear(self):
         """Clear experiment queues, does not reset self.experiment_count
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.experiment_queue = []
         # clean up the running experiments
         for exp_id, exp_data in self.running_experiments.items():
@@ -269,33 +269,33 @@ class ResourceManager:
 
 class Node:
     def __init__(self, host, max_slots):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.host = host
         self.max_slots = max_slots
         self.idle_slots = list(range(max_slots))
 
     def reserve_slots(self, slot_request: int) -> list:
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if len(self.idle_slots) >= slot_request:
             return [self.idle_slots.pop(0) for _ in range(slot_request)]
 
     def restore_slots(self, slots: list):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.idle_slots += slots
 
 
 class Reservation:
     def __init__(self, node, slots):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.node = node
         self.slots = slots
 
     def restore_slots(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.node.restore_slots(self.slots)
 
     def desc(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         slots = ",".join(map(str, self.slots))
         return f"{self.node.host}:{slots}@"
 
@@ -304,13 +304,13 @@ def get_job_id():
     # Infrastructure-specific job-id
     infra_job_id = None
     if "DLWS_JOB_ID" in os.environ:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         infra_job_id = os.environ["DLWS_JOB_ID"]
     elif "DLTS_JOB_ID" in os.environ:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         infra_job_id = os.environ["DLTS_JOB_ID"]
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         infra_job_id = "unknown-job-id"
 
     return infra_job_id
@@ -326,7 +326,7 @@ def get_user():
 
 
 def run_experiment(exp: dict, reservations, user_script, user_args):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     include_str = ""
     for reservation in reservations:
         reservation.slots.sort()
@@ -415,7 +415,7 @@ PDSH_MAX_FAN_OUT = 1024
 
 
 def clean_up(exp: dict, reservations):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     env = os.environ.copy()
     env['PDSH_RCMD_TYPE'] = 'ssh'
 

@@ -83,7 +83,8 @@ class FusedAdam(torch.optim.Optimizer):
                  weight_decay=0.,
                  amsgrad=False,
                  set_grad_none=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        # optimizer = AdamOptimizer 入口处
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
 
         if amsgrad:
             raise RuntimeError('FusedAdam does not support the AMSGrad variant.')
@@ -92,6 +93,8 @@ class FusedAdam(torch.optim.Optimizer):
         self.adam_w_mode = 1 if adam_w_mode else 0
         self.set_grad_none = set_grad_none
 
+        # 触发编译过程
+        # 是否重新编译是nvcc编译器决定的，和ds无关！
         fused_adam_cuda = FusedAdamBuilder().load()
         # Skip buffer
         self._dummy_overflow_buf = get_accelerator().IntTensor([0])
@@ -99,12 +102,12 @@ class FusedAdam(torch.optim.Optimizer):
 
     def zero_grad(self):
         if self.set_grad_none:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             for group in self.param_groups:
                 for p in group['params']:
                     p.grad = None
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             super(FusedAdam, self).zero_grad()
 
     def step(self, closure=None, grads=None, output_params=None, scale=None, grad_norms=None, grad_scaler=None):
@@ -116,7 +119,7 @@ class FusedAdam(torch.optim.Optimizer):
 
         The remaining arguments are deprecated, and are only retained (for the moment) for error-checking purposes.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         if any(p is not None for p in [grads, output_params, scale, grad_norms]):
             raise RuntimeError(
                 'FusedAdam has been updated.  Simply initialize it identically to torch.optim.Adam, and call step() with no arguments.'

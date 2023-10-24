@@ -10,7 +10,7 @@ from .constants import (FP32_WEIGHT_KEY, PARAM, VOCAB_DIVISIBILITY_PADDING_TENSO
 from pydebug import gd, infoTensor
 
 def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     hp_mapping = self._hp_mapping
     optim_state_keys = hp_mapping.get_optim_state_keys()
     hp_keys = [FP32_WEIGHT_KEY] + optim_state_keys
@@ -92,6 +92,6 @@ def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
 
 
 def enable_universal_checkpoint(param_list):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     for param in param_list:
         param.load_hp_checkpoint_state = types.MethodType(load_hp_checkpoint_state, param)

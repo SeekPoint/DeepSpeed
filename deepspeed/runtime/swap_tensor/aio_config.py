@@ -16,7 +16,7 @@ AIO_DEFAULT_DICT = {
 
 
 def get_aio_config(param_dict):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     if AIO in param_dict.keys() and param_dict[AIO] is not None:
         aio_dict = param_dict[AIO]
         return {

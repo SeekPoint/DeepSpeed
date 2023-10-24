@@ -41,7 +41,7 @@ def was_interruptted(filename):
 
 
 def find_replace_str(value, replace_dict):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     if not isinstance(value, str):
         return str(value)
 

@@ -21,7 +21,7 @@ except ImportError:
 class CudaEventTimer(object):
 
     def __init__(self, start_event: get_accelerator().Event, end_event: get_accelerator().Event):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         #yk==CudaEventTimer init: <torch.cuda.Event 0x52c1b0c0> <torch.cuda.Event 0x629e64d0>
         self.start_event = start_event
         self.end_event = end_event
@@ -39,7 +39,7 @@ class SynchronizedWallClockTimer:
         """Timer."""
 
         def __init__(self, name):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.name_ = name
             self.started_ = False
             self.event_timers = []
@@ -163,7 +163,7 @@ class ThroughputTimer:
         monitor_memory=False,
         logging_fn=None,
     ):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         from deepspeed.utils import logger
         self.start_time = 0
         self.end_time = 0

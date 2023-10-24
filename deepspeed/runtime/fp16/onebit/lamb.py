@@ -78,7 +78,7 @@ class OnebitLamb(torch.optim.Optimizer):
                  factor_min=0.5,
                  factor_threshold=0.1):
 
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
 
         if amsgrad:
             raise RuntimeError('1-bit Lamb does not support the AMSGrad variant.')
@@ -113,7 +113,7 @@ class OnebitLamb(torch.optim.Optimizer):
         self.comm_backend_handle = None
 
         if self.comm_backend_name == 'nccl':
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             TORCH_MAJOR = int(torch.__version__.split('.')[0])
             TORCH_MINOR = int(torch.__version__.split('.')[1])
             assert (
@@ -125,7 +125,7 @@ class OnebitLamb(torch.optim.Optimizer):
             self.comm_backend_handle = NcclBackend(self.deepspeed.mpu)
 
         elif self.comm_backend_name == 'mpi':
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             from deepspeed.runtime.comm.mpi import MpiBackend
             self.comm_backend_handle = MpiBackend(cuda_aware)
 
@@ -151,32 +151,32 @@ class OnebitLamb(torch.optim.Optimizer):
                 optimizer update. If gradients have type torch.half, parameters
                 are expected to be in type torch.float. (default: None)
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         loss = None
         if closure is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             loss = closure()
 
         if grads is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [grads]
         elif type(grads[0]) != list:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [grads]
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = grads
 
         #remove the previous stats
         del self.lamb_coeffs[:]
 
         if self.lamb_freeze_key:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             exp_avg_last_step = []
             for group in self.param_groups:
                 exp_avg_last_step.append([self.state[p]['exp_avg'].detach().clone() for p in group['params']])
@@ -267,7 +267,7 @@ class OnebitLamb(torch.optim.Optimizer):
 
         # init fused momentum
         if len(self.exp_avg_flat) == 0:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             momentum_groups = []
             tensor_size = 0
             for group in self.param_groups:
@@ -289,7 +289,7 @@ class OnebitLamb(torch.optim.Optimizer):
                 p.data = q.data
 
         if self.initialize and len(self.worker_errors) == 0:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             get_accelerator().empty_cache()
             for i in range(len(self.exp_avg_flat)):
                 self.worker_errors.append(
@@ -298,7 +298,7 @@ class OnebitLamb(torch.optim.Optimizer):
             get_accelerator().empty_cache()
 
         if self.lamb_freeze_key:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if self.size > 1:
                 for i in range(len(self.exp_avg_flat)):
                     if not self.initialize:
@@ -323,7 +323,7 @@ class OnebitLamb(torch.optim.Optimizer):
                                                                       self.server_errors[i], self.deepspeed.local_rank)
 
         if self.lamb_freeze_key and self.initialize:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             for i, group in enumerate(self.param_groups):
                 bias_correction = 1 if group['bias_correction'] else 0
 
@@ -400,7 +400,7 @@ class OnebitLamb(torch.optim.Optimizer):
         """
         Overrides load_state_dict() to add special handling when loading checkpoints
         """
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # Because at different stage exp_avg_mask may change (e.g.,
         # BERT pre-training seqlen 128 and 512 ), we don't use the exp_avg_mask
         # in checkpoints but always use the one user provided in training script.
@@ -438,10 +438,10 @@ class OnebitLamb(torch.optim.Optimizer):
             if self.lamb_freeze_key is False:
                 self.lamb_freeze_key = True
                 if self.using_pipeline:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     self.deepspeed.pipeline_enable_backward_allreduce = False
                 else:
-                    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     self.deepspeed.enable_backward_allreduce = False
         # We reset the compression errors when loading checkpoints for 3 reasons:
         # 1) The worker and server error at each GPU are distinct, so in current implementation
@@ -459,5 +459,5 @@ class OnebitLamb(torch.optim.Optimizer):
         del self.server_errors[:]
 
     def get_lamb_coeffs(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return self.lamb_coeffs

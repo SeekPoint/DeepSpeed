@@ -16,10 +16,10 @@ class NcclBackend(object):
 
     def __init__(self, mpu=None):
         if mpu is None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.world_group = dist.new_group(ranks=range(dist.get_world_size()))
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.mpu = mpu
             self.world_group = self.mpu.get_data_parallel_group()
         self.rank = dist.get_rank(group=self.world_group)
@@ -29,33 +29,33 @@ class NcclBackend(object):
         TORCH_MAJOR = int(torch.__version__.split('.')[0])
         TORCH_MINOR = int(torch.__version__.split('.')[1])
         if (TORCH_MAJOR == 1 and TORCH_MINOR >= 10) or TORCH_MAJOR == 2:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.bool_not_supported = True
 
     def my_igather(self, rank, size, group, sendbuf, recvbuf, root):
         req = []
         if rank == root:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             for idx in range(size):
                 if idx != rank:
                     req.append(dist.irecv(recvbuf[idx], src=idx, group=group))
                 else:
                     recvbuf[rank] = sendbuf
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             req.append(dist.isend(sendbuf, group=group, dst=root))
         return req
 
     def my_gather(self, rank, size, group, sendbuf, recvbuf, root):
         if rank == root:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             for idx in range(size):
                 if idx != rank:
                     dist.recv(recvbuf[idx], src=idx, group=group)
                 else:
                     recvbuf[rank] = sendbuf
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             dist.send(sendbuf, group=group, dst=root)
 
     def compressed_allreduce(self, buffer_m: torch.tensor, worker_error, server_error, local_rank):
@@ -63,14 +63,14 @@ class NcclBackend(object):
         # all_start_time = time.time()
         original_shape = buffer_m.size()
         if len(original_shape) > 1:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             buffer_m = torch.flatten(buffer_m)
         original_size = buffer_m.numel()
         worker_error_size = worker_error.numel()
         cupy.cuda.Device(local_rank).use()
 
         if original_size != worker_error_size:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             empty_tensor = torch.zeros(worker_error_size - original_size, device=buffer_m.device)
             buffer_m = torch.cat([buffer_m, empty_tensor])
 
@@ -79,11 +79,11 @@ class NcclBackend(object):
         worker_error.set_(buffer_m - worker_scale * buffer_m.sign().add_(1).bool().float().add_(-0.5).mul_(2.0))
 
         if self.bool_not_supported:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             cupy_sign_list_packed = self.compression_backend.compress_by_chunk(
                 self.compression_backend.torch2cupy(buffer_m.sign_().add_(1).bool().to(dtype=torch.uint8)), self.size)
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             cupy_sign_list_packed = self.compression_backend.compress_by_chunk(
                 self.compression_backend.torch2cupy(buffer_m.sign_().add_(1).bool()), self.size)
         cupy_worker_scale = self.compression_backend.torch2cupy(worker_scale)
@@ -130,12 +130,12 @@ class NcclBackend(object):
         # cupy_server_scale = self.compression_backend.torch2cupy(server_scale)
 
         if self.bool_not_supported:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             cupy_server_sign_packed = self.compression_backend.compress_by_chunk(
                 self.compression_backend.torch2cupy(compensated_server_m.sign_().add_(1).bool().to(dtype=torch.uint8)),
                 1)
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             cupy_server_sign_packed = self.compression_backend.compress_by_chunk(
                 self.compression_backend.torch2cupy(compensated_server_m.sign_().add_(1).bool()), 1)
         compensated_server_m = None
@@ -175,10 +175,10 @@ class NcclBackend(object):
                 self.size, -1)).float().add_(-0.5).mul_(2.0).mul_(
                     self.compression_backend.cupy2torch(cupy_recvbuf_scale_server)).flatten().data)
         if original_size != worker_error_size:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             buffer_m = buffer_m[0:original_size]
         if len(original_shape) > 1:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             buffer_m = buffer_m.reshape(original_shape)
 
         return buffer_m

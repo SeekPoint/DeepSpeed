@@ -10,7 +10,7 @@ fcntl = None
 module_names = {}
 param_names = {}
 from pydebug import gd, infoTensor
-gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+gd.debuginfo(prj="ds")
 
 def debug_extract_module_and_param_names(model):
     # extract the fully qualified names as soon as the model is acquired
@@ -20,7 +20,15 @@ def debug_extract_module_and_param_names(model):
     module_names = {module: name for name, module in model.named_modules()}
     param_names = {param: name for name, param in model.named_parameters()}
 
+    gd.debuginfo(prj="ds", info=f"---------------module_names-----------------------")
+    for k, v in module_names.items():
+        gd.debuginfo(prj="ds", info=f"{k} is: {infoTensor(v)}")
 
+    gd.debuginfo(prj="ds", info=f"---------------param_names-----------------------")
+    for k, v in param_names.items():
+        gd.debuginfo(prj="ds", info=f"{infoTensor(k)} is: {v}")
+
+#以下都在实际调用出打印输出
 def debug_module2name(module):
     if module in module_names:
         return module_names[module]

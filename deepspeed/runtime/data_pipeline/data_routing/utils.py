@@ -7,7 +7,7 @@ import torch
 from pydebug import gd, infoTensor
 
 def bsh_decoder_gather(reserved_length, hidden_states, mask):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     # random-layer-token-drop
     rand_list = []
     part_hidden_states = []  #  batch, seq, hidden ## different from megatron
@@ -23,7 +23,7 @@ def bsh_decoder_gather(reserved_length, hidden_states, mask):
 
 
 def bsh_decoder_scatter(hidden_states, part_hidden_states, rand_list):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     for k in range(hidden_states.size(0)):
         hidden_states[k, rand_list[k], :] = part_hidden_states[k, :, :]
     return hidden_states

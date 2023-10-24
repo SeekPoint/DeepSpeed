@@ -8,12 +8,12 @@ from deepspeed.utils import logger, log_dist
 from deepspeed.runtime.checkpoint_engine.checkpoint_engine import \
     CheckpointEngine
 from pydebug import gd, infoTensor
-gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+gd.debuginfo(prj="ds")
 
 class TorchCheckpointEngine(CheckpointEngine):
 
     def __init__(self, config_params=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(config_params)
 
     def create(self, tag):

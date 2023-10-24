@@ -26,11 +26,11 @@ def load_model_with_checkpoint(r_module,
                                weight_quantizer=None,
                                rank=0,
                                container=None):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     error_msgs = []
 
     def prefix_check():
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # if keys start with 'model.' or 'transformer.', don't skip level 0 prefix
         for key in sd[0].keys():
             # OPT models
@@ -44,7 +44,7 @@ def load_model_with_checkpoint(r_module,
     skip_level_0_prefix = prefix_check() and container.policy.use_load_prefix
 
     def transpose(data):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         with torch.no_grad():
             data = data.contiguous()
             data1 = data.transpose(-1, -2).reshape(-1)
@@ -56,12 +56,12 @@ def load_model_with_checkpoint(r_module,
         args = (sd[0], prefix, {}, True, [], [], error_msgs)
 
         if hasattr(module, 'weight'):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             module.weight = mp_replace.copy(module.weight.data, sd[0][prefix + 'weight'])
         if prefix + 'bias' in sd[0].keys():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if module.bias.data.is_meta:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 # meta tensor cannot be casted or copied to, so we need to replace it with a normal tensor here
                 module.bias = torch.nn.parameter.Parameter(data=torch.empty_like(module.bias.data, device="cpu"),
                                                            requires_grad=module.bias.data.requires_grad)
@@ -71,10 +71,10 @@ def load_model_with_checkpoint(r_module,
 
     def load_transformer_layer(module, prefix):
         if ckpt_type == "tp":
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
 
             def load_parameters(module, prefix):
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 for n, p in module.named_parameters():
                     if prefix + n in sd[0] and len(n.split('.')) == 1:
                         if type(sd[0][prefix + n]) is list:
@@ -182,17 +182,17 @@ def load_model_with_checkpoint(r_module,
             for n, child in module.named_children():
                 load_parameters(child, prefix + n + '.')
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             container.load_params(module, sd[0], weight_quantizer, mp_replace, prefix)
 
     try:
         import transformers
         OPTLearnedPositionalEmbedding = transformers.models.opt.modeling_opt.OPTLearnedPositionalEmbedding
         if hasattr(transformers.models, "llama"):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             LlamaRMSNorm = transformers.models.llama.modeling_llama.LlamaRMSNorm
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             LlamaRMSNorm = None
     except:
         OPTLearnedPositionalEmbedding = None
@@ -218,10 +218,10 @@ def load_model_with_checkpoint(r_module,
     all_ds_ids = {}
 
     def load_module_recursive(module, prefix='', level=0):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for name, child in module.named_children():
             if child.__class__ in layer_policies:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 checking_key = prefix + name + '.'
                 if not any(checking_key in item for item in sd[0].keys()):
                     if hasattr(child, 'weight') and \
@@ -260,7 +260,7 @@ def load_model_with_checkpoint(r_module,
                         setattr(module, name, child)
                 layer_policies[child.__class__](child, prefix + name + '.')
             else:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 load_module_recursive(
                     child,
                     prefix if (level == 0 and ckpt_type == 'pp') and skip_level_0_prefix else \

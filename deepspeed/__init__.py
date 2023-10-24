@@ -14,7 +14,7 @@ from packaging import version as pkg_version
 
 from pydebug import gd, infoTensor
 
-gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+gd.debuginfo(prj="ds")
 
 try:
     import triton  # noqa: F401
@@ -147,8 +147,10 @@ def initialize(args=None,
     log_dist("DeepSpeed info: version={}, git-hash={}, git-branch={}".format(__version__, __git_hash__,
                                                                              __git_branch__),
              ranks=[0])
+    # deepspeed.initialize入口处
+    gd.debuginfo(prj="ds")
 
-    # Disable zero.Init context if it's currently enabled
+    # Disable zero.Init context if it's currently enabled 禁止上下文
     zero.partition_parameters.shutdown_init_context()
 
     assert model is not None, "deepspeed.initialize requires a model"
@@ -159,7 +161,10 @@ def initialize(args=None,
     # 当然大部分情况我们都选择 cuda
     # 可以通过环境变量 DS_ACCELERATOR 指定
     dist_backend = get_accelerator().communication_backend_name()
-    dist.init_distributed(dist_backend=dist_backend, dist_init_required=dist_init_required)
+    gd.debuginfo(prj="ds", info=f"dist_backend is {dist_backend}")
+
+    dist.init_distributed(dist_backend=dist_backend,
+                          dist_init_required=dist_init_required)
 
     # Set config using config_params for backwards compat
     if config is None and config_params is not None:
@@ -188,6 +193,7 @@ def initialize(args=None,
             # 混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式，
             # 同时轻松应用DeepSpeed推理引擎进行生成/评估模式，
             # 为第三阶段的RLHF训练提供了一个明显更快的训练系统
+            gd.debuginfo(prj="ds")
             engine = DeepSpeedHybridEngine(args=args,
                                            model=model,
                                            optimizer=optimizer,
@@ -200,7 +206,8 @@ def initialize(args=None,
                                            config=config,
                                            config_class=config_class)
         else:
-            # 一般情况下是这里，也是我们重点要梳理的
+            # 非混合引擎，也是我们重点要梳理的
+            gd.debuginfo(prj="ds")
             engine = DeepSpeedEngine(args=args,
                                      model=model,
                                      optimizer=optimizer,
@@ -213,6 +220,7 @@ def initialize(args=None,
                                      config=config,
                                      config_class=config_class)
     else:
+        gd.debuginfo(prj="ds")
         assert mpu is None, "mpu must be None with pipeline parallelism"
         mpu = model.mpu()
         config_class = DeepSpeedConfig(config, mpu)

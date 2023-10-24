@@ -11,16 +11,16 @@ class InferenceBuilder(CUDAOpBuilder):
     NAME = "transformer_inference"
 
     def __init__(self, name=None):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         name = self.NAME if name is None else name
         super().__init__(name=name)
 
     def absolute_name(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return f'deepspeed.ops.transformer.inference.{self.NAME}_op'
 
     def is_compatible(self, verbose=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         try:
             import torch
         except ImportError:
@@ -42,7 +42,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return super().is_compatible(verbose) and cuda_okay
 
     def filter_ccs(self, ccs):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         ccs_retained = []
         ccs_pruned = []
         for cc in ccs:
@@ -55,7 +55,7 @@ class InferenceBuilder(CUDAOpBuilder):
         return ccs_retained
 
     def sources(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return [
             'csrc/transformer/inference/csrc/pt_binding.cpp',
             'csrc/transformer/inference/csrc/gelu.cu',
@@ -71,12 +71,12 @@ class InferenceBuilder(CUDAOpBuilder):
 
     def extra_ldflags(self):
         if not self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return ['-lcurand']
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=self.__class__.__name__)
             return []
 
     def include_paths(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=self.__class__.__name__)
         return ['csrc/transformer/inference/includes', 'csrc/includes']

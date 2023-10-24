@@ -15,7 +15,7 @@ from pydebug import gd, infoTensor
 
 @triton.jit
 def softmax_kernel(output_ptr, input_ptr, stride, n_cols, BLOCK_SIZE: tl.constexpr):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     row_idx = tl.program_id(0)
     row_start_ptr = input_ptr + row_idx * stride
     col_offsets = tl.arange(0, BLOCK_SIZE)
@@ -32,7 +32,7 @@ def softmax_kernel(output_ptr, input_ptr, stride, n_cols, BLOCK_SIZE: tl.constex
 
 @triton.jit
 def masked_softmax_kernel(output_ptr, input_ptr, stride, mask_ptr, mask_stride, n_cols, BLOCK_SIZE: tl.constexpr):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     row_idx = tl.program_id(0)
     row_start_ptr = input_ptr + row_idx * stride
     col_offsets = tl.arange(0, BLOCK_SIZE)
@@ -60,15 +60,15 @@ def softmax(input: torch.Tensor, mask: torch.Tensor = None, dim=-1) -> torch.Ten
     BLOCK_SIZE = max(triton.next_power_of_2(n_cols), 2)
     num_warps = 4
     if BLOCK_SIZE >= 2048:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         num_warps = 8
     if BLOCK_SIZE >= 4096:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         num_warps = 16
     # Allocate output
     output = torch.empty_like(input)
     if use_mask:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         assert mask.is_contiguous()
         mask = mask.view(-1, mask.shape[-1])
         mask_stride = mask.shape[-1] if mask.shape[-2] > 1 else 0
@@ -83,7 +83,7 @@ def softmax(input: torch.Tensor, mask: torch.Tensor = None, dim=-1) -> torch.Ten
             BLOCK_SIZE=BLOCK_SIZE,
         )
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         softmax_kernel[(n_rows, )](
             output,
             input,

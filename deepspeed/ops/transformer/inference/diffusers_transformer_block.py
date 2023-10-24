@@ -19,19 +19,19 @@ spatial_cuda_module = None
 from pydebug import gd, infoTensor
 
 def load_transformer_module():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     global transformer_cuda_module
     if transformer_cuda_module is None:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         transformer_cuda_module = InferenceBuilder().load()
     return transformer_cuda_module
 
 
 def load_spatial_module():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     global spatial_cuda_module
     if spatial_cuda_module is None:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         spatial_cuda_module = SpatialInferenceBuilder().load()
     return spatial_cuda_module
 
@@ -68,27 +68,27 @@ class DeepSpeedDiffusersTransformerBlock(nn.Module):
 
         # Pull the bias in if we can
         if isinstance(self.attn_1, DeepSpeedDiffusersAttention):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attn_1.do_out_bias = False
             self.attn_1_bias = self.attn_1.attn_ob
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attn_1_bias = nn.Parameter(torch.zeros_like(self.norm2_g), requires_grad=False)
 
         # Pull the bias in if we can
         if isinstance(self.attn_2, DeepSpeedDiffusersAttention):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attn_2.do_out_bias = False
             self.attn_2_bias = self.attn_2.attn_ob
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attn_2_bias = nn.Paramaeter(torch.zeros_like(self.norm3_g), requires_grad=False)
 
         self.transformer_cuda_module = load_transformer_module()
         load_spatial_module()
 
     def forward(self, hidden_states, context=None, timestep=None, **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # In v0.12.0 of diffuser, several new kwargs were added. Capturing
         # those with kwargs to maintain backward compatibility
 

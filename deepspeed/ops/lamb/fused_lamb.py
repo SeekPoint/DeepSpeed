@@ -50,7 +50,7 @@ class FusedLamb(torch.optim.Optimizer):
                  max_coeff=10.0,
                  min_coeff=0.01,
                  amsgrad=False):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.fused_lamb_cuda = FusedLambBuilder().load()
 
         if amsgrad:
@@ -82,43 +82,43 @@ class FusedLamb(torch.optim.Optimizer):
             scale (float, optional): factor to divide gradient tensor values
                 by before applying to weights. (default: 1)
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         
         loss = None
         if closure is not None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             loss = closure()
 
         if grads is None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [None] * len(self.param_groups)
         # backward compatibility
         # assuming a list/generator of parameter means single group
         elif isinstance(grads, types.GeneratorType):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [grads]
         elif type(grads[0]) != list:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = [grads]
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grads_group = grads
 
         if output_params is None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             output_params_group = [None] * len(self.param_groups)
         elif isinstance(output_params, types.GeneratorType):
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             output_params_group = [output_params]
         elif type(output_params[0]) != list:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             output_params_group = [output_params]
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             output_params_group = output_params
 
         if grad_norms is None:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             grad_norms = [None] * len(self.param_groups)
 
         #remove the previous coeffs
@@ -183,6 +183,6 @@ class FusedLamb(torch.optim.Optimizer):
         return loss
 
     def get_lamb_coeffs(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         lamb_coeffs = [lamb_coeff.item() for lamb_coeff in self.lamb_coeffs]
         return lamb_coeffs

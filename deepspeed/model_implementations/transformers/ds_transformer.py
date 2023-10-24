@@ -36,7 +36,7 @@ class DeepSpeedTransformerInference(nn.Module):
                 of a Transformer layer. We use this feature for quantization to reduce the convergence impact
                 for specific downstream tasks.
     """
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     layer_id = 0
 
     def __init__(self,
@@ -46,7 +46,7 @@ class DeepSpeedTransformerInference(nn.Module):
                  quantize_groups=1,
                  merge_count=1,
                  mlp_extra_grouping=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(DeepSpeedTransformerInference, self).__init__()
 
         self.config = config
@@ -56,7 +56,7 @@ class DeepSpeedTransformerInference(nn.Module):
         data_type = torch.half if self.config.dtype == torch.int8 else self.config.dtype
         global inference_module
         if inference_module is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             builder = InferenceBuilder()
             inference_module = builder.load()
 
@@ -66,23 +66,23 @@ class DeepSpeedTransformerInference(nn.Module):
                 log_dist(f"Injecting Triton kernels ...", [0])
 
         if self.config.bigscience_bloom:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.attention = BloomSelfAttention(self.config, mp_group, quantize_scales, quantize_groups, merge_count)
             assert not self.config.use_triton
         else:
             if deepspeed.HAS_TRITON and self.config.use_triton:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.attention = TritonSelfAttention(self.config)
             else:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.attention = DeepSpeedSelfAttention(self.config, mp_group, quantize_scales, quantize_groups,
                                                         merge_count)
 
         if deepspeed.HAS_TRITON and self.config.use_triton:
             self.mlp = TritonMLP(self.config)
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.mlp = DeepSpeedMLP(self.config, mp_group, quantize_scales, quantize_groups, merge_count,
                                     mlp_extra_grouping)
 
@@ -90,9 +90,9 @@ class DeepSpeedTransformerInference(nn.Module):
         if self.config.set_empty_params:
             self.norm_w = None
             self.norm_b = None
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.norm_w = nn.Parameter(torch.empty(self.config.hidden_size, dtype=data_type, device=device),
                                        requires_grad=False)
             self.norm_b = nn.Parameter(torch.empty(self.config.hidden_size, dtype=data_type, device=device),
@@ -107,14 +107,14 @@ class DeepSpeedTransformerInference(nn.Module):
                 self.allocate_workspace = inference_module.allocate_workspace_fp32
             self._alloc_workspace = True
         except AttributeError:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.allocate_workspace = None
             self._alloc_workspace = False
 
     @classmethod
     def reset_cache(cls):
         if inference_module is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             inference_module.reset_cache()
 
     def forward(
@@ -140,7 +140,7 @@ class DeepSpeedTransformerInference(nn.Module):
             layer_head_mask=None,
             past_key_value=None,
             **kwargs):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         if x is not None:
             input = x
@@ -151,7 +151,7 @@ class DeepSpeedTransformerInference(nn.Module):
 
         # Allocate memory only on first layer forward
         if self.config.layer_id == 0 and self._alloc_workspace:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.allocate_workspace(self.config.hidden_size, self.config.heads,
                                     input.size()[1],
                                     input.size()[0], DeepSpeedTransformerInference.layer_id, self.config.mp_size,
@@ -177,7 +177,7 @@ class DeepSpeedTransformerInference(nn.Module):
 
         if (self.config.dtype in [torch.float16, torch.bfloat16, torch.int8]) \
             and input.dtype == torch.float:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             target_dtype = torch.half if self.dtype == torch.int8 else self.dtype
             input = input.to(target_dtype)
 
@@ -200,7 +200,7 @@ class DeepSpeedTransformerInference(nn.Module):
             output = self.mlp(attention_output, input, inp_norm, self.attention.attn_ob)
 
             if not self.config.pre_layer_norm:
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 output = inference_module.layer_norm(output, self.norm_w, self.norm_b, self.config.epsilon)
 
             output = output.to(input_type)

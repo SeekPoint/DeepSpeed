@@ -24,7 +24,7 @@ class RepeatingLoader:
         Args:
             loader (iterator): The data loader to repeat.
         """
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.loader = loader
         self.data_iter = iter(self.loader)
 
@@ -33,10 +33,10 @@ class RepeatingLoader:
 
     def __next__(self):
         try:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             batch = next(self.data_iter)
         except StopIteration:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.data_iter = iter(self.loader)
             batch = next(self.data_iter)
         return batch
@@ -62,11 +62,11 @@ class DeepSpeedDataLoader(object):
         self.batch_size = batch_size
         self.curriculum_learning_enabled = False
         if CURRICULUM_LEARNING in deepspeed_dataloader_config:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.curriculum_learning_enabled = deepspeed_dataloader_config[CURRICULUM_LEARNING]
 
         if self.curriculum_learning_enabled:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             data_sampler = DeepSpeedDataSampler(self.deepspeed_dataloader_config[DATA_EFFICIENCY],
                                                 len(dataset),
                                                 self.batch_size,
@@ -80,23 +80,23 @@ class DeepSpeedDataLoader(object):
             num_local_io_workers = self.deepspeed_dataloader_config[DATA_SAMPLING_NUM_WORKERS]
         else:
             if local_rank >= 0:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 if data_sampler is None:
-                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     data_sampler = DistributedSampler(dataset=dataset,
                                                       num_replicas=data_parallel_world_size,
                                                       rank=data_parallel_rank)
                 device_count = 1
             else:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 if data_sampler is None:
-                    gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                    gd.debuginfo(prj="ds")
                     data_sampler = RandomSampler(dataset)
                 device_count = get_accelerator().device_count()
                 batch_size *= device_count
 
             if num_local_io_workers is None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 num_local_io_workers = 2 * device_count
 
         self.num_local_io_workers = num_local_io_workers
@@ -111,15 +111,15 @@ class DeepSpeedDataLoader(object):
         self.post_process_func = None
 
         if self.dataloader_drop_last:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.len = len(self.data_sampler) // self.batch_size
         else:
             from math import ceil
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.len = ceil(len(self.data_sampler) / self.batch_size)
 
     def __iter__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self._create_dataloader()
         return self
 
@@ -128,29 +128,29 @@ class DeepSpeedDataLoader(object):
 
     def __next__(self):
         if self.tput_timer:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.tput_timer.start()
         if self.curriculum_learning_enabled:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             data = next(self.data_iterator)
             if self.post_process_func is not None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 data = self.post_process_func(data, self.data_sampler.state_dict())
             return data
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return next(self.data)
 
     def _create_dataloader(self):
         if self.curriculum_learning_enabled:
             if self.collate_fn is None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.dataloader = DataLoader(self.dataset,
                                              pin_memory=self.pin_memory,
                                              batch_sampler=self.data_sampler,
                                              num_workers=self.num_local_io_workers)
             else:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.dataloader = DataLoader(self.dataset,
                                              pin_memory=self.pin_memory,
                                              batch_sampler=self.data_sampler,
@@ -160,7 +160,7 @@ class DeepSpeedDataLoader(object):
             return self.dataloader
         else:
             if self.collate_fn is None:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.dataloader = DataLoader(self.dataset,
                                              batch_size=self.batch_size,
                                              pin_memory=self.pin_memory,
@@ -168,7 +168,7 @@ class DeepSpeedDataLoader(object):
                                              num_workers=self.num_local_io_workers,
                                              drop_last=self.dataloader_drop_last)
             else:
-                gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 self.dataloader = DataLoader(self.dataset,
                                              batch_size=self.batch_size,
                                              pin_memory=self.pin_memory,

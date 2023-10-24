@@ -12,7 +12,7 @@ class DeepSpeedCPUAdagrad(torch.optim.Optimizer):
     optimizer_id = 0
 
     def __init__(self, model_params, lr=1e-2, eps=1e-10, weight_decay=0, amsgrad=False, fp32_optimizer_states=True):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         default_args = dict(lr=lr, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad)
         super(DeepSpeedCPUAdagrad, self).__init__(model_params, default_args)
 
@@ -24,20 +24,20 @@ class DeepSpeedCPUAdagrad(torch.optim.Optimizer):
         self.ds_opt_adagrad.create_adagrad(self.opt_id, lr, eps, weight_decay, should_log_le("info"))
 
     def __del__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         # need to destroy the C++ object explicitly to avoid a memory leak when deepspeed.initialize
         # is used multiple times in the same process (notebook or pytest worker)
         self.ds_opt_adagrad.destroy_adagrad(self.opt_id)
 
     def __setstate__(self, state):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super(DeepSpeedCPUAdagrad, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
 
     @torch.no_grad()
     def step(self, closure=None, fp16_param_groups=None):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         """Update the model parameters.
 
         .. note::

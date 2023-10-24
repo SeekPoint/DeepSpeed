@@ -18,9 +18,8 @@ from .utils import swap_in_tensors, swap_out_tensors, MIN_AIO_BYTES, AIO_ALIGNED
 from pydebug import gd, infoTensor
 
 def print_rank_0(message, debug=False, force=False):
-    if dist.get_rank() == 0 and (debug or force):
-        print(message)
-
+    if dist.get_rank() == 0:
+        gd.debuginfo(prj='ds', info=message, level = 2)
 
 class PartitionedParamStatus(Enum):
     # Partitioned parameters are present and ready for use
@@ -36,7 +35,7 @@ class PartitionedParamStatus(Enum):
 class AsyncPartitionedParameterSwapper(object):
 
     def __init__(self, ds_config, model_dtype):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         aio_op = AsyncIOBuilder().load(verbose=False)
         self.aio_handle = aio_op.aio_handle
         self.dtype = model_dtype
@@ -79,11 +78,11 @@ class AsyncPartitionedParameterSwapper(object):
             print_object(obj=self, name='AsyncPartitionedParameterSwapper', exclude_list=exclude_list)
 
     def available_swap_in_buffers(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return len(self.available_buffer_ids)
 
     def _configure_aio(self, ds_config):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.swap_config = ds_config.zero_config.offload_param
         torch_dtype_string = str(self.dtype).split(".")[1]
         self.swap_folder = os.path.join(self.swap_config.nvme_path, 'zero_stage_3', f'{torch_dtype_string}params',
@@ -124,21 +123,21 @@ class AsyncPartitionedParameterSwapper(object):
     #Check if partitioned param or numel in a tensor is swappable or not
     def swappable_tensor(self, param=None, numel=None):
         if param is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             assert numel is None, "Both parma and numel cannot be provided"
             numel = param.ds_tensor.ds_numel
         if numel is not None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return self.min_aio_bytes <= numel * self.swap_element_size
         assert False, "Either param or numel must be provided"
 
     def get_path(self, param, must_exist=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         paths = self._get_swap_paths([param], must_exist=must_exist)
         return paths[0]
 
     def _get_swap_paths(self, params, must_exist=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         paths = []
         for param in params:
             param_id = param.ds_id
@@ -154,7 +153,7 @@ class AsyncPartitionedParameterSwapper(object):
         return paths
 
     def _get_swap_buffers(self, params):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         buffers = []
         for param in params:
             param_id = param.ds_id
@@ -165,13 +164,13 @@ class AsyncPartitionedParameterSwapper(object):
         return buffers
 
     def _track_numel(self, params):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for param in params:
             assert param.ds_tensor is not None, "Partitioned tensor is None"
             self.param_id_to_numel[param.ds_id] = param.ds_tensor.ds_numel
 
     def _allocate_and_return_buffers_for_swap_in(self, params):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         compute_buffers = []
         swap_buffers = []
 
@@ -198,9 +197,9 @@ class AsyncPartitionedParameterSwapper(object):
 
     #waits for inflight nvme write to complete
     def synchronize_writes(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if self.pending_writes == 0:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
         assert self.pending_writes == self.aio_write_handle.wait()
         self.pending_writes = 0
@@ -209,9 +208,9 @@ class AsyncPartitionedParameterSwapper(object):
 
     #waits for inflight nvme reads to complete
     def synchronize_reads(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if self.pending_reads == 0:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return
 
         assert self.pending_reads == self.aio_read_handle.wait()
@@ -234,7 +233,7 @@ class AsyncPartitionedParameterSwapper(object):
     #Removes the memory assignment and releases the buffers
     #Should only be executed after swapping out the tensors
     def remove_partition_and_release_buffers(self, params):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for param in params:
             param_id = param.ds_id
 
@@ -258,7 +257,7 @@ class AsyncPartitionedParameterSwapper(object):
 
     #writes from in memory to nvme. Does not release the buffers
     def _swap_out(self, params, async_op=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         swap_out_paths = self._get_swap_paths(params)
         swap_out_params = self._get_swap_buffers(params)
@@ -270,19 +269,19 @@ class AsyncPartitionedParameterSwapper(object):
         self.swap_out_params += params
 
         if not async_op:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.synchronize_writes()
 
     #blocking swap out followed by releasing the memory buffers
     def swap_out_and_release(self, params, async_op=False, force_buffer_release=False):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         if async_op:
             assert force_buffer_release, "Should not release preallocated buffers without completing the swap out. Set force_buffer_release to True to do it anyways"
         self._swap_out(params, async_op=async_op)
 
     # book keeping function for inflight swap in
     def _update_inflight_swap_in(self, params, swap_in_buffers, inflight_numel):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         self.inflight_params.extend(params)
         self.inflight_swap_in_buffers.extend(swap_in_buffers)
         self.inflight_numel += inflight_numel
@@ -294,14 +293,14 @@ class AsyncPartitionedParameterSwapper(object):
 
     #assigns an in memory buffer and swaps in from nvme
     def swap_in(self, params, async_op=True, swap_in_buffers=None):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         assert all([param.ds_tensor.status == PartitionedParamStatus.NOT_AVAILABLE
                     for param in params]), "Some params are already available or in flight"
         swap_in_paths = self._get_swap_paths(params)
 
         if swap_in_buffers is None:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             if len(self.available_buffer_ids) < len(swap_in_paths):
                 ids = [p.ds_id for p in params]
                 print_rank_0(
@@ -320,7 +319,7 @@ class AsyncPartitionedParameterSwapper(object):
             compute_buffers, swap_in_buffers = self._allocate_and_return_buffers_for_swap_in(params)
             inflight_numel = sum([t.numel() for t in compute_buffers])
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             inflight_numel = sum([t.numel() for t in swap_in_buffers])
 
         swap_in_tensors(self.aio_read_handle, swap_in_buffers, swap_in_paths)
@@ -328,7 +327,7 @@ class AsyncPartitionedParameterSwapper(object):
         self._update_inflight_swap_in(params, swap_in_buffers, inflight_numel)
 
         if not async_op:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             self.synchronize_reads()
 
     # Enables swapping into buffer that is out the control of swapper. This is always synchronous
@@ -338,12 +337,12 @@ class AsyncPartitionedParameterSwapper(object):
         require_swap_buffer = not (dest_buffer.is_pinned() and self._is_io_aligned(dest_buffer.numel()))
 
         if require_swap_buffer:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             assert len(self.available_buffer_ids) > 0, f"No buffer available to swap param {param.ds_id}."
             compute_buffers, swap_in_buffers = self._allocate_and_return_buffers_for_swap_in([param])
             inflight_numel = compute_buffers[0].numel()
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             swap_in_buffers = [dest_buffer]
             inflight_numel = dest_buffer.numel()
 
@@ -354,14 +353,14 @@ class AsyncPartitionedParameterSwapper(object):
         self.synchronize_reads()
 
         if require_swap_buffer:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             dest_buffer.data.copy_(param.ds_tensor.data)
             # Release swap buffer memory assignment. Note, this will mark the parameter not available.
             self.remove_partition_and_release_buffers([param])
 
     #assign a buffer to a param and return the buffer
     def get_buffer(self, param, numel):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         param_id = param.ds_id
 
         assert self.available_swap_in_buffers(
@@ -380,7 +379,7 @@ class AsyncPartitionedParameterSwapper(object):
         return compute_buffer
 
     def reserve_available_buffers(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         buffers = []
         for id in self.available_buffer_ids:
             buffers.append(
@@ -392,29 +391,29 @@ class AsyncPartitionedParameterSwapper(object):
         return buffers
 
     def release_reserved_buffers(self):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         for id in self.reserved_buffer_ids:
             self.available_buffer_ids.append(id)
         self.reserved_buffer_ids = []
 
     def _io_aligned_numel(self, numel):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         remainder = numel % self.numel_alignment
         return numel if remainder == 0 else (numel + self.numel_alignment - remainder)
 
     def _is_io_aligned(self, numel):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         return (numel % self.numel_alignment) == 0
 
     def reserve_partitioned_swap_space(self, partition_num_elems):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         aligned_numel = sum([self._io_aligned_numel(numel) for numel in partition_num_elems])
         self.partitioned_swap_buffer = get_accelerator().pin_memory(
             torch.zeros(aligned_numel, device='cpu', dtype=self.dtype))
         self.partitioned_swap_pool = SwapBufferPool([self.partitioned_swap_buffer])
 
     def swap_out_partitioned_params(self, dst_fp16_params, src_fp32_params):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         assert self.partitioned_swap_buffer is not None, f'partitioned swap buffers for fp16 params not initialized'
         assert self.partitioned_swap_pool is not None, f'partitioned swap pool for fp16 params not initialized'
         assert len(dst_fp16_params) == len(src_fp32_params), \

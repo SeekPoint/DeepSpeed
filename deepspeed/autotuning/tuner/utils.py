@@ -10,7 +10,7 @@ import collections.abc
 from pydebug import gd, infoTensor
 
 def index_to_feature(p, dims):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     """convert index form (single integer) to feature form (vector)"""
     feature = []
     for dim in dims:
@@ -22,7 +22,7 @@ def index_to_feature(p, dims):
 def feature_to_index(feature, dims):
     """convert feature form (vector) to index form (single integer)"""
     p = 0
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     for j, k in enumerate(feature):
         print("j:", "k:", k, "dims", dims[:j])
         p += int(np.prod(dims[:j])) * k
@@ -32,7 +32,7 @@ def feature_to_index(feature, dims):
 def dict_to_dims(tuning_space):
 
     dims = []
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
 
     for key, val in tuning_space.items():
         if isinstance(val, dict):
@@ -46,7 +46,7 @@ def dict_to_dims(tuning_space):
 
 
 def gen_combinations(d: dict):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     keys, values = d.keys(), d.values()
     for v in values:
         if not isinstance(v, list):
@@ -57,7 +57,7 @@ def gen_combinations(d: dict):
 
 
 def flatten(d, parent_key='', sep='_'):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -69,7 +69,7 @@ def flatten(d, parent_key='', sep='_'):
 
 
 def dict_to_feature(feature_dict, keys, max_value=None):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     """Extract values from dict"""
     feature = []
     for key, val in feature_dict.items():  # First level

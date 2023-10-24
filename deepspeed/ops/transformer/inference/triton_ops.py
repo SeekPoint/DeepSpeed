@@ -43,7 +43,7 @@ def _fwd_kernel(
     BLOCK_DMODEL: tl.constexpr,
     BLOCK_N: tl.constexpr,
 ):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
     # initialize offsets
@@ -108,11 +108,11 @@ def _fwd_kernel(
 class triton_flash_attn(torch.nn.Module):
 
     def __init__(self, ):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__)
+        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(triton_flash_attn, self).__init__()
 
     def forward(self, q, k, v, sm_scale, block_128=True):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         BLOCK = 128 if block_128 else 64
         # shape constraints
         Lq, Lk, Lv = q.shape[-1], k.shape[-1], v.shape[-1]

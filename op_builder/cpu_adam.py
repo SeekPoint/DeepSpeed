@@ -12,7 +12,7 @@ class CPUAdamBuilder(TorchCPUOpBuilder):
     NAME = "cpu_adam"
 
     def __init__(self):
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
@@ -21,21 +21,21 @@ class CPUAdamBuilder(TorchCPUOpBuilder):
 
     def sources(self):
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return ['csrc/adam/cpu_adam.cpp']
         
-        gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
 
         return ['csrc/adam/cpu_adam.cpp', 'csrc/common/custom_cuda_kernel.cu']
 
     def libraries_args(self):
         args = super().libraries_args()
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return args
 
         if not self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             args += ['curand']
 
         gd.debuginfo(prj='ds', info=' args: ' + str(args))
@@ -44,13 +44,13 @@ class CPUAdamBuilder(TorchCPUOpBuilder):
     def include_paths(self):
         import torch
         if self.build_for_cpu:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             CUDA_INCLUDE = []
         elif not self.is_rocm_pytorch():
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             CUDA_INCLUDE = [os.path.join(torch.utils.cpp_extension.CUDA_HOME, "include")]
         else:
-            gd.debuginfo(prj='ds-chat', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             CUDA_INCLUDE = [
                 os.path.join(torch.utils.cpp_extension.ROCM_HOME, "include"),
                 os.path.join(torch.utils.cpp_extension.ROCM_HOME, "include", "rocrand"),

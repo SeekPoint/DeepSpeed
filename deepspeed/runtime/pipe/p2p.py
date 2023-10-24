@@ -21,7 +21,7 @@ _async = []
 
 
 def can_send_recv() -> bool:
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     torch_version = Version(torch_info['version'])
     sendrecv_min = Version('1.8')
     return torch_version >= sendrecv_min
@@ -30,19 +30,19 @@ def can_send_recv() -> bool:
 #initializes adjacent process groups
 #run this only after deepspeed.init_distributed() has been called
 def init_process_groups(grid):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     global _groups, _grid
     _grid = grid
 
     assert _grid.pipe_parallel_size > 1, "There is no pipeline parallelism"
 
     if not can_send_recv():
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         _groups = [dist.new_group(ranks=group) for group in _grid.p2p_groups]
 
 
 def _is_valid_send_recv(src_stage, dest_stage):
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     first_stage = 0
     last_stage = _grid.pipe_parallel_size - 1
     assert abs(src_stage-dest_stage) == 1 or \
@@ -59,17 +59,17 @@ def send(tensor, dest_stage, async_op=False):
 
     dest_rank = _grid.stage_to_global(stage_id=dest_stage)
     if async_op:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         global _async
         op = dist.isend(tensor, dest_rank)
         _async.append(op)
     else:
 
         if can_send_recv():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return dist.send(tensor, dest_rank)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             group = _get_send_recv_group(src_stage, dest_stage)
             src_rank = _grid.stage_to_global(stage_id=src_stage)
             return dist.broadcast(tensor, src_rank, group=group, async_op=async_op)
@@ -84,22 +84,22 @@ def recv(tensor, src_stage, async_op=False):
     src_rank = _grid.stage_to_global(stage_id=src_stage)
 
     if async_op:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         global _async
         op = dist.irecv(tensor, src_rank)
         _async.append(op)
     else:
         if can_send_recv():
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return dist.recv(tensor, src_rank)
         else:
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             group = _get_send_recv_group(src_stage, dest_stage)
             return dist.broadcast(tensor, src_rank, group=group, async_op=async_op)
 
 
 def wait():
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    # gd.debuginfo(prj="ds")
     global _async
     for op in _async:
         op.wait()
@@ -132,7 +132,7 @@ def send_obj(msg: typing.Any, dest: int):
 
 
 def recv_obj(sender: int) -> typing.Any:
-    gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+    gd.debuginfo(prj="ds")
     """Receive an arbitrary python object from ``sender``.
 
     WARN: This incur a CPU <-> GPU transfers and should be used sparingly
@@ -154,18 +154,18 @@ def recv_obj(sender: int) -> typing.Any:
     def _to(x):
         """Recursively move to the current device."""
         if torch.is_tensor(x):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             return x.to(get_accelerator().device_name())
         if isinstance(x, (tuple, list)):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             ret = [_to(x_) for x_ in x]
             if isinstance(x, tuple):
-                gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+                gd.debuginfo(prj="ds")
                 ret = tuple(ret)
             return ret
         # handle kwargs
         if isinstance(x, dict):
-            gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+            gd.debuginfo(prj="ds")
             ret = dict()
             for key, val in x.items():
                 ret[_to(key)] = _to(val)
@@ -188,13 +188,13 @@ def _get_send_recv_group(src_stage, dest_stage):
 
     if (src_stage == first_stage and dest_stage == last_stage
             or dest_stage == first_stage and src_stage == last_stage):
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         stage_id = last_stage
     elif src_stage > dest_stage:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         stage_id = dest_stage
     else:
-        gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
+        gd.debuginfo(prj="ds")
         stage_id = src_stage
     '''group_id corresponds to group of [group_id, group_id+1]
      unless group_id is the rank of the last stage
