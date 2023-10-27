@@ -106,7 +106,7 @@ class LinearLayer_LoRA(torch.nn.Module):
 
 
 def only_optimize_lora_parameters(model):
-    gd.debuginfo(prj='dsUT', info='C:' + self.__class__.__name__)
+    gd.debuginfo(prj='dsUT')
     # turn off the gradient of all the parameters except the LoRA parameters
     for name, param in model.named_parameters():
         if "lora_right_weight" in name or "lora_left_weight" in name:

@@ -6,6 +6,7 @@
 import os
 from pydebug import gd, infoTensor
 
+#cp基类引擎
 class CheckpointEngine(object):
 
     # init checkpoint engine for save/load

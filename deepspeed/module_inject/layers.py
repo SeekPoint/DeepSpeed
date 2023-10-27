@@ -29,6 +29,7 @@ class LinearAllreduce(nn.Module):
         if self.bias is not None:
             gd.debuginfo(prj="ds")
             output += self.bias
+        gd.debuginfo(prj='ds', info=f"output={output}")
         return output
 
 
@@ -52,11 +53,11 @@ class LinearLayer(nn.Module):
                 if bias is not None else None
 
     def forward(self, input):
-        gd.debuginfo(prj="ds")
         output = torch.matmul(input, self.weight.transpose(-1, -2))
         if self.bias is not None:
             gd.debuginfo(prj="ds")
             output += self.bias
+        gd.debuginfo(prj='ds', info=f"output={output}")
         return output
 
 
@@ -77,8 +78,9 @@ class Normalize(nn.Module):
         self.eps = eps
 
     def forward(self, input):
-        gd.debuginfo(prj="ds")
-        return nn.functional.layer_norm(input, input.shape[-1:], self.weight, self.bias, eps=self.eps)
+        tmp = nn.functional.layer_norm(input, input.shape[-1:], self.weight, self.bias, eps=self.eps)
+        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+        return tmp
 
 
 class EmbeddingLayer(nn.Module):
@@ -97,8 +99,9 @@ class EmbeddingLayer(nn.Module):
             self.weight = weight
 
     def forward(self, input):
-        gd.debuginfo(prj="ds")
-        return F.embedding(input, self.weight)
+        tmp = F.embedding(input, self.weight)
+        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+        return tmp
 
 
 class OPTEmbedding(EmbeddingLayer):
@@ -123,8 +126,12 @@ class OPTEmbedding(EmbeddingLayer):
 
         # cut positions if `past_key_values_length` is > 0
         positions = positions[:, past_key_values_length:]
+        gd.debuginfo(prj="ds", info=f"positions={positions}")
 
-        return super().forward(positions + self.offset)
+        tmp = positions + self.offset
+        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+
+        return super().forward(tmp)
 
 
 class RMSNormalize(nn.Module):
@@ -132,20 +139,23 @@ class RMSNormalize(nn.Module):
     def __init__(self, dim=None, dtype=torch.float, eps=1e-5, weight=None):
         super(RMSNormalize, self).__init__()
         if weight is not None:
-            gd.debuginfo(prj="ds")
             self.weight = weight
+            gd.debuginfo(prj="ds", info=f"self.weight={self.weight}")
         else:
-            gd.debuginfo(prj="ds")
             self.weight = nn.Parameter(torch.ones(dim, dtype=dtype, device=get_accelerator().current_device_name()))
+            gd.debuginfo(prj="ds", info=f"self.weight={self.weight}")
 
         self.eps = eps
 
     def forward(self, hidden_states):
-        gd.debuginfo(prj="ds")
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.eps)
-        print(self.weight)
+        # print(self.weight)
+        gd.debuginfo(prj="ds", info=f"self.weight={self.weight}")
         if self.weight.dtype in [torch.float16, torch.bfloat16]:
             hidden_states = hidden_states.to(self.weight.dtype)
 
-        return hidden_states * self.weight
+        tmp = hidden_states * self.weight
+        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+
+        return tmp

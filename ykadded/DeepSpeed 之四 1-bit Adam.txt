@@ -1,0 +1,39 @@
+DeepSpeed 之四 1-bit Adam
+
+https://mp.weixin.qq.com/s/U-_RAoStPY6q6YU-J2c2Hg
+
+张北北 指北笔记 2023-08-10 22:00 Posted on 北京
+1-bit Adam: 5x less communication and 3.4x faster training
+大型模型(如BERT和GPT-3)的可伸缩训练需要基于模型设计、体系结构和系统功能的仔细优化。从系统的角度来看，通信已经成为一个主要的瓶颈，特别是在具有标准TCP互连的商用系统上，这些系统提供有限的网络带宽。
+
+通信压缩是减少此类系统训练时间的一项重要技术。压缩通信最有效的方法之一是通过误差补偿压缩，即使在1位压缩下，它也提供了强大的收敛速度。然而，最先进的误差补偿技术只适用于基本的优化器，如随机梯度下降(SGD)和动量SGD，它们线性依赖于梯度。它们不适用于像Adam这样基于非线性梯度的优化器，后者为许多任务提供了最先进的收敛效率和准确性，包括训练类似bert的模型。
+
+Understand the background on classic compression techniques
+通信压缩的一种方式是1位压缩，可以表示为:
+
+Image
+通过这种压缩，我们可以通过使用一个比特来表示每个数字，从而将内存大小减少32倍。问题是使用这种直接的方法会显著降低收敛速度，使得该方法不适用。为了解决这个问题，最近的研究表明，通过使用误差补偿压缩，我们可以期望与通信压缩几乎相同的收敛速度。
+
+错误补偿的思想可以概括为:1)进行压缩，2)记住压缩错误，然后3)在下一次迭代中添加压缩错误。对于SGD，执行错误压缩会导致:
+
+Image
+其中为1位压缩运算符。这种错误补偿的好处是历史压缩错误  和   最终会被自己取消，这可以通过:
+
+Image
+该策略已被证明适用于所有线性依赖于梯度的优化算法，如SGD和动量SGD。
+
+Compressing communication with 1-bit Adam
+为了在使用Adam优化器时压缩通信，我们开发了1位Adam，它通过预处理解决了梯度中的非线性问题。我们观察到非线性项的变化幅度，方差()，经过几次训练和设定后显著下降 之后的常数不会改变收敛速度。所提出的1位Adam优化器，如图14所示，由两部分组成:热身阶段，本质上是普通的Adam算法;压缩阶段，保持方差项不变，并将剩余的线性项，即动量，压缩成1位表示。
+
+Image
+Figure 14: Comparison of distributed training steps in classic Adam and the proposed 1-bit compressed Adam algorithm
+Addressing system challenges for 1-bit Adam
+除了算法上的挑战，在训练系统中应用1-bit Adam还有两个系统上的挑战。首先，我们需要有效的内核将动量转换为1位表示。其次，我们需要有效的通信方案来在不同的gpu之间交换压缩的动量。压缩的目标是减少总体训练时间，以便具有带宽限制的互连的商品系统可以用于训练大型模型。我们在DeepSpeed中解决了这些挑战，并引入了一个完全优化的1位Adam实现，用于在通信受限系统上进行培训。
+
+Benefits of 1-bit Adam on communication-constrained systems
+1位Adam提供与Adam相同的收敛性，减少多达5倍的通信，使BERT-Large预训练的吞吐量提高3.5倍，SQuAD微调的吞吐量提高2.7倍。这种端到端吞吐量改进是通过在压缩阶段观察到的6.6倍(图15左)和6.2倍(图15右)加速来实现的。值得一提的是，我们的1位Adam优化器在40千兆以太网系统上的可扩展性非常好，其性能可以与Adam在40千兆InfiniBand QDR系统上的可扩展性相媲美。我们注意到，基于iPerf基准测试，40千兆以太网的有效带宽为4.1 Gbps，而基于InfiniBand最完美的微基准测试，InfiniBand提供的近峰值带宽为32 Gbps。
+
+Image
+Figure 15: Scalability of 1-bit Adam for BERT-Large Pretraining (left) and SQuAD Fine-tuning (right) on NVIDIA V100 GPUs. The batch sizes are 16/GPU and 3/GPU for BERT pretraining and SQuAD fine-tuning, respectively.
+参考文献
+https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-model-training-for-everyone/

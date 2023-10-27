@@ -65,6 +65,7 @@ class csvMonitor(Monitor):
                 # sanitize common naming conventions into filename
                 filename = log_name.replace('/', '_').replace(' ', '_')
                 fname = self.log_dir + '/' + filename + '.csv'
+                gd.debuginfo(prj="ds", info=f"fname={fname}")
 
                 # Open file and record event. Insert header if this is the first time writing
                 with open(fname, 'a+') as csv_monitor_file:

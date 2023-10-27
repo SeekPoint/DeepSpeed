@@ -1,0 +1,33 @@
+DeepSpeed 之三 Sparse Attention
+
+https://mp.weixin.qq.com/s/NaNcT6QaqPbfjc1CVU6DqA
+
+张北北 指北笔记 2023-08-09 22:00 Posted on 北京
+DeepSpeed Sparse Attention: Powering 10x longer sequences with 6x faster execution
+基于注意力的深度学习模型，如Transformers，在捕获输入序列中标记之间的关系方面非常有效，即使是跨越长距离。因此，它们用于基于文本、图像和声音的输入，其中序列长度可以是数千个令牌。然而，尽管注意模块在捕获长期依赖方面是有效的，但在实践中，它们在长序列输入中的应用受到注意计算的计算和内存需求的限制，这些需求呈二次增长, ，表示序列长度 .
+
+为了解决这一限制，DeepSpeed提供了一套稀疏注意力kernel，这是一种工具技术，可以通过块稀疏计算将注意力计算的计算和内存需求降低几个数量级。该套件不仅缓解了注意力计算的内存瓶颈，而且有效地进行了稀疏计算。它的api允许与任何基于transformer的模型方便地集成。除了提供广泛的稀疏结构外，它还具有处理任何用户定义的块稀疏结构的灵活性。
+
+更具体地说，可以设计稀疏注意(SA)来计算附近令牌之间的局部注意，或者通过局部注意计算的摘要令牌来计算全局注意。此外，SA还可以允许随机注意或本地、全局和随机注意的任意组合，如图10所示，分别使用蓝色、橙色和绿色块。因此，SA将内存占用减少到 ，其中$<w ≤="" n$="" 是一个参数，其值取决于注意结构。<="" p="">
+
+Image
+gpu上的高效实现:虽然稀疏注意力的基本实现可能会显示出内存节省的好处，但在计算上它甚至可能比完全计算更糟糕。这主要是由于稀疏数据增加的散度和非合并内存访问。一般来说，开发高效的稀疏核，特别是在gpu上，是具有挑战性的。DeepSpeed提供了Triton开发的高效稀疏注意力内核。这些内核采用块稀疏范式构建，支持对齐内存访问，减轻线程分歧，并平衡处理器上的工作负载。
+
+系统性能:SA可以提供10倍长的序列和高达6.3倍的计算速度，如图11所示。左图显示了在三种设置下BERT-Base和BERT-Large模型中可运行的最长序列长度:dense, dense with activation checkpoint，和sparse (SA) with activation checkpoint。与BERT-Base和BERT-Large相比，SA的序列长度分别为10倍和16倍。此外，与dense相比，SA减少了总计算量，提高了训练速度:随着序列长度的增加，提升幅度更高，BERT-Base和BERT-Large的提升幅度分别高达6.3倍和5.3倍。
+
+Image
+Figure 11: Maximum possible sequence length for BERT models (left); Training time of BERT-Base (center) and BERT-Large (right) on a single NVIDIA V100 GPU with varying sequence length.
+Learn how SA abtains comparable or higher accuracy than full attention
+稀疏注意的相关工作(稀疏Transformer，Longformer, BigBird)已经显示出与完全注意相当或更高的准确性。我们的经验是一致的。除了更低的内存开销和更快的计算外，我们还在生产模型中观察到SA达到更高精度和更快收敛的情况。下图说明了基于BERT的长文档理解(2048序列长度)的生产模型训练的准确性。实验在三种设置下进行:从头开始的dense，从头开始的SA，以及使用序列长度为512的dense的检查点继续训练SA。我们已经观察到，对于从头开始的预训练，与密集训练相比，SA收敛速度更快，精度更高。此外，在时间和准确性方面，使用SA从预训练的检查点继续训练的性能甚至更好。
+
+Image
+Figure 12: Accuracy of long document comprehension application
+Learn how SA compares with state-of-the-art LongFormer
+我们将SA与Longformer(一种最先进的稀疏结构和实现)进行了比较。在我们的实验中，SA使用“固定”稀疏性，并且两种实现具有相当的准确性。在系统性能方面，SA在训练和推理方面都优于Longformer:
+
+1.5倍更快的执行预训练MLM on Wikitext103
+在BERT-Base上的执行推理速度提高3倍(批大小为1，序列长度为2,048)
+处理任何块稀疏结构的灵活性:DeepSpeed稀疏注意套件不针对任何特定的稀疏结构，但使模型科学家能够在有效的系统支持下探索任何块稀疏结构。目前，我们已经添加了流行的稀疏结构，如Fixed(来自OpenAI稀疏变压器)，BigBird(来自Google)和BSLongformer (AI2 Longformer的块稀疏实现)。我们还定义了一个具有“可变”结构的模板，如图10所示，它可以用来简单地定制任何块稀疏的随机、局部或全局注意力模式。
+
+参考文献
+https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-model-training-for-everyone/

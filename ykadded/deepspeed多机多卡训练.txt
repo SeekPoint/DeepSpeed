@@ -1,0 +1,120 @@
+deepspeed多机多卡训练
+Firefly
+https://zhuanlan.zhihu.com/p/622051995
+
+本文描述了利用微软的deepspeed训练大模型，启动2个节点，两个相同配置的镜像容器，启动的容器注意事项参考：
+
+Firefly：pytorch多机多卡训练
+12 赞同 · 6 评论文章
+1、环境准备：两台带有GPU显卡的服务器，ssh服务开启。
+
+参考微软的官方教程：
+
+https://www.youtube.com/watch?v=_NOk-mBwDYg&list=PLa85ZdUjfWS21mgibJ2vCvLziprjpKoW0&index=93
+
+由于之前在服务器启动ssh服务时，升级了openssh会导致服务器远程连接有问题，需要重启才行，
+重启了之后发现容器内部的的sshd无法启动，转发不了端口，运维帮忙调试，
+在容器内部配置/etc/ssh/sshd_config 的配置文件把POET=22注释打开并且换了一个端口号2222，成功启动，
+这是因为不熟悉linux的sed命令导致没有看懂微软官方教程里面shell脚本，直接复制运行导致端口号一直没有改成功，
+sshd一直启动的默认端口22，容器内部的指定端口没有启动成功，其中1台运行:
+
+service ssh status
+
+显示：sshd is running
+
+但是查询端口号占用为空，应该是没有启动成功，虽然其显示sshd is running ，大概监听的是22端口。
+
+在2台机器都修改了指定端口之后，开始并行运算，其中需要两台机器免密登陆，A机器免密登陆B机器，B机器也需要免密登陆A机器，
+这个要求跟torch的并行还不太一样，torch只要在主节点和子节点启动都启动dist并指定同一个端口号，在容器内部就可以直接连起来跑。
+这个需要免密登陆的要求在deepspeed的官方教程里面就写了这么一句话：
+which are machines accessible via passwordless SSH，而在UER-py的wiki文档对于deepspeed描述也没有细说。
+只是描述需要配置hostfile，两个节点需要如何配置并没有详细说明，而对服务器之间通信不够熟悉的人则难以启动。
+
+DeepSpeed configures multi-node compute resources with hostfiles that are compatible withOpenMPIandHorovod.
+A hostfile is a list ofhostnames(or SSH aliases), which are machines accessible via passwordless SSH, andslot counts,
+which specify the number of GPUs available on the system.
+
+
+2、下面描述如何在两台机器的两个容器之间进行免密登陆
+
+1）两台机器都进行:
+
+mkdir -p /root/.ssh
+
+cd /root/.ssh
+
+ssh-keygen -t rsa
+
+chmod 700 /root/.ssh
+
+2）将本机的公钥拷贝到其他机器上
+
+输入yes
+
+输入对方服务器密码
+
+A机器
+
+ssh-copy-id user@ipB
+
+B机器
+
+ssh-copy-id user@ipA
+
+3）由于在容器内部，也需要ssh免密登陆到主节点,因此也需要在A机器的容器内：
+
+ssh-copy-id user@ipA
+
+3、完成以上操作之后可以启动deepspeed，在此之前要安装好编译好，参考我之前的文章：
+
+Firefly：deepspeed安装踩坑实践
+27 赞同 · 11 评论文章
+运行以下代码：
+
+python3 preprocess.py --corpus_path corpora/CLUECorpusSmall_5000_lines.txt --vocab_path models/google_zh_vocab.txt \
+                      --dataset_path dataset.pt --processes_num 8 --dynamic_masking \
+                      --data_processor mlm
+
+deepspeed --hostfile=hostfile.txt pretrain.py --deepspeed --deepspeed_config models/deepspeed_config.json \
+                                              --dataset_path dataset.pt --vocab_path models/google_zh_vocab.txt \
+                                              --config_path models/megatron/bert_3.9B_config.json \
+                                              --output_model_path models/output_model \
+                                              --world_size 16 --batch_size 16 \
+                                              --total_steps 10000 --save_checkpoint_steps 5000 --report_steps 100 --deep_init
+踩坑如下：
+
+1）'pdsh' not installed
+
+两台机器都在容器运行
+
+apt-get install pdsh
+
+2）教程代码的配置deepspeed跑起来的时候没有指定--data_processor mlm ，而数据处理的时候指定了--data_processor mlm，
+如果不手动指定的话会调用默认的--data_processor bert导致报错
+
+3）preprocess.py 预处理代码的序列长度默认为128，而--config_path models/megatron/bert_3.9B_config.json里面的序列长度为512，
+需要重新根据序列长度512来预处理数据才不会元组越界
+
+4）--config_path models/megatron/bert_3.9B_config.json中的target为两个任务，但是“sp”任务会报错，改成单一任务“mlm”才能跑起来
+
+5）RuntimeError: NCCL error in: /opt/conda/conda-bld/pytorch_1670525552843/work/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:1269, internal error, NCCL version 2.14.3
+
+该问题在torch多机并行的时候碰到过，需要指定一堆环境变量export NCCL_IB_DISABLE=1; export NCCL_P2P_DISABLE=1; NCCL_DEBUG=INFO，参考我的文章：
+
+Firefly：pytorch多机多卡训练
+12 赞同 · 6 评论文章
+6）由于上次启动的时候升级了torch到2，按照之前经验操作一波，把torch和torchvision都升级，两台机器的容器分别升级，碰到了deepspeed编译版本和torch版本不匹配的问题
+
+pip uninstall deepspeed
+
+重装，但是pip直接加载在低版本编译的wheel文件，需要去把工作目录下的.cache/pip中的文件删除，在新版本的torch环境下再次编译安装deepspeed才行
+
+7）OOM
+
+调小batchsize=8,调小batchsize=4，都不起作用
+
+调小序列长度=256，不起作用
+
+调小模型参数为原本一半，序列长度恢复为512，batchsize恢复为16，依旧OOM，batchsize调为8，终于成功跑起来，主节点每张卡都占满，子节点只能占满一半
+
+编辑于 2023-04-14 23:08・IP 属地广东

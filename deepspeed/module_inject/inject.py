@@ -9,8 +9,8 @@ from deepspeed.ops.transformer import DeepSpeedTransformerLayer, DeepSpeedTransf
 from pydebug import gd, infoTensor
 
 def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, seed, preln, fp16=True):
-    gd.debuginfo(prj="ds")
     for name, child in model.named_children():
+        gd.debuginfo(prj="ds", info=f"name={name} +++ child={child}")
         if isinstance(child, layer_obj):
             cuda_config = DeepSpeedTransformerConfig(batch_size=micro_batch_size,
                                                      max_seq_length=max_seq_length,
@@ -23,8 +23,9 @@ def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, se
                                                      seed=seed,
                                                      fp16=fp16,
                                                      pre_layer_norm=preln)
-
             new_module = DeepSpeedTransformerLayer(cuda_config)
+
+            gd.debuginfo(prj="ds", info=f"cuda_config={cuda_config} +++ new_module={new_module}")
 
             # copy relevant state from child -> new module
             qw = child.attention.self.query.weight
@@ -64,9 +65,14 @@ def module_inject(layer_obj, model, config, micro_batch_size, max_seq_length, se
 
             setattr(model, name, copy.deepcopy(new_module))
 
+            gd.debuginfo(prj="ds", info=f"cuda_config={cuda_config} +++ new_module={new_module}")
+
         else:
+            gd.debuginfo(prj="ds")
             module_inject(layer_obj, child, config, micro_batch_size, max_seq_length, seed, preln, fp16)
-    print("model :", model)
+
+    gd.debuginfo(prj="ds", info=f"model={model}")
+
     return model
 
 

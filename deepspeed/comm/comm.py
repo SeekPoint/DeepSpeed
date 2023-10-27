@@ -55,6 +55,9 @@ ccl_backend = None
 from deepspeed.comm.utils import *
 
 
+# 本文件相当于提供了comm模块对外的api
+
+
 class ProcessGroup():
 
     def __init__(self, comm_id, ranks=[]):

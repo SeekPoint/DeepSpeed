@@ -1,0 +1,17 @@
+一下没什么干货
+
+DeepSpeed Communication Package
+https://mp.weixin.qq.com/s/v8iZEk1Vv-hhiBW0JcGYew
+
+
+DeepSpeed Activation Checkpointing
+https://mp.weixin.qq.com/s/lszVFCudsF76mehUXRDWPg
+
+DeepSpeed accelerator
+https://mp.weixin.qq.com/s/7YenLmO7dl23JQhpNQIDXQ
+
+DeepSpeed ZeRO
+https://mp.weixin.qq.com/s/GKYPqRw6qVCuMiB8Rqj9bA
+
+DeepSpeed LoRA 实现
+https://mp.weixin.qq.com/s/29n4gPfBlaw5UV2Jb0nOVg

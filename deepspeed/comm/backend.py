@@ -18,10 +18,13 @@ In the future, directly use NCCL/MPI/Gloo/etc without requiring torch.distribute
  - T-MPI
 
 # Backend is the base class
-     -- NcclBackend, MpiBackend, and TorchBackend are the main subclasses. TorchBackend is the only officially supported backend for now.
+     -- NcclBackend, MpiBackend, and TorchBackend are the main subclasses.
+     TorchBackend is the only officially supported backend for now.
+     目前只有基于torch的后端实现了
 """
 from pydebug import gd, infoTensor
 
+# 后端基类
 class Backend(object):
 
     def __init__(self, name='backend', rank=0, size=1):

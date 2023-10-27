@@ -61,17 +61,17 @@ _MODEL_PARALLEL_RNG_TRACKER_NAME = 'model-parallel-rng'
 transport_stream = None
 cuda_device = None
 
-
+# 对tensor在device上进行detach https://blog.csdn.net/qq_27825451/article/details/95498211
 def detach_variable(inputs, device=None):
     if isinstance(inputs, tuple):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         out = []
         for inp in inputs:
-            if not isinstance(inp, torch.Tensor):
+            if not isinstance(inp, torch.Tensor): #仅仅针对tensor
                 out.append(inp)
                 continue
 
-            requires_grad = inp.requires_grad
+            requires_grad = inp.requires_grad  #先记录
 
             if device is not None:
                 x = inp.to(device=device)
@@ -79,13 +79,13 @@ def detach_variable(inputs, device=None):
                 x = inp
 
             x = x.detach()
-            x.requires_grad = requires_grad
+            x.requires_grad = requires_grad #再恢复
             out.append(x)
         return tuple(out)
     else:
         raise RuntimeError("Only tuple of tensors is supported. Got Unsupported input type: ", type(inputs).__name__)
 
-
+# 设置GPU当前的随机数发生器状态
 def _set_cuda_rng_state(new_state, device=-1):
     """Sets the random number generator state of the current GPU.
 
@@ -120,7 +120,7 @@ def _set_cuda_rng_state(new_state, device=-1):
 
     get_accelerator().lazy_call(cb)
 
-
+# CUDA RNG状态跟踪器
 class CudaRNGStatesTracker:
     """Tracker for the cuda RNG states.
 
@@ -200,7 +200,7 @@ _CUDA_RNG_STATE_TRACKER = CudaRNGStatesTracker()
 
 
 def get_cuda_rng_tracker():
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     """Get cuda rng tracker."""
     return _CUDA_RNG_STATE_TRACKER
 
@@ -377,7 +377,7 @@ def is_activation_to_checkpoint(item):
     """
         Is an activation to be checkpointed
     """
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     global mp_size
     return torch.is_tensor(item) and item.is_floating_point() and item.numel() >= mp_size
 
@@ -591,13 +591,15 @@ class CheckpointFunction(torch.autograd.Function):
         del inputs_cuda
 
         if PARTITION_ACTIVATIONS:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f"args={args}")
             new_args = get_partitioned_activations_for_backward(args, inputs, CONTIGUOUS_CHECKPOINTING)
             assert len(new_args) % 2 == 0, f'save_for_backward called with odd number of args, {len(new_args)}'
+            gd.debuginfo(prj="ds", info=f"new_args={new_args}")
             save_args_for_backward(*new_args)
         elif CPU_CHECKPOINT:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f"args={args}")
             new_args = get_cpu_activations_for_backward(args, inputs)
+            gd.debuginfo(prj="ds", info=f"new_args={new_args}")
             save_args_for_backward(*new_args)
         else:
             gd.debuginfo(prj="ds")

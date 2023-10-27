@@ -100,7 +100,7 @@ class Noop:
     def wait(self):
         return None
 
-
+# 具体的后端类实现，目前只有基于torch的，
 class TorchBackend(Backend):
     """
         A light-weight wrapper class for torch.distributed API.

@@ -5,7 +5,7 @@
 
 from enum import Enum
 
-
+# 定义操作
 class ReduceOp(Enum):
     SUM = 0
     PRODUCT = 1

@@ -30,9 +30,9 @@ def load_model_with_checkpoint(r_module,
     error_msgs = []
 
     def prefix_check():
-        gd.debuginfo(prj="ds")
         # if keys start with 'model.' or 'transformer.', don't skip level 0 prefix
         for key in sd[0].keys():
+            gd.debuginfo(prj="ds", info=f'key={key}')
             # OPT models
             if re.match("^model[.]", key):
                 return False
@@ -44,13 +44,15 @@ def load_model_with_checkpoint(r_module,
     skip_level_0_prefix = prefix_check() and container.policy.use_load_prefix
 
     def transpose(data):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'data={data}')
         with torch.no_grad():
             data = data.contiguous()
             data1 = data.transpose(-1, -2).reshape(-1)
             data.reshape(-1).copy_(data1)
             data1 = None
-        return data.reshape(data.shape[-1], data.shape[-2])
+        tmp = data.reshape(data.shape[-1], data.shape[-2])
+        gd.debuginfo(prj="ds", info=f'tmp={tmp}')
+        return tmp
 
     def load(module, prefix):
         args = (sd[0], prefix, {}, True, [], [], error_msgs)
@@ -179,6 +181,7 @@ def load_model_with_checkpoint(r_module,
                                                       dim=0).to(get_accelerator().current_device_name()).contiguous())
 
             load_parameters(module, prefix)
+
             for n, child in module.named_children():
                 load_parameters(child, prefix + n + '.')
         else:

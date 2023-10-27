@@ -1,0 +1,287 @@
+deepspeed使用踩坑
+
+https://www.zhihu.com/question/453941150/answer/3092709784
+
+
+lcvcl
+lcvcl
+nlp算法
+deepspeed使用踩坑
+
+deepspeed为模型训练加速工具，其和transformers深度结合https://huggingface.co/docs/transformers/main_classes/deepspeed
+
+简单介绍
+Deepspeed分zero1，zero2，zero3和infinity版本
+
+●Speed-wise (left is faster than right)
+
+Stage 0 (DDP) > Stage 1 > Stage 2 > Stage 2 + offload > Stage 3 > Stage 3 + offloads
+
+●GPU Memory usage-wise (right is more GPU memory efficient than left)
+
+Stage 0 (DDP) < Stage 1 < Stage 2 < Stage 2 + offload < Stage 3 < Stage 3 + offloads
+
+其功能如下：Pipeline Parallelism
+
+1.Optimizer state partitioning (ZeRO stage 1)
+
+2.Gradient partitioning (ZeRO stage 2)
+
+3.Parameter partitioning (ZeRO stage 3)
+
+4.Custom mixed precision training handling
+
+5.A range of fast CUDA-extension-based optimizers
+
+6.ZeRO-Offload to CPU and NVMe
+
+7.此外还有一个pipeline模型，模型分层并行
+
+deepspeed在zero2时还提供offload模式，其在进行训练时可以将优化器参数和梯度状态卸载到内存中，以节省显存，zero3可以通过限定参数加载量而对模型逐块加载训练，使得大模型可以在小模型上运行，即infinity方式，只不过时间会减慢很多
+
+
+
+pipeline模式
+pipeline模式通过将模型的每层加载到不同gpu上，使用多卡加载大模型
+
+其天然支持使用sequential 方法构建的模型，只要是使用该方法的模型，可以直接用pipeline进行分层
+
+https://github.com/CoinCheung/gdGPT/tree/master
+
+https://github.com/liucongg/ChatGLM-Finetuning/blob/master/train_pipeline.py
+
+参考上述两个项目以及transformers中的代码，对starcoder的代码进行拆解
+
+
+
+from transformers import GPTBigCodeForCausalLM
+import torch
+from torch.nn import CrossEntropyLoss
+from deepspeed.pipe import PipelineModule, TiedLayerSpec, LayerSpec
+
+class EmbeddingPipeLayer(torch.nn.Module):
+    def __init__(self, model: GPTBigCodeForCausalLM):
+        super().__init__()
+        self.wte = model.transformer.wte
+        self.wpe = model.transformer.wpe
+        self.config = model.config
+        self.drop = model.transformer.drop
+        max_positions = self.config.max_position_embeddings
+        self.register_buffer(
+            "bias", torch.tril(torch.ones((max_positions, max_positions), dtype=torch.bool)), persistent=False
+        )
+        self.get_head_mask = model.transformer.get_head_mask
+
+    def forward(self, ipt):
+        input_ids, labels = ipt
+        device = input_ids.device
+        input_shape = input_ids.size()
+        input_ids = input_ids.view(-1, input_shape[-1])
+
+        past_length = 0
+        position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
+        position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
+
+        query_length = input_shape[-1]
+        key_length = past_length + query_length
+        self_attention_mask = self.bias[None, key_length - query_length : key_length, :key_length]
+        attention_mask = self_attention_mask.unsqueeze(2 if self.config.multi_query else 1)
+
+        head_mask = self.get_head_mask(head_mask, self.config.n_layer)
+
+        inputs_embeds = self.wte(input_ids)
+        position_embeds = self.wpe(position_ids)
+        hidden_states = inputs_embeds + position_embeds
+        hidden_states = self.drop(hidden_states)
+        output_shape = input_shape + (hidden_states.size(-1),)
+
+        return  hidden_states, None, attention_mask, head_mask, output_shape, labels
+
+class CodeBlockPipeLayer(torch.nn.Module):
+    def __init__(self, model: GPTBigCodeForCausalLM, layer_idx):
+        super().__init__()
+        self.layer = model.transformer.h[layer_idx]
+        self.layer_idx = torch.tensor(layer_idx)
+
+    def forward(self, ipt):
+        hidden_states, layer_past, attention_mask, head_mask, output_shape, labels = ipt
+        hidden_states = self.layer(hidden_states, hidden_states, layer_past, attention_mask, head_mask[self.layer_idx], torch.tensor(self.layer_idx))[0]
+        return hidden_states, layer_past, attention_mask, head_mask, output_shape, labels
+
+class FLNPipeLayer(torch.nn.Module):
+    def __init__(self, model: GPTBigCodeForCausalLM):
+        super().__init__()
+        self.final_layernorm = model.transformer.ln_f
+
+    def forward(self, ipt):
+        hidden_states, layer_past, attention_mask, head_mask, output_shape, labels = ipt
+        hidden_states = self.final_layernorm(hidden_states)
+        hidden_states = hidden_states.view(output_shape)
+        return hidden_states, labels
+
+class LMPipeLayer(torch.nn.Module):
+    def __init__(self, model: GPTBigCodeForCausalLM):
+        super().__init__()
+        self.lm_head = model.lm_head
+
+    def forward(self, ipt):
+        hidden_states, labels = ipt
+        logits = self.lm_head(hidden_states)
+        return logits, labels
+
+class LossPipeLayer(torch.nn.Module):
+    def __init__(self, model: GPTBigCodeForCausalLM):
+        super().__init__()
+
+    def forward(self, ipt):
+        logits, labels = ipt
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        loss_fct = CrossEntropyLoss()
+        loss = loss_fct(shift_logits.reshape(-1, shift_logits.size(-1)), shift_labels.reshape(-1))
+        return loss
+
+
+def get_model(model):
+    layers = [LayerSpec(EmbeddingPipeLayer, model=model),
+              *[LayerSpec(CodeBlockPipeLayer, model=model, layer_idx=idx) for idx in
+                range(model.config.n_layer)],
+              LayerSpec(FLNPipeLayer, model=model),
+              LayerSpec(LMPipeLayer, model=model),
+              LayerSpec(LossPipeLayer, model=model)]
+    return layers
+
+
+对于共享层则需要使用TieLayerSpec进行声明
+
+可以使用transformers对模型的权重进行加载，而后使用PipelineModule对模型进行分层，默认根据参数量进行划分，如下num_stages为划分层的数量，对应gpu卡的数量
+
+model = GPTBigCodeForCausalLM.from_pretrained(args.model_name_or_path, torch_dtype=torch.float16)
+model_pipe = PipelineModule(layers=get_model(model),
+                                num_stages=args.num_stages)
+此处有个坑，即模型的权重会向memory中进行加载，所以需要对模型进行fp16化，否则可能会oom，内存需求量为单卡*4
+
+而后构建dataset和collector后（参见pytorch训练），则可以对模型进行训练
+
+model_engine, optimizer, train_loader, lr_schdlr = deepspeed.initialize(model=model_pipe,
+                                                                        config=ds_config,
+                                                                        model_parameters=model_pipe.parameters(),
+                                                                        training_data=train_dataset)
+for i in range(args.num_train_epochs * num_update_steps_per_epoch):
+    loss = model_engine.train_batch()
+
+
+这里有个更大的坑，如果使用offload，在调用训练时需要更大的memory。否则优化器参数默认使用gpu加载，gpu就会oom
+
+总结
+
+pipeline只到模型训练之前，如果使用gpu分层，则需要大量的memory给其进行其他参数的加载，否则会oom
+
+但是可以通过自己手段给模型分配到不同GPU，使用to(device)的方法进行每个block模型数据结果设备的转换
+
+
+
+ZeRo3
+ZeRo3参数
+
+
+
+{
+    "zero_optimization": {
+        "stage": 3,
+        "offload_optimizer": {
+            "device": "cpu",
+            "pin_memory": true
+        },
+        "offload_param": {
+            "device": "cpu",
+            "pin_memory": true
+        },
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "sub_group_size": 1e9,                     //会把参数分组，在参数更新时对参数判断，如果使用infinity方法，则会拉倒内存中进行更新
+        "reduce_bucket_size": "auto",
+        "stage3_prefetch_bucket_size": "auto",
+        "stage3_param_persistence_threshold": "auto",
+        "stage3_max_live_parameters": 1e9,
+        "stage3_max_reuse_distance": 1e9,
+        "stage3_gather_16bit_weights_on_model_save": true  //模型用fp16的方式对权重进行保存
+    }
+}
+
+
+如果使用zero3训练遇到oom，减小stage3_max_live_parameters and stage3_max_reuse_distance这两个参数即可
+
+stage3_max_live_parameters 为在gpu使用参数量的上限
+
+stage3_max_reuse_distance 决定是在gpu上保留参数还是去除，如果在后面参数马上就会用到，且小于该值，该参数则会被保留用于计算，以减少通信开销
+
+下述三个参数的计算方式，如果设置为auto，Trainer则会自动对其进行计算赋值
+
+●reduce_bucket_size: hidden_size*hidden_size
+
+●stage3_prefetch_bucket_size: 0.9 hidden_size hidden_size
+
+●stage3_param_persistence_threshold: 10 * hidden_size
+
+在优化器step时oom，可以通过减小sub_group_size的方式进行解决
+
+
+
+在gpu较小放不下模型的时候，可以通过调整stage3_max_live_parameters 使其可以继续进行训练，其多余暂时不用的参数会放到内存中
+
+
+
+ZeRo-infinity
+{
+    "zero_optimization": {
+        "stage": 3,
+        "offload_optimizer": {
+            "device": "nvme",
+            "nvme_path": "/local_nvme",
+            "pin_memory": true,
+            "buffer_count": 4,
+            "fast_init": false
+        },
+        "offload_param": {
+            "device": "nvme",
+            "nvme_path": "/local_nvme",
+            "pin_memory": true,
+            "buffer_count": 5,
+            "buffer_size": 1e8,
+            "max_in_cpu": 1e9
+        },
+        "aio": {
+            "block_size": 262144,
+            "queue_depth": 32,
+            "thread_count": 1,
+            "single_submit": false,
+            "overlap_events": true
+        },
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "sub_group_size": 1e9,
+        "reduce_bucket_size": "auto",
+        "stage3_prefetch_bucket_size": "auto",
+        "stage3_param_persistence_threshold": "auto",
+        "stage3_max_live_parameters": 1e9,
+        "stage3_max_reuse_distance": 1e9,
+        "stage3_gather_16bit_weights_on_model_save": true
+    },
+}
+
+
+其实是在zero3的基础上使offload_param参数指定到nvme，如果相比就是一个放到内存中一个放到nvme中
+
+实践
+使用zero3限制stage3_max_live_parameters和stage3_max_reuse_distance 为2e-7在3090上训练lora，15b starcoderbase 3张卡数据并行，3个epoch 2w数据，batchsize 2，gradient_accumulation_steps 4，需要31小时
+
+速度大幅下降
+
+
+
+Deepspeed zero3使用off_load会大幅降低gpu使用率，使得gpu训练速度非常慢，且batchsize也不能设置太大，否则gpu会oom，可以正常运行时，其显存明显只占用了一半
+
+使用grading checkpoints对模型显存进行节省，会小幅降低速度，但是显存节省很多，通过增加batchsize相对加快训练速度
+
+发布于 2023-09-08 09:05

@@ -1,0 +1,85 @@
+DeepSpeed原理（手写笔记）
+https://juejin.cn/post/7265210281193619497
+
+介绍了一下DeepSpeed的架构，以及部分重点内容的原理。
+其实是看DeepSpeed源码时候随便写的一段笔记，没时间整理并且写的很潦草，所以不太想发，但是框架的代码读起来不容易，里面知识点确实花了一些时间才弄明白。
+另外，也看到DeepSpeed框架在工作中使用越来越多，所以发出来给想要了解DeepSpeed原理的人一个参考，欢迎批评指正，献丑了。
+
+正文
+
+001.webpp 内容如下：
+
+ds的初版是围绕zero1,2构建的
+zero2的实现是以优化器的形式实现的,
+以下为简化的流程：
+
+zero优化器创建过程：
+     1 开一个新的fp16 buffer,存所有的parameters
+     2 将新的 buffer 分配到原来的参数上
+     3 切分buffer,每个节点clone对应的fP32参数
+         fp32 Parameter被切分
+         fp32 参数是flatten tensor
+     4 fp32 参数替换掉原来的参数
+     5 切分信息--原来tensor list与fp32 flatten的对应关系
+
+。。。有个示意图，不明白？？
+
+梯度更新
+1 fp16 grad norm
+2 释放不在当前节点的梯度
+3 创建当前节点上所需要的grad
+4 底层优化器Step-更新fp32的参数
+5 fp32复制到fp16数中
+6 All gather操作,合并所有更新后的fp16参数
+
+？？为什么fp32参数需要梯度呢？？是不是只用作记录用
+
+
+002.webpp 内容如下：
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DS启动机制
+deepspeed [ds参数] [用户程序] [程序参数]
+重要参数
+hostfile 定义资源的文件 默认位置/job/hostfile,如果省略或者文件不存在默认为单机情况
+force_multi 强制用多机方式启动，在单机上可以作为调试用
+
+流程：
+runner.py--》计算资源池--》检查多机环境--》构造Runner--》在节点上启动了程序
+
+检查多机环境: 与主机通信，如果master address未指定，则指定可用资源里的第一个节点
+构造Runner：环境变量，程序停止？？？
+在节点上启动了程序：多机命令运行工具pdsh
+PDSH is a an efficient, multithreaded remote shell client which executes commands on multiple remote hosts in parallel
+https://github.com/chaos/pdsh
+
+launcher.py:  这是runner.py的下属线程，负责本机多卡上的线程管理
+每张卡的rank(全局)和LOCAL_RANK(本地)
+
+                                        runner(下发launcher命令)
+        Machine-0                 Machine-1   ....              Machine-M
+GPU1 GPU2...GPUN                GPU1 GPU2...GPUN              GPU1 GPU2......GPUN
+0    1    N-1                   0     1    N-1                0     1         N-1     ====这是locak_rank
+0    1    N-1                   N     N+1    2N-1        M*(N-1)  M*(N-1)+1   M*N -1  ====这是global_rank
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+DS engine 框架的核心内容
+使用ds的第一件事就是定义模型，ds把模型封装成统一的engine形式
+
+分布式初始化： configure backend
+
+get_accelerator函数：是硬件加速器的封装，定义了一些通用的接口函数和属性，类型有cuda，cpu，xpu
+并且加载自定义的算子，op_builder
+
+backend: nccl, mpi, gloo, ccl??torch dist===其实只有ccl实现了，最终还是用的torch backend，也就是torch dist
+
+deepspeed.initialize是创建engine的一个公共入口
+一共有3个类型：
+1 DeepspeedHybirdEngine  ==包含了TP切分，推理方向的优化
+2 deepspeedEngine ==其他engine的父类，整个框架的基础，包括了zero,amp,offload, Qdute???
+3 pipelineEngine
+
+v0.1.1版本中还有一个deepspeedlight, 是后续engine的前身，可以了解一下最初的设计
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -26,14 +26,15 @@ class QuantAct(nn.Module):
     """
 
     def __init__(self, act_range_momentum=0.95, quant_mode='symmetric'):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(QuantAct, self).__init__()
 
         self.act_range_momentum = act_range_momentum
         self.quant_mode = quant_mode
         if quant_mode == 'symmetric':
+            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
             self.act_function = SymQuantizer.apply
         else:
+            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
             self.act_function = AsymQuantizer.apply
 
         self.register_buffer('x_min_max', torch.zeros(2))

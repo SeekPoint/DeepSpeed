@@ -1,0 +1,38 @@
+DeepSpeed 之二 ZeRO-Offload
+
+https://mp.weixin.qq.com/s/ApHgc4SD7G4D3rcNbzmXUw
+
+----无代码，有图，TBD
+
+张北北 指北笔记 2023-08-07 22:42 Posted on 北京
+ZeRO-Offload: 10x bigger model training using a single GPU
+ZeRO-Offload通过利用GPU及其主机cpu上的计算和内存资源，推动了可以使用最小GPU资源有效训练的最大模型大小的边界。它允许在单个NVIDIA V100 GPU上训练多达130亿个参数模型，比最先进的GPU大10倍，同时保持每个GPU超过30万亿次浮点运算的高训练吞吐量。
+
+通过在单个GPU上实现数十亿参数的模型训练，ZeRO-Offload使大型模型训练民主化，使资源有限的深度学习从业者也可以使用它。
+
+Image
+Figure 6: The largest models can be trained using default PyTorch and ZeRO-Offload on a single GPU.
+ZeRO-Offload背后的关键技术是我们将优化器状态和梯度卸载到CPU内存的新功能，构建在ZeRO-2之上。这种方法允许ZeRO-Offload最小化CPU卸载带来的计算效率损失，同时还能实现与原始ZeRO-2相同，有时甚至更好的效率。下图显示了ZeRO-Offload的架构。
+
+Image
+Figure 7: ZeRO-Offload overview.
+**Learn how ZeRO-Offload enables multi-billion parameter training on a single GPU **
+
+训练像GPT和T5这样的数十亿参数模型需要许多GPU来拟合模型及其在GPU内存中的状态。为了解决内存限制问题，大型模型训练大多采用跨多个GPU设备的模型并行进行。最近，我们发布了ZeRO，这是一个内存高效的优化器，它跨数据并行gpu划分模型状态(优化器状态、梯度和模型权重)，允许在不需要模型并行性的情况下训练数十亿参数的模型。然而，ZeRO仍然需要大量的数据并行gpu来保存被划分的模型状态，这就限制了大型模型训练的访问权限，只有少数能够访问这些资源的人。
+
+ZeRO-Offload使大型模型训练民主化，甚至可以在单个GPU上进行。为了允许在不使用多个gpu的情况下训练数十亿参数的模型，ZeRO-Offload继承了ZeRO-2的优化器状态和梯度划分。与ZeRO-2不同，ZeRO-Offload不是让每个GPU保留优化器状态和梯度的分区，而是将两者都卸载到主机CPU内存中。优化器状态在整个训练过程中保存在CPU内存中。另一方面，梯度是在向后传递期间使用gpu上的reduce-scatter计算和平均的，然后每个数据并行进程将属于其分区的平均梯度卸载到CPU内存(图7中的g offload)，同时丢弃其余的梯度。
+
+一旦梯度在CPU上可用，每个数据并行进程直接在CPU上并行更新优化器状态分区(图7中的p更新)。参数分区被移回GPU，然后在GPU上进行all-gather操作来收集所有更新的参数(图7中的g swap)。ZeRO-Offload还利用通信(如g offload和g swap)和计算(如向后传递和p update)之间的重叠，使用单独的CUDA流来最大化训练效率。
+
+See the benefits ofr ZeRO-Offload on model scale, training speed, and scalability
+
+10倍的模型规模:在单个32 GB的V100 GPU上，图6显示PyTorch可以训练的最大模型有13亿个参数，而ZeRO-Offload允许训练130亿个参数的模型，这是10倍。这是因为ZeRO-Offload在整个训练过程中将优化器状态(消耗很大一部分GPU内存)保存在主机内存中，同时还将梯度在逆向计算时卸载给CPU。因此，节省的GPU内存可以用于托管更大的模型进行训练。
+
+高效的训练吞吐量:图8显示，在训练100亿个参数的模型时，即使只使用单个GPU进行训练，ZeRO-Offload也可以在每个GPU上提供超过30 teraflops的吞吐量，并且其吞吐量随着GPU数量的增加而接近完美的线性增长。
+
+ZeRO-Offload很好地补充了ZeRO-2，支持在少量gpu上高效训练大型模型。从1到16个GPU, ZeRO-Offload通过利用CPU内存，减少模型所需的GPU内存，将模型训练从不可行的变为可行的。在32个gpu上，ZeRO-Offload略优于ZeRO-2;这种改进来自于ZeRO-Offload在GPU上额外节省的内存，它允许更大的批处理规模的训练，并提高GPU的计算效率，尽管CPU卸载的开销。对于更多的gpu(如64和128)，ZeRO-2优于ZeRO-Offload，因为两者现在可以运行相似的批处理大小。一方面，ZeRO-2没有将数据移动到CPU的开销，而另一方面，GPU上的优化器步长计算比CPU上快得多。总之，ZeRO-offload补充了ZeRO-2并扩展了ZeRO家族的优化，以涵盖从单个设备到数千个设备的大型模型训练的全部范围。
+
+Image
+Figure 8: The training throughput is compared for ZeRO-Offload and ZeRO-2 using 128 GPUs to train a 10-billion parameter GPT-2 model.
+参考文献
+https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-model-training-for-everyone/

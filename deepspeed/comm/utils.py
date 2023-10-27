@@ -8,8 +8,10 @@ import inspect
 from deepspeed.utils import get_caller_func
 from pydebug import gd, infoTensor
 
+#前面三个****_from_launcher通过 DeepSpeed launcher 获取相关信息，他们有是由 DeepSpeed launcher设置
+
 def get_local_rank_from_launcher():
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     # DeepSpeed launcher will set it so get from there
     rank = os.environ.get('LOCAL_RANK')
 
@@ -24,7 +26,7 @@ def get_local_rank_from_launcher():
 
 
 def get_world_rank_from_launcher():
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
 
     # DeepSpeed launcher will set it so get from there
     rank = os.environ.get('RANK')
@@ -40,7 +42,7 @@ def get_world_rank_from_launcher():
 
 
 def get_world_size_from_launcher():
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     # DeepSpeed launcher will set it so get from there
     size = os.environ.get('WORLD_SIZE')
     rank = os.environ.get('RANK')
@@ -57,16 +59,19 @@ def get_world_size_from_launcher():
 
     return int(size)
 
+# 这后面是一个函数参数类型处理相关函数，主要是调试打印用
 
+# https://blog.csdn.net/weixin_35955795/article/details/53053762
+# 打印相关参数信息   TBD，打开调试了解详细功能！
 def get_default_args(func):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     signature = inspect.signature(func)
     return {k: v.default for k, v in signature.parameters.items() if v.default is not inspect.Parameter.empty}
 
 
 # We need this hacky function since torch doesn't consistently name or place the input tensor args
 def get_tensor_position(func):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     sig_params = inspect.signature(func).parameters
     arg = None
     # most colls
@@ -88,9 +93,12 @@ def get_tensor_position(func):
 
 
 def get_tensor_kwarg(func, kwargs):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     func_args = get_default_args(func)
+
+    #Python 字典(Dictionary) update() 函数把字典 dict2 的键/值对更新到 dict 里。
     func_args.update(kwargs)
+
     arg = None
 
     if 'tensor' in func_args:
@@ -109,7 +117,7 @@ def get_msg_size_from_args(func, *args, **kwargs):
     #   - tensor arg is in args
     #   - tensor arg is in kwargs
     #   - tensor arg is not present (e.g. barrier)
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     tensor_arg_position = -1
     tensor_arg = None
     # check if tensor arg is in args
@@ -131,9 +139,8 @@ def get_msg_size_from_args(func, *args, **kwargs):
         else:
             return tensor_arg.element_size() * tensor_arg.nelement()
 
-
 def get_debug_log_name(func_args, debug):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     if debug:
         return func_args['log_name'] + ' | [Caller Func: ' + get_caller_func() + ']'
     else:

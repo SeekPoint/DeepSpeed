@@ -1,0 +1,110 @@
+DeepSpeed 之一 3D 并行
+https://mp.weixin.qq.com/s/1w0gqJ6F2z0mkSdTmGESpA
+
+----无代码，有图，TBD, 其实就是翻译
+
+张北北 指北笔记 2023-08-08 22:02 Posted on 北京
+2月，我们宣布了DeepSpeed，一个开源的深度学习训练优化库，以及ZeRO(零冗余优化器)，一个库中的一种新的内存优化技术，通过提高规模、速度、成本和可用性，极大地推进了大型模型训练。DeepSpeed使研究人员能够创建图灵自然语言生成(Turing-nlg)，这是在发布时拥有170亿个参数和最先进精度的最大语言模型。今年5月，我们发布了支持ZeRO-2的2000亿个参数的模型训练，与目前的状态相比，速度提高了10倍，同时还发布了一系列计算、I/O和收敛优化，为最快的BERT训练提供了动力。从那时起，我们一直在继续快速创新，推动深度学习训练的速度和规模的界限。
+
+今天，我们很高兴分享我们的新进展，不仅将深度学习训练推向极致，而且还将其民主化，让更多的人-从在大型超级计算机上训练的数据科学家到在低端集群甚至单个GPU上训练的数据科学家。更具体地说，DeepSpeed增加了四项新的系统技术，进一步推动了微软人工智能产品和平台的大规模创新。它们提供了极高的计算、内存和通信效率，并为具有数十亿到数万亿个参数的模型训练提供了动力。这些技术还允许使用非常长的输入序列和单个GPU的硬件系统，具有数千个GPU的高端集群或具有非常慢的以太网网络的低端集群。
+
+具有3D并行性的万亿参数模型训练:DeepSpeed实现了三种并行方法的灵活组合-ZeRO-powered 数据并行，管道并行和tensor-slicing模型并行。3D并行性适应工作负载需求的不同需求，为具有超过一万亿参数的超大型模型提供动力，同时实现近乎完美的内存扩展和吞吐量扩展效率。此外，其改进的通信效率允许用户在有限网络带宽的常规集群上以 2- 7 倍的速度训练数十亿参数的模型。
+
+在具有ZeRO-Offload的单个GPU上进行10倍大的模型训练:我们扩展ZeRO-2以利用CPU和GPU内存来训练大型模型。使用带有单个NVIDIA V100 GPU的机器，我们的用户可以运行多达130亿个参数的模型，而不会耗尽内存，比现有方法大10倍，同时获得具有竞争力的吞吐量。这一特征使数十亿参数的模型训练民主化，并为许多深度学习从业者打开了探索更大更好的模型的窗口。
+
+https://www.microsoft.com/en-us/research/publication/zero-offload-democratizing-billion-scale-model-training/
+
+通过DeepSpeed稀疏注意力为10倍长的序列和6倍更快的执行速度提供动力: DeepSpeed提供稀疏注意力kernel-一种工具技术，以支持长序列的模型输入，无论是文本，图像还是声音。与传统的Dense Transformer相比，它提供了一个数量级更长的输入序列，并在相当的精度下获得高达6倍的执行速度。它的执行速度也比最先进的稀疏实现快1.5 - 3倍。此外，我们的稀疏内核支持灵活的稀疏格式的有效执行，并使用户能够在他们的自定义稀疏结构上进行创新。
+
+1-bit Adam，最多减少5倍的通信量:Adam是一个有效的(可能是最充分利用的)优化器，用于训练许多大规模深度学习模型。然而，Adam通常不兼容通信高效的优化算法。因此，在跨分布式设备扩展时，通信成本可能成为瓶颈。我们引入了一种新的算法，高效实现的1位Adam，它将通信量减少了5倍，同时实现了与Adam相似的收敛效率。我们观察到，在通信受限的场景下，分布式训练速度提高了3.5倍，允许扩展到不同类型的GPU集群和网络。
+
+https://www.microsoft.com/en-us/research/publication/1-bit-adam-communication-efficient-large-scale-training-with-adams-convergence-speed/
+
+Image
+This blog post explores these four lines of technology in greater depth. We have been making all of these exciting new optimizations available in open-source library, DeepSpeed.
+3D parallelism: Scaling to trillion-parameter models
+随着现代GPU集群上可用计算的快速增长，训练具有令人难以置信的能力的强大的万亿参数模型不再是遥不可及的梦想，而是不久的将来的现实。DeepSpeed结合了三种强大的技术，可以训练数万亿规模的模型，并扩展到数千个gpu:数据并行训练，模型并行训练和管道并行训练。这种共生关系扩展了深度学习训练，远远超出了每种策略单独提供的范围。3D并行同时解决了训练万亿参数模型的两个基本挑战:内存效率和计算效率。因此，DeepSpeed可以在不牺牲速度的情况下扩展到内存中最大规模的模型。
+
+Learn the challenges of obtaining memory and compute efficiency for gigantic models
+
+内存效率: 训练一万亿参数模型所需的内存远远超出单个GPU设备的可用内存。使用混合精度的Adam优化器进行训练需要大约16tb (TB)的内存来存储**模型状态(参数、梯度和优化器状态)**。相比之下，最先进的NVIDIA A100 gpu只有40gb的内存。仅仅是存储模型状态就需要400个这样的gpu的集体内存。
+
+激活会消耗随着批处理大小而增加的额外内存。仅使用单位批处理大小训练的万亿参数模型产生超过1tb的激活内存。通过交换额外的计算，激活检查点将内存减少到大约20 GB，但是对于训练来说，内存需求仍然非常大。
+
+模型状态和激活必须在可用的多个GPU设备之间有效地进行分区，以使这样的模型甚至可以在不耗尽内存的情况下开始训练。
+
+计算效率:端到端训练一个万亿参数的模型大约需要5000 zttaflops(即5后面有24个零;基于OpenAI扩展工作的法则)。训练这样一个模型需要4000个NVIDIA A100 gpu以50%的计算效率运行大约100天。
+
+虽然大型超级计算GPU集群可以拥有超过4000个GPU，但由于批处理大小的限制，在这种规模下实现高计算效率是具有挑战性的。计算效率随着计算时间随通信时间的增加而增加。这个比率与批量大小成正比。然而，训练模型的批大小是有上限的，超过这个上限，收敛效率就会迅速下降。
+
+GPT-3是世界上最大的模型之一，它的批量训练规模约为1500个。对于4,000个GPU，即使是4,000个自由的批处理大小也只能允许每个GPU的批处理大小为1，并且限制了可伸缩性。
+
+Understand the tradeoffs of data, model, and pipeline parallelism
+
+数据并行是深度学习中普遍存在的一种技术，其中每个训练数据的输入批次在数据并行workers之间进行拆分。梯度必须在反向传播后进行通信和聚合，以确保优化器采取一致的step。数据并行有几个明显的优点，包括计算效率和最小的实现工作量。然而，数据并行依赖于随着数据并行工作者数量的增加而扩展批处理大小，这是不可能在不影响收敛的情况下无限完成的。
+
+内存效率:数据并行性在所有workers中复制模型和优化器，因此内存效率不高。DeepSpeed开发了ZeRO，这是一个优化集合，可以提高数据并行的内存效率。这项工作依赖于ZeRO阶段1，它在数据并行workers之间划分优化器状态以减少冗余。
+
+计算效率:当我们增加并行度时，每个worker执行的计算量是恒定的。数据并行可以在小范围内实现近乎完美的扩展。然而，数据并行workers之间聚合梯度的通信成本随着模型的大小而增加，限制了大型模型或低通信带宽系统的计算效率。gradient accumlation 是平摊这种通信成本的一种常用策略，方法是进一步增加批大小，并在 micro-batches 上执行多次正向和反向传播，同时在聚合和执行优化step之前局部积累梯度。
+
+模型并行是一大类技术，它将模型的各个层划分为不同的workers。就其本质而言，模型并行性的计算和通信是特定于模型体系结构的，因此可能需要大量的初始实现工作。DeepSpeed在这项工作中利用了NVIDIA的Megatron-LM，用于基于transformer的大规模模型并行语言模型。模型并行性减少了与工作线程数量成比例的内存。模型并行是三种并行中内存效率最高的，但代价是计算效率最低。
+
+内存效率:模型并行性减少了与工作线程数量成比例的内存占用。至关重要的是，这是减少单个网络层激活内存的唯一方法。DeepSpeed通过在模型并行workers之间划分激活内存进一步提高了内存效率。
+计算效率:由于在每次向前和向后传播中激活的额外通信，模型并行性的计算效率很差。模型并行性需要高通信带宽来提高效率，并且不能很好地扩展到通信带宽有限的单个节点之外。此外，每个模型并行工作者减少了每个通信阶段之间执行的计算量，从而影响了计算效率。模型并行性通常与数据并行性结合使用，在内存和计算效率之间进行权衡。
+管道并行训练引擎包含在这个版本的DeepSpeed!管道并行性将模型的层划分为可以并行处理的阶段。当一个阶段完成micro-batch的前向传递时，激活memory被传送到管道中的下一个阶段。类似地，当下一阶段完成其向后传播时，梯度通过管道向后通信。多个micro-batches必须保持在飞行中，以确保管道阶段并行计算。已经开发了几种方法，例如PipeDream，以权衡内存和计算效率以及收敛行为。DeepSpeed方法通过梯度积累提取并行性，以保持与传统数据和模型并行训练相同的收敛行为。
+
+内存效率:管道并行性减少了与管道阶段数量成比例的内存，允许模型大小与workers数量线性扩展。然而，流水线并行性并没有减少每一层激活的内存占用。此外，每个worker必须存储所有正在运行的micro-batch的激活。实际上，管道第一阶段的激活内存与单个micro-batch的总激活内存大致相同。一个万亿参数的模型将需要大约19 GB的内存来激活一个微批处理，几乎消耗了新NVIDIA A100 GPU可用内存的一半。
+
+计算效率:管道并行具有最低的通信量，因为它只通信与阶段边界之间层的激活大小成比例的数据。然而，它不能无限扩展。与模型并行性一样，增加管道大小会减少每个管道阶段的计算量，这也会降低计算与通信的比率。管道并行性还要求其每个阶段都能完美地实现负载平衡，以实现良好的效率。
+
+Achieving both memory and compute efficiency with 3D parallelism
+数据、模型和管道并行性各自在提高内存和计算效率方面发挥着特定的作用。图1说明了我们的3D策略。
+
+内存效率:将模型的层划分为流水线阶段，通过模型并行性进一步划分每个阶段的层。这种2D组合同时减少了模型、优化器和激活所消耗的内存。然而，我们不能在不屈服于限制计算效率的通信开销的情况下无限期地划分模型。
+
+计算效率:为了在不牺牲计算效率的情况下允许worker的数量超出模型和管道并行，我们使用 ZeRO-powered 数据并行(ZeRO-DP)。ZeRO-DP不仅通过优化器状态分区进一步提高内存效率，而且还允许通过利用拓扑感知映射以最小的通信开销扩展到任意数量的gpu。
+
+拓扑感知的3D映射(图2):3D并行性中的每个维度都被仔细映射到worker上，通过利用两个关键的体系结构属性来实现最大的计算效率。
+
+Image
+Figure 1: Example 3D parallelism with 32 workers. Layers of the neural network are divided among four pipeline stages. Layers within each pipeline stage are further partitioned among four model parallel workers. Lastly, each pipeline is replicated across two data parallel instances, and ZeRO partitions the optimizer states across the data parallel replicas.
+Image
+Figure 2: Mapping of workers in Figure 1 to GPUs on a system with eight nodes, each with four GPUs. Coloring denotes GPUs on the same node.
+Learn more about how 3D parallelism enlists eatch type of parallelism to train trillion-paramerter models
+
+使用8路模型并行性、64路管道并行性和8路数据并行性，可以将一个万亿参数的模型扩展到4,096个NVIDIA A100 gpu上。
+
+三维并行通过模型并行和管道并行的结合，实现了优异的跨节点存储效率和计算效率。模型并行性为节点内的激活和模型状态带来内存效率，而管道并行性允许跨节点的模型状态的内存效率，而不会牺牲与单独使用模型并行性相比的计算效率。在我们的万亿参数示例中，micro-batch大小为1，在使用上述3D并行性进行激活检查点之后，我们的模型将为模型状态消耗30 GB内存，为分区激活消耗2.5 GB内存。这导致总内存占用为32.5 GB。在这样的配置下，具有40gb内存的NVIDIA A100 gpu有足够的空间来拟合和训练这样的模型。
+
+将模型并行性与管道并行性相结合还允许管道并行性以最小的气泡开销实现高计算效率，即使在非常小的批处理规模下也是如此。使用8路模型并行性，每个模型使用1个微批将导致每个GPU的有效微批为1/8。因此，使用管道并行度8倍的梯度累积步长，并且每个gpu的批处理大小仅为1，管道并行性可以实现90%的计算效率。当与数据并行性相结合时，这导致在4,096个gpu上的有效批处理大小为4,096，仍然可以实现90%的流水线效率。
+
+But what compute efficiency results from data parallelism? Doesn’t data parallelism require large batch per GPU to remain efficient?
+
+模型并行可以将有效批处理大小降低到每个GPU小于1个。这允许管道并行性隐藏管道气泡开销，即使是小批处理。请注意，通过跨节点使用管道并行性，我们有效地允许管道每个阶段的数据并行节点之间的通信独立发生，并与其他管道阶段并行。事实上，在高端GPU集群中常见的全连接网络拓扑中，这对数据并行训练可用的有效通信带宽具有重要意义。由于管道阶段的每个节点都可以与其对应的数据并行节点并行通信，因此有效通信带宽与管道阶段数成正比。通过64个管道并行级，有效带宽是往返单个节点带宽的64倍。有了如此大的有效带宽，管道并行可以有效地扩展数据并行性，即使是在计算与通信比率非常低的小批处理规模下也是如此。
+
+Powering trillion-parameter model training with linear efficiency scaling
+DeepSpeed可以使用少至800个NVIDIA V100 gpu来训练具有一万亿参数的语言模型(图3)。我们通过缩放模型的大小和观察模型大小和训练吞吐量的线性增长来展示同步内存和计算效率。在每种配置中，我们可以在每个GPU上训练大约14亿个参数，这是单个GPU在不耗尽内存的情况下所能支持的最大模型尺寸，表明了完美的内存缩放。我们还获得了接近完美的线性计算效率扩展和每V100 GPU 47 teraflops的吞吐量。对于给定的硬件来说，这是令人印象深刻的扩展和吞吐量。
+
+Image
+Figure 3: Model size (in billions of parameters) and training throughput (in petaflops) as a function of GPUs. DeepSpeed can train a model with 1 trillion parameters using 800 NVIDIA V100 Tensor Core GPUs with 32 GB of memory. Each configuration uses 16-way model parallelism provided by NVIDIA Megatron-LM, and the remaining GPUs are arranged using pipeline parallelism. The trillion-parameter model has 298 layers of Transformers with a hidden dimension of 17,408 and is trained with sequence length 2,048 and batch size 2,048. For smaller models, we decrease the number of Transformer layers and the batch size proportionally to the number of GPUs.
+Dive deeper into how 3D parallelism accerlerates training at the scale of GPT-3
+
+Image
+Figure 4: System performance using 800 GPUs to train a GPT-3 scale model with 180 billion parameters using 2D and 3D parallelism. The model has 100 Transformer layers with hidden dimension 12,288 and 96 attention heads. The model is trained with batch size 2,048 and sequence length 2,048. ZeRO-1 is enabled alongside data parallelism. P, M, and D denote the pipeline, model, and data parallel dimensions, respectively.
+在图4中，我们使用最新的GPT-3模型架构，拥有超过1750亿个参数，作为3D并行性的基准
+
+我们首先评估2D confiurations(C1-C3)。配置C1和C2只使用管道和模型并行——它们可以训练模型，但由于过度分解问题和GPU利用率低而实现低吞吐量。C3试图只使用管道和数据并行性，但如果不通过Megatron's的模型并行性减少激活的大小，则无法在内存中适应问题。
+3D configurations (C4-C10)采用增加管道平行度的方式布置;最佳性能是通过中间配置实现的，这些配置平衡了并行性，从而实现了内存、计算和通信效率。
+最好的3D方法可以达到每个GPU每秒49万亿次浮点运算，超过理论硬件峰值的40%。
+See how hybrid parallelism accelerates training GPT-2 on low-bandwidth clusters up to 7x
+
+在图5中，我们在训练一个有15亿个参数的GPT-2模型时展示了混合并行的通信优势。为了强调训练的通信阶段，我们在节点间带宽较低的集群中的四个节点上进行训练:
+
+由于低节点内带宽和较小的模型尺寸，模型并行性在这种情况下不是有利的。
+与数据和模型并行配置相比，管道并行通信的体积要小一个数量级，在小批量处理时速度要快7倍。
+随着批处理大小的增加，数据并行使用梯度积累来分摊通信开销，但是管道并行配置在更大的批处理大小下仍然可以实现数据并行性能的两倍以上。
+混合管道和数据并行配置通过将数据并行组限制在节点内的gpu上，避免了梯度通信的瓶颈，因此梯度通信受益于更快的节点内带宽。
+Image
+Figure 5: Throughput as a function of batch size while training GPT-2 (1.5B parameters) with sequence length 1,024. Training uses four nodes, each with four NVIDIA V100 GPUs with 16 GB of memory. The GPUs are connected with 50 Gigabits-per-second (Gbps) intra-node bandwidth and 4 Gbps inter-node bandwidth. DP denotes data parallelism with ZeRO-1 enabled. All methods scale batch size via increasing steps of gradient accumulation.
+参考文献
+https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-model-training-for-everyone/

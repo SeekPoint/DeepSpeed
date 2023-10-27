@@ -50,7 +50,7 @@ def get_module_name(group_name, model, key_word, exist_module_name, mpu=None, ve
     return return_module_name, exist_module_name
 
 
-def get_compress_methods(model, compress_methods, mpu=None):
+def (model, compress_methods, mpu=None):
     # extract the compression module for each method in compress_methods
     gd.debuginfo(prj="ds")
     layer_added_compress_methods = []
