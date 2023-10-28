@@ -70,7 +70,7 @@ class ZeroOneAdam(torch.optim.Optimizer):
                  cuda_aware=False,
                  comm_backend_name='nccl'):
 
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
 
         if amsgrad:
             raise RuntimeError('0/1 Adam does not support the AMSGrad variant.')

@@ -13,7 +13,7 @@ class FusedAdamBuilder(CUDAOpBuilder):
     NAME = "fused_adam"
 
     def __init__(self):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__, level = 2)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}", level = 2)
         super().__init__(name=self.NAME)
 
     def absolute_name(self):
@@ -26,11 +26,11 @@ class FusedAdamBuilder(CUDAOpBuilder):
         return ['csrc/adam/fused_adam_frontend.cpp', 'csrc/adam/multi_tensor_adam.cu']
 
     def include_paths(self):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return ['csrc/includes', 'csrc/adam']
 
     def cxx_args(self):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         args = super().cxx_args()
         return args + self.version_dependent_macros()
 

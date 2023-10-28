@@ -26,7 +26,7 @@ class BaseConvolutionContainer(ABC):
 class BaseTransformerContainer(ABC):
 
     def __init__(self, policy, config, model_config, layer_id, child):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.policy = policy
         self.config = config
         self.model_config = model_config

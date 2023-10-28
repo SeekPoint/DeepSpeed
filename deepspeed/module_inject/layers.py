@@ -15,7 +15,7 @@ from pydebug import gd, infoTensor
 class LinearAllreduce(nn.Module):
 
     def __init__(self, weight, bias=None, mp_group=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(LinearAllreduce, self).__init__()
         self.weight = weight
         self.bias = bias

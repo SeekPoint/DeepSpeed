@@ -10,7 +10,7 @@ from pydebug import gd, infoTensor
 class DSUNet(CUDAGraph, torch.nn.Module):
 
     def __init__(self, unet, enable_cuda_graph=True):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         self.unet = unet
         # SD pipeline accesses this attribute

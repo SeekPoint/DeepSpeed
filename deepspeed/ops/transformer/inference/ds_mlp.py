@@ -17,7 +17,7 @@ class DeepSpeedMLP(nn.Module):
     _inter_w_buffers = []
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, mlp_extra_grouping=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(DeepSpeedMLP, self).__init__()
 
         self.config = config

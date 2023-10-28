@@ -23,7 +23,7 @@ class TritonSelfAttention(nn.Module):
 
     def __init__(self, config, mp_group=None, q_scales=None, q_groups=1, merge_count=1, qkv_merging=False):
         super(TritonSelfAttention, self).__init__()
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.config = config
         data_type = self.config.dtype
         data_type_fp = torch.half if self.config.dtype == torch.int8 else self.config.dtype

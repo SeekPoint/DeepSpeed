@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class DeepSpeedFlopsProfilerConfig(DeepSpeedConfigObject):
 
     def __init__(self, param_dict):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(DeepSpeedFlopsProfilerConfig, self).__init__()
 
         self.enabled = None

@@ -35,7 +35,7 @@ class PartitionedParamStatus(Enum):
 class AsyncPartitionedParameterSwapper(object):
 
     def __init__(self, ds_config, model_dtype):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         aio_op = AsyncIOBuilder().load(verbose=False)
         self.aio_handle = aio_op.aio_handle
         self.dtype = model_dtype

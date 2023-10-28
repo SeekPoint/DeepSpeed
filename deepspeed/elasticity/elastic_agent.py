@@ -35,7 +35,7 @@ class DSElasticAgent(LocalElasticAgent):
         exit_barrier_timeout: float = 300,
         log_dir: Optional[str] = None,
     ):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(spec, start_method, exit_barrier_timeout, log_dir)
         self.ds_env = env
 

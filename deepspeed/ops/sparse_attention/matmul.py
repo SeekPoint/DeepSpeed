@@ -731,7 +731,7 @@ class MatMul:
              trans_b: optional: a boolean determining if multiplication needs to be applied on transpose of input b; default is false
              bench: optional: set if you want to do benchmarking
         """
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         if mode not in ['sdd', 'dsd', 'dds']:
             raise NotImplementedError('Supported modes are: sdd, dsd, dds')
         # look-up table cache

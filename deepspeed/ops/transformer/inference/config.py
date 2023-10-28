@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class TransformerConfig():
 
     def __init__(self, hidden_size, intermediate_size, heads, num_hidden_layers):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.layer_id = -1
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
@@ -82,7 +82,7 @@ class DeepSpeedInferenceConfig(TransformerConfig):
                  transposed_mode=False,
                  use_triton=False,
                  triton_autotune=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(DeepSpeedInferenceConfig,
               self).__init__(hidden_size, (intermediate_size if intermediate_size > 0 else 4 * hidden_size), heads,
                              num_hidden_layers)

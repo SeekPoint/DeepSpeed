@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class DSClipEncoder(CUDAGraph, torch.nn.Module):
 
     def __init__(self, enc, enable_cuda_graph=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(enable_cuda_graph=enable_cuda_graph)
         enc.text_model._build_causal_attention_mask = self._build_causal_attention_mask
         self.enc = enc

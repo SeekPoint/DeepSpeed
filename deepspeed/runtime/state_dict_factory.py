@@ -209,7 +209,7 @@ class SDLoaderBase(ABC):
 class MegatronSDLoader(SDLoaderBase):
 
     def __init__(self, ckpt_list, version, checkpoint_engine):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(ckpt_list, version, checkpoint_engine)
         """
         ## Q/K/V data need special processing

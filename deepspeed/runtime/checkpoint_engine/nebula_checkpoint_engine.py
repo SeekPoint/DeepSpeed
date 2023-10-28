@@ -20,7 +20,7 @@ def _get_tag_from_path(path):
 class NebulaCheckpointEngine(CheckpointEngine):
 
     def __init__(self, config_params=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(config_params)
         self.checkpoint = None
         self.tag_flag = None

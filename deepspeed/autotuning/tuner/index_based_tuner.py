@@ -12,7 +12,7 @@ class RandomTuner(BaseTuner):
     """Explore the search space in random order"""
 
     def __init__(self, exps: list, resource_manager, metric):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(exps, resource_manager, metric)
 
     def next_batch(self, sample_size=1):

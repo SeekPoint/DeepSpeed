@@ -13,7 +13,7 @@ from pydebug import gd, infoTensor
 class SoftmaxOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(SoftmaxOp, self).__init__(config)
         self.num_attention_heads_per_partition = config.heads // config.mp_size
         try:

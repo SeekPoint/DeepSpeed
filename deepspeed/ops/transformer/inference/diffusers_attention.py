@@ -115,7 +115,7 @@ class DeepSpeedDiffusersAttention(nn.Module):
         self,
         config,
     ):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(DeepSpeedDiffusersAttention, self).__init__()
 
         self.config = config

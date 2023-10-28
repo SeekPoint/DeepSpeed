@@ -111,12 +111,16 @@ class TorchBackend(Backend):
     """
 
     def __init__(self, backend, timeout, init_method, rank=-1, world_size=-1, name='torch'):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
         super(TorchBackend, self).__init__()
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.has_all_reduce_coalesced = has_all_reduce_coalesced()
         self.has_coalescing_manager = has_coalescing_manager()
         self.all_gather_function = self.get_all_gather_function()
         self.reduce_scatter_function = self.get_reduce_scatter_function()
+        gd.debuginfo(prj='ds', info=f"self.has_all_reduce_coalesced={self.has_all_reduce_coalesced}")
+        gd.debuginfo(prj='ds', info=f"self.has_coalescing_manager={self.has_coalescing_manager}")
+        gd.debuginfo(prj='ds', info=f"self.all_gather_function={self.all_gather_function}")
+        gd.debuginfo(prj='ds', info=f"self.reduce_scatter_function={self.reduce_scatter_function}")
         self.initialized = True
         self.name = name
         # Future functionality to support ds.initialize() on a single GPU

@@ -17,7 +17,7 @@ class RandomLayerTokenDrop(Module):
     """
 
     def __init__(self, layer: Module):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(RandomLayerTokenDrop, self).__init__()
         self.random_ltd_layer = layer
         self.reserved_length = None  #config['max_value']

@@ -129,7 +129,7 @@ class ZeROOrderedDict(OrderedDict):
         Args:
             parent_module (``collections.OrderedDict``): the collection to replace
         """
-        # gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        # gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(*args, **kwargs)
         self._parent_module = parent_module
         self._in_forward = False

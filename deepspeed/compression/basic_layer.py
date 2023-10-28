@@ -31,10 +31,10 @@ class QuantAct(nn.Module):
         self.act_range_momentum = act_range_momentum
         self.quant_mode = quant_mode
         if quant_mode == 'symmetric':
-            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             self.act_function = SymQuantizer.apply
         else:
-            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             self.act_function = AsymQuantizer.apply
 
         self.register_buffer('x_min_max', torch.zeros(2))
@@ -69,7 +69,7 @@ class QuantAct(nn.Module):
 class Embedding_Compress(nn.Embedding):
 
     def __init__(self, *kargs):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(Embedding_Compress, self).__init__(*kargs)
         self.weight.start_bits = None
         self.weight.target_bits = None
@@ -136,7 +136,7 @@ class LinearLayer_Compress(nn.Linear):
     """
 
     def __init__(self, *kargs, bias=True):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(LinearLayer_Compress, self).__init__(*kargs, bias=bias)
         self.sparse_pruning_method = None
         self.row_pruning_method = None
@@ -457,7 +457,7 @@ class Conv2dLayer_Compress(nn.Conv2d):
     """
 
     def __init__(self, *kargs):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(Conv2dLayer_Compress, self).__init__(*kargs)
         self.sparse_pruning_method = None
         self.channel_pruning_method = None
@@ -862,7 +862,7 @@ def gather_from_model_parallel_region(input_):
 class ColumnParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, gather_output=True, skip_bias_add=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         # Keep input parameters
         global g_mpu
         g_mpu = mpu
@@ -902,7 +902,7 @@ class ColumnParallelLinear_Compress(LinearLayer_Compress):
 class RowParallelLinear_Compress(LinearLayer_Compress):
 
     def __init__(self, mpu, input_size, output_size, bias=True, input_is_parallel=False, skip_bias_add=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         # Keep input parameters
         global g_mpu
         g_mpu = mpu

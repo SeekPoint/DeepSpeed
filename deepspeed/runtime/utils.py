@@ -197,7 +197,7 @@ class CheckOverflow(object):
     '''Checks for overflow in gradient across parallel process'''
 
     def __init__(self, param_groups=None, mpu=None, zero_reduce_scatter=False, deepspeed=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.mpu = mpu
         self.params = [] if param_groups else None
         self.zero_reduce_scatter = zero_reduce_scatter
@@ -688,7 +688,7 @@ def partition_balanced(weights, num_parts, eps=1e-3):
 class PartitionedTensor:
 
     def __init__(self, tensor, group, partition_meta=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
 
         self.group = group

@@ -18,7 +18,7 @@ from pydebug import gd, infoTensor
 class MultiNodeRunner(ABC):
 
     def __init__(self, args, world_info_base64):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.args = args
         self.validate_args()
         self.user_arguments = self.parse_user_args()
@@ -52,7 +52,7 @@ class MultiNodeRunner(ABC):
 class PDSHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(args, world_info_base64)
 
     def backend_exists(self):
@@ -111,7 +111,7 @@ class PDSHRunner(MultiNodeRunner):
 class OpenMPIRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
         self.add_export('UCX_TLS', 'tcp')
@@ -167,7 +167,7 @@ class OpenMPIRunner(MultiNodeRunner):
 class MPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
@@ -325,7 +325,7 @@ class IMPIRunner(MultiNodeRunner):
 class SlurmRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
@@ -376,7 +376,7 @@ class SlurmRunner(MultiNodeRunner):
 class MVAPICHRunner(MultiNodeRunner):
 
     def __init__(self, args, world_info_base64, resource_pool):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(args, world_info_base64)
         self.resource_pool = resource_pool
 
