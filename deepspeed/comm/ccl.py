@@ -25,7 +25,7 @@ def build_ccl_op():
 class CCLBackend(TorchBackend):
 
     def __init__(self, name='ccl', rank=-1, world_size=-1, mpu=None, timeout=None, init_method=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.ccl_comm_op = build_ccl_op()
         if self.ccl_comm_op is None:
             # set CCLBackend to uninitialized state if CCLCommBuilder cannot be loaded
@@ -50,19 +50,19 @@ class CCLBackend(TorchBackend):
         return self.initialized
 
     def broadcast(self, tensor, src, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.ccl_comm_op.broadcast(tensor, src, group, async_op)
 
     def all_reduce(self, tensor, op=ReduceOp.SUM, group=None, async_op=False):
         use_caching = False
         if use_caching:
-            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             match_id = f"{tensor.size()}-{op}"
             self.ccl_comm_op.all_reduce_caching(tensor, op, match_id, group, async_op)
         else:
-            gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             self.ccl_comm_op.all_reduce(tensor, op, group, async_op)
 
     def barrier(self, group=None, async_op=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.ccl_comm_op.barrier(group, async_op)

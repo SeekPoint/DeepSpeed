@@ -184,7 +184,7 @@ class Fp16Matmul(TritonMatmul):
     _cache_stride = 32
 
     def __init__(self, read_cache=True):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         if read_cache:
             __class__._read_autotune_table()

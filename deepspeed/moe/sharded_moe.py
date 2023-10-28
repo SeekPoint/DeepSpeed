@@ -370,7 +370,7 @@ class TopKGate(Module):
                  noisy_gate_policy: Optional[str] = None,
                  drop_tokens: bool = True,
                  use_rts: bool = True) -> None:
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
 
         # Only top-1 and top-2 are supported at the moment.
@@ -445,7 +445,7 @@ class MOELayer(Base):
                  ep_size,
                  num_local_experts: int,
                  use_tutel: bool = False) -> None:
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         self.gate = gate
         self.experts = experts

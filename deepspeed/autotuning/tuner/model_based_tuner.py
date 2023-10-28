@@ -19,7 +19,7 @@ from pydebug import gd, infoTensor
 class ModelBasedTuner(BaseTuner):
     """Exploring the search space with a cost model"""
     def __init__(self, exps: list, resource_manager, metric, tuning_sapce):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(exps, resource_manager, metric)
         self.tuning_space = tuning_space
         self.best_iter = 0

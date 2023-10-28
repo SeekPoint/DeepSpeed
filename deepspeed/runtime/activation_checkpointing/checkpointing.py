@@ -131,7 +131,7 @@ class CudaRNGStatesTracker:
     """
 
     def __init__(self):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         # Map from a string name to the cuda rng state.
         self.states_ = {}
         # Seeds are just for book keeping and ensure no seed is set twice.

@@ -10,7 +10,7 @@ from pydebug import gd, infoTensor
 class VAEPolicy(DSPolicy):
 
     def __init__(self):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         try:
             import diffusers

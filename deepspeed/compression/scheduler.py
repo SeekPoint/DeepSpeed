@@ -15,7 +15,7 @@ class compression_scheduler():
     '''
 
     def __init__(self, model, compression_config):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.model = model
         self.compression_config = compression_config
         self.make_init()

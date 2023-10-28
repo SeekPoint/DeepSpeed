@@ -155,7 +155,7 @@ class LinearModuleForZeroStage3(Module):
     weight: Tensor
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(LinearModuleForZeroStage3, self).__init__()
         print("Building ZeRO module")
         self.in_features = in_features

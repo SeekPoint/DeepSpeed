@@ -46,7 +46,7 @@ class LossScalerBase:
     """
 
     def __init__(self, cur_scale):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.cur_scale = cur_scale
         self.dynamic = False
 
@@ -82,7 +82,7 @@ class LossScaler(LossScalerBase):
     """
 
     def __init__(self, scale=1):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(LossScaler, self).__init__(scale)
 
     # `params` is a list / generator of torch.Variable
@@ -130,7 +130,7 @@ class DynamicLossScaler(LossScalerBase):
                  consecutive_hysteresis=False,
                  raise_error_at_min_scale=True,
                  dtype=torch.half):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(DynamicLossScaler, self).__init__(init_scale)
         self.cur_iter = 0
         self.last_overflow_iter = -1

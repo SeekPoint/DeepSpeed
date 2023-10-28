@@ -64,7 +64,7 @@ class TransformerPolicy(DSPolicy):
             split_qkv=True,
             # Type of normalization to perform
             norm_type=NormType.LayerNorm):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         self.cuda_graph_supported = False
         self.inference = inference

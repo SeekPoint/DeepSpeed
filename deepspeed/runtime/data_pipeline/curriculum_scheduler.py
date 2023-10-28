@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class CurriculumScheduler(object):
 
     def __init__(self, config):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         self.state = {}
         assert CURRICULUM_LEARNING_MIN_DIFFICULTY in config, \

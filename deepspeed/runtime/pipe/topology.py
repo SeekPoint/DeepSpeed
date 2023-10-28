@@ -249,7 +249,7 @@ class PipeDataParallelTopology(ProcessTopology):
     """
 
     def __init__(self, num_pp, num_dp):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(axes=['pipe', 'data'], dims=[num_pp, num_dp])
 
 
@@ -257,7 +257,7 @@ class PipeModelDataParallelTopology(ProcessTopology):
     """ A topology for hybrid pipeline, model, and data parallelism. """
 
     def __init__(self, num_pp, num_mp, num_dp):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(axes=['pipe', 'data', 'model'], dims=[num_pp, num_dp, num_mp])
 
 
@@ -285,7 +285,7 @@ class PipelineParallelGrid:
     """
 
     def __init__(self, topology=None, process_group=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         # TODO use process_group if provided
         self.global_rank = dist.get_rank()
         self.world_size = dist.get_world_size()

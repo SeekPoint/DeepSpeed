@@ -21,7 +21,7 @@ from pydebug import gd, infoTensor
 class FlattenedTensorSwapInfo(object):
 
     def __init__(self, path, length, offset):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.path = path
         self.offset = offset
         self.length = length
@@ -30,7 +30,7 @@ class FlattenedTensorSwapInfo(object):
 class OptimizerStateSwapInfo(object):
 
     def __init__(self, parameter, numel, base_folder):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.tensors = []
         self.param_id = id(parameter)
         self.swap_folder = base_folder

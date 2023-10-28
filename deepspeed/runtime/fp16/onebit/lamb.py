@@ -78,7 +78,7 @@ class OnebitLamb(torch.optim.Optimizer):
                  factor_min=0.5,
                  factor_threshold=0.1):
 
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
 
         if amsgrad:
             raise RuntimeError('1-bit Lamb does not support the AMSGrad variant.')

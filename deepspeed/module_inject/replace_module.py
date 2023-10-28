@@ -163,7 +163,7 @@ def get_transformer_name(replaced_module):
 class GroupQuantizer:
 
     def __init__(self, q_int8=True, group_size=1, num_bits=8, num_groups=0):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.group_size = group_size
         self.num_bits = num_bits
         self.q_int8 = q_int8

@@ -19,7 +19,7 @@ from pydebug import gd, infoTensor
 class OptimizerSwapOp(object):
 
     def __init__(self, aio_handle, read_op, param_info, allocated_buffers, state_buffers, num_ops):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.aio_handle = aio_handle
         self.read_op = read_op
         self.param_info = param_info

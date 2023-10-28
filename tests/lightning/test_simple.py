@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 from pydebug import gd, infoTensor
 from pydebug import gd, infoTensor
 class RandomDataset(Dataset):
-    gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+    gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
     def __init__(self, size, length):
         self.len = length
         self.data = torch.randn(length, size)
@@ -24,7 +24,7 @@ class RandomDataset(Dataset):
 
 
 class BoringModel(LightningModule):
-    gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+    gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
     def __init__(self):
         super().__init__()
         self.layer = torch.nn.Linear(32, 2)

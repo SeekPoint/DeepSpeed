@@ -37,7 +37,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                  mpu=None,
                  clip_grad=0.0,
                  fused_lamb_legacy=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
 
         self.fused_lamb_legacy = fused_lamb_legacy
         self._global_grad_norm = 0.

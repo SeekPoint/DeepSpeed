@@ -13,7 +13,7 @@ from pydebug import gd, infoTensor
 class BaseTransformerMoEContainer(BaseTransformerContainer):
 
     def __init__(self, **kwargs):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         # Call the init function of the parent class to initialize the tensors and configs from parent class
         super().__init__(**kwargs)
 

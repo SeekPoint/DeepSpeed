@@ -84,7 +84,7 @@ class FusedAdam(torch.optim.Optimizer):
                  amsgrad=False,
                  set_grad_none=True):
         # optimizer = AdamOptimizer 入口处
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
 
         if amsgrad:
             raise RuntimeError('FusedAdam does not support the AMSGrad variant.')
@@ -102,12 +102,12 @@ class FusedAdam(torch.optim.Optimizer):
 
     def zero_grad(self):
         if self.set_grad_none:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             for group in self.param_groups:
                 for p in group['params']:
                     p.grad = None
         else:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             super(FusedAdam, self).zero_grad()
 
     def step(self, closure=None, grads=None, output_params=None, scale=None, grad_norms=None, grad_scaler=None):
@@ -119,7 +119,7 @@ class FusedAdam(torch.optim.Optimizer):
 
         The remaining arguments are deprecated, and are only retained (for the moment) for error-checking purposes.
         """
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         if any(p is not None for p in [grads, output_params, scale, grad_norms]):
             raise RuntimeError(
                 'FusedAdam has been updated.  Simply initialize it identically to torch.optim.Adam, and call step() with no arguments.'

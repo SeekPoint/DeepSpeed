@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class CupyBackend(object):
 
     def __init__(self):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         pass
 
     def torch2cupy(self, tensor):

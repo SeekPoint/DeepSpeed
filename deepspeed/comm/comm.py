@@ -61,7 +61,7 @@ from deepspeed.comm.utils import *
 class ProcessGroup():
 
     def __init__(self, comm_id, ranks=[]):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.ranks = ranks
         self.comm_id = comm_id
         self.size = len(ranks)
@@ -717,8 +717,8 @@ def init_distributed(dist_backend=None,
         else:
             assert isinstance(timeout, timedelta)
             if dist_backend is None:
-                gd.debuginfo(prj='ds')  ##目前触发这里！ Initializing TorchBackend in DeepSpeed with backend nccl
                 dist_backend = get_accelerator().communication_backend_name()
+                gd.debuginfo(prj='ds', info=f'dist_backend={dist_backend}')  ##目前触发这里！ Initializing TorchBackend in DeepSpeed with backend nccl
             if int(os.getenv('RANK', '0')) == 0:
                 utils.logger.info('Initializing TorchBackend in DeepSpeed with backend {}'.format(dist_backend))
             # Create a torch backend object, initialize torch distributed, and assign to cdb

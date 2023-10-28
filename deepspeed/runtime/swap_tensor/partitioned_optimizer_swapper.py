@@ -28,7 +28,7 @@ from pydebug import gd, infoTensor
 class PartitionedOptimizerSwapper(OptimizerSwapper):
 
     def __init__(self, swap_config, aio_config, base_folder, optimizer, largest_numel, device, dtype, timers):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(PartitionedOptimizerSwapper, self).__init__(swap_config, aio_config, base_folder, optimizer,
                                                           largest_numel, device, dtype, timers)
 

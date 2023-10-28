@@ -99,7 +99,7 @@ class InferenceEngine(Module):
             model: torch.nn.Module
             config: DeepSpeedInferenceConfig
         """
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         global DS_INFERENCE_ENABLED
         DS_INFERENCE_ENABLED = True
 

@@ -163,7 +163,7 @@ class OpBuilder(ABC):
                                    f"Install CUDA version={install_cuda_version}, "
                                    f"Runtime CUDA version={current_cuda_version}")
         else:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             current_hip_version = ".".join(torch.version.hip.split('.')[:2])
             install_hip_version = torch_info['hip_version']
             if install_hip_version != current_hip_version:
@@ -221,36 +221,36 @@ class OpBuilder(ABC):
         '''
         Returns list of include paths, relative to root of deepspeed package (i.e., DeepSpeed/deepspeed)
         '''
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return []
 
     def nvcc_args(self):
         '''
         Returns optional list of compiler flags to forward to nvcc when building CUDA sources
         '''
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return []
 
     def cxx_args(self):
         '''
         Returns optional list of compiler flags to forward to the build
         '''
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return []
 
     def is_compatible(self, verbose=True):
         '''
         Check if all non-python dependencies are satisfied to build this op
         '''
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return True
 
     def extra_ldflags(self):
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return []
 
     def libraries_installed(self, libraries):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         valid = False
         check_cmd = 'dpkg -l'
         for lib in libraries:
@@ -267,7 +267,7 @@ class OpBuilder(ABC):
         and then distutils is used to compile that program and link it with the specified libraries.
         Returns True if both the compile and link are successful, False otherwise.
         '''
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         tempdir = None  # we create a temporary directory to hold various files
         filestderr = None  # handle to open file to which we redirect stderr
         oldstderr = None  # file descriptor for stderr
@@ -330,7 +330,7 @@ class OpBuilder(ABC):
             return False
 
         finally:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             # Restore stderr file descriptor and close the stderr redirect file.
             if oldstderr is not None:
                 os.dup2(oldstderr, sys.stderr.fileno())
@@ -346,12 +346,12 @@ class OpBuilder(ABC):
         '''
         Drop any empty strings from the list of compile and link flags
         '''
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return [x for x in args if len(x) > 0]
 
     #返回cpu架构的字符串
     def cpu_arch(self):
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -375,7 +375,7 @@ class OpBuilder(ABC):
 
     # 返回CUDA是否可用的字符串
     def is_cuda_enable(self):
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         try:
             assert_no_cuda_mismatch(self.name)
             return '-D__ENABLE_CUDA__'
@@ -402,16 +402,16 @@ class OpBuilder(ABC):
         if 'genuineintel' in result or 'authenticamd' in result:
             cpu_info['arch'] = 'X86_64'
             if 'avx512' in result:
-                gd.debuginfo(prj="ds", info=self.__class__.__name__)
+                gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
                 cpu_info['flags'] += 'avx512,'
             elif 'avx512f' in result:
-                gd.debuginfo(prj="ds", info=self.__class__.__name__)
+                gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
                 cpu_info['flags'] += 'avx512f,'
             if 'avx2' in result:
-                gd.debuginfo(prj="ds", info=self.__class__.__name__)
+                gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
                 cpu_info['flags'] += 'avx2'
         elif 'ppc64le' in result:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             cpu_info['arch'] = "PPC_"
 
         # gd.debuginfo(prj='ds', info=str(cpu_info))
@@ -419,7 +419,7 @@ class OpBuilder(ABC):
 
     #返回simd信息字符串
     def simd_width(self):
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         try:
             from cpuinfo import get_cpu_info
         except ImportError as e:
@@ -445,10 +445,10 @@ class OpBuilder(ABC):
 
     def command_exists(self, cmd):
         if '|' in cmd:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             cmds = cmd.split("|")
         else:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             cmds = [cmd]
         valid = False
         for cmd in cmds:
@@ -492,17 +492,17 @@ class OpBuilder(ABC):
     def load(self, verbose=True):
         from deepspeed.git_version_info import installed_ops, torch_info
         if installed_ops.get(self.name, False):
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             # Ensure the op we're about to load was compiled with the same
             # torch/cuda versions we are currently using at runtime.
             self.validate_torch_version(torch_info)
             if torch.cuda.is_available() and isinstance(self, CUDAOpBuilder):
-                gd.debuginfo(prj="ds", info=self.__class__.__name__)
+                gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
                 self.validate_torch_op_version(torch_info)
 
             return importlib.import_module(self.absolute_name())
         else:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             return self.jit_load(verbose)
 
     def jit_load(self, verbose=True):
@@ -561,6 +561,7 @@ class OpBuilder(ABC):
                          extra_ldflags=self.strip_empty_entries(self.extra_ldflags()),
                          verbose=verbose)
         gd.debuginfo(prj="ds", info=f"op_module = {op_module}")
+        # op_module = <module 'fused_adam' from '/home/amd00/.cache/torch_extensions/py39_cu121/fused_adam/fused_adam.so'>
         build_duration = time.time() - start_build
         if verbose:
             print(f"Time to load {self.name} op: {build_duration} seconds")
@@ -594,7 +595,7 @@ class CUDAOpBuilder(OpBuilder):
         """
         ccs = []
         if self.jit_mode:
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             # Compile for underlying architectures since we know those at runtime
             for i in range(torch.cuda.device_count()):
                 CC_MAJOR, CC_MINOR = torch.cuda.get_device_capability(i)
@@ -606,7 +607,7 @@ class CUDAOpBuilder(OpBuilder):
         else:
             # Cross-compile mode, compile for various architectures
             # env override takes priority
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
             cross_compile_archs_env = os.environ.get('TORCH_CUDA_ARCH_LIST', None)
             if cross_compile_archs_env is not None:
                 if cross_compile_archs is not None:
@@ -639,7 +640,7 @@ class CUDAOpBuilder(OpBuilder):
         return args
 
     def filter_ccs(self, ccs: List[str]):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         """
         Prune any compute capabilities that are not compatible with the builder. Should log
         which CCs have been pruned.
@@ -651,19 +652,19 @@ class CUDAOpBuilder(OpBuilder):
         version_ge_1_1 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 0):
             version_ge_1_1 = ['-DVERSION_GE_1_1']
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         version_ge_1_3 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 2):
             version_ge_1_3 = ['-DVERSION_GE_1_3']
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         version_ge_1_5 = []
         if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR > 4):
             version_ge_1_5 = ['-DVERSION_GE_1_5']
-            gd.debuginfo(prj="ds", info=self.__class__.__name__)
+            gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return version_ge_1_1 + version_ge_1_3 + version_ge_1_5
 
     def is_compatible(self, verbose=True):
-        gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         return super().is_compatible(verbose)
 
     def builder(self):

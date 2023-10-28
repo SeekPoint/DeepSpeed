@@ -11,7 +11,7 @@ from pydebug import gd, infoTensor
 class MultiTensorApply(object):
 
     def __init__(self, chunk_size):
-        # gd.debuginfo(prj="ds", info=self.__class__.__name__)
+        # gd.debuginfo(prj="ds", info=f"C:{self.__class__.__name__}")
         self.chunk_size = chunk_size
 
     def __call__(self, op, noop_flag_buffer, tensor_lists, *args):

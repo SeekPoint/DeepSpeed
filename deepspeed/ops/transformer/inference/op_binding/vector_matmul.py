@@ -13,7 +13,7 @@ from pydebug import gd, infoTensor
 class VectorMatMulOp(BaseOp):
 
     def __init__(self, config: DeepSpeedInferenceConfig):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(VectorMatMulOp, self).__init__(config)
         try:
             if self.config.dtype == torch.float16:

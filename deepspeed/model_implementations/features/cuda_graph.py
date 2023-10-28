@@ -9,7 +9,7 @@ from pydebug import gd, infoTensor
 class CUDAGraph(ABC):
 
     def __init__(self, enable_cuda_graph=False):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         self.enable_cuda_graph = enable_cuda_graph
 

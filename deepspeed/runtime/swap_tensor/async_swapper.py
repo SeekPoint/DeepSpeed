@@ -18,7 +18,7 @@ from pydebug import gd, infoTensor
 class AsyncTensorSwapper(object):
 
     def __init__(self, aio_handle, numel_alignment, timers):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.free_buffer_index = []
         self.swapping_buffer_index = []
         self.ready_buffer_index = []

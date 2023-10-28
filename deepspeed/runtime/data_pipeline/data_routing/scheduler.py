@@ -15,7 +15,7 @@ from pydebug import gd, infoTensor
 class BaseScheduler(object):
 
     def __init__(self):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.state = {}
 
     def __fixed_root_get_value(self, global_steps, root_degree=None):

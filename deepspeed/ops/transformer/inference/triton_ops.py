@@ -108,7 +108,7 @@ def _fwd_kernel(
 class triton_flash_attn(torch.nn.Module):
 
     def __init__(self, ):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super(triton_flash_attn, self).__init__()
 
     def forward(self, q, k, v, sm_scale, block_128=True):

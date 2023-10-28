@@ -14,7 +14,7 @@ from pydebug import gd, infoTensor
 class XGBoostCostModel():
 
     def __init__(self, loss_type, num_threads=None, log_interval=25, upper_model=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
 
         assert xgb is not None, "missing requirements, please install deepspeed w. 'autotuning_ml' extra."
 

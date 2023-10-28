@@ -11,7 +11,7 @@ class CheckpointEngine(object):
 
     # init checkpoint engine for save/load
     def __init__(self, config_params=None):
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         pass
 
     def create(self, tag):

@@ -37,7 +37,7 @@ class MiCS_AllGatherCoalescedHandle(AllGatherCoalescedHandle):
     """
 
     def __init__(self, allgather_handle, params: List[Parameter], partitions: List[Tensor], world_size: int) -> None:
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__(allgather_handle, params, partitions, world_size)
 
     def wait(self) -> None:

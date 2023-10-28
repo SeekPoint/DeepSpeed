@@ -268,7 +268,7 @@ class Softmax:
              block: required: an integer determining the block size.
              bench: optional: set if you want to do benchmarking
         """
-        gd.debuginfo(prj='ds', info=f"c:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
 
         self.num_blocks = layout.sum().item()
         self.spdims = layout.shape
