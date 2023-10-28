@@ -18,7 +18,8 @@ build_win.bat
 The wheel will be located at: dist/*.whl
 """
 from pydebug import gd, infoTensor
-gd.enable(prj='dsST')
+logf = f"setup.py"
+gd.enable(info=logf)
 
 gd.debuginfo(prj="dsST",info=f"............ds setpy.py start.........")
 
@@ -374,4 +375,4 @@ gd.debuginfo(prj="dsST", info=f".................call setup ends...........\n\n\
 
 end_time = time.time()
 gd.debuginfo(prj="dsST", info=f"Done: deepspeed build time = {end_time - start_time} secs")
-gd.disable()
+gd.disable(info=logf)
