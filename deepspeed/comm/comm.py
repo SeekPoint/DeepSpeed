@@ -214,24 +214,25 @@ def set_backend():
 
     if backend_name == NCCL_BACKEND:
         if nccl_backend is not None and nccl_backend.is_initialized():
-            gd.debuginfo(prj='ds', info=f"set_backend->backend_name = {backend_name}, level=2")
+            gd.debuginfo(prj='ds', info=f"set_backend->backend_name={backend_name}, level=2")
             cdb = nccl_backend
     elif backend_name == MPI_BACKEND:
         if mpi_backend is not None and mpi_backend.is_initialized():
-            gd.debuginfo(prj='ds', info=f"set_backend->backend_name = {backend_name}, level=2")
+            gd.debuginfo(prj='ds', info=f"set_backend->backend_name={backend_name}, level=2")
             cdb = mpi_backend
     elif backend_name == CCL_BACKEND:
         if ccl_backend is not None and ccl_backend.is_initialized():
-            gd.debuginfo(prj='ds', info=f"set_backend->backend_name = {backend_name}, level=2")
+            gd.debuginfo(prj='ds', info=f"set_backend->backend_name={backend_name}, level=2")
             cdb = ccl_backend
     else:
         assert 0
 
-
+# group ={group} 的信息类似 group =<torch.distributed.distributed_c10d.ProcessGroup object at 0x7f3ccc07dbf0>
+# 一是多，第二每次的值不一样，造成不必要的不同，不方便比较log， 因此大部分都删去，少数保留
 # @timed_op
 def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='broadcast', debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"broadcast->src={src}, group ={group}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"broadcast->src={src}, tensor={infoTensor(tensor)}", level=3)
     return cdb.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
 
 
@@ -252,7 +253,10 @@ def all_gather(tensor_list,
                debug=get_caller_func()):
     global cdb
     # tensor_list 就是一个list，太大，不打印
-    gd.debuginfo(prj='ds', info=f"all_gather=>group ={group}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"all_gather=>tensor={infoTensor(tensor)}", level=3)
+    print(f"len of tensor_list={len(tensor_list)}")  # 防止消失，直接打印
+    for i, v in enumerate(tensor_list):
+        gd.debuginfo(prj='ds', info=f"all_gather=>tensor_list[{i}]={infoTensor(tensor_list[i])}", level=3)
     return cdb.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)
 
 
@@ -276,8 +280,27 @@ def reduce_scatter_fn(output_tensor,
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
     # output_tensor 是一个tensor的list，太大不打印
     if cdb.has_reduce_scatter_tensor():
-        gd.debuginfo(prj='ds', info=f"reduce_scatter_fn->group ={group}, "
-                                    f"op = {op}, tensor = {infoTensor(tensor)}, level=2")
+        gd.debuginfo(prj='ds', info=f"reduce_scatter_fn->"
+                                    f"op={op}, lens of output_tensor={len(output_tensor)}, tensor={infoTensor(tensor)}", level=2)
+        # tmp = set()   用集合来判断太慢，
+        # for i, v in enumerate(output_tensor):
+        #     if infoTensor(output_tensor[i]) not in tmp: #重复的不打印
+        #         gd.debuginfo(prj='ds', info=f"reduce_scatter_fn=>output_tensor[{i}]={infoTensor(output_tensor[i])}", level=2)
+        #         tmp.add(infoTensor(output_tensor[i]))
+
+        # 改用和上一条tensor是否相同来判断, 这里循环次数可能达到千万次， 目前导致了z3的主要延迟！
+        # 第一个epoch 时间高达数分钟！！！
+        # 第二个epoch 时间高达几十分钟！！！尽管规模一样！！！！
+        # pretensor = ''
+        # print(f"len of output_tensor={len(output_tensor)}") #防止消失，直接打印 # len of output_tensor=21479424
+        # for i, v in enumerate(output_tensor):
+        #     tmpstr = infoTensor(output_tensor[i])
+        #     if tmpstr != pretensor: #重复的不打印
+        #         # 输出 reduce_scatter_fn=>output_tensor[0]=_Size([])_float16_cuda:0_
+        #         #
+        #         gd.debuginfo(prj='ds', info=f"reduce_scatter_fn=>output_tensor[{i}]={tmpstr}", level=2)
+        #         pretensor = tmpstr
+
         return reduce_scatter_tensor(output_tensor,
                                      tensor,
                                      op=op,
@@ -286,8 +309,8 @@ def reduce_scatter_fn(output_tensor,
                                      prof=prof,
                                      debug=debug)
     else:
-        gd.debuginfo(prj='ds', info=f"reduce_scatter_fn->group ={group}, "
-                                    f"op = {op}, tensor = {infoTensor(tensor)}, level=2")
+        gd.debuginfo(prj='ds', info=f"reduce_scatter_fn->"
+                                    f"op={op}, tensor={infoTensor(tensor)}, level=2")
         if get_rank() == 0:
             utils.logger.warning_once("unable to find torch.distributed.reduce_scatter_tensor. will fall back to "
                                       "torch.distributed.reduce_scatter which will result in suboptimal performance. "
@@ -312,8 +335,8 @@ def reduce_scatter_tensor(output_tensor,
                           log_name='reduce_scatter_tensor',
                           debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"reduce_scatter_tensor->group ={group}, "
-                                f"op = {op}, tensor = {infoTensor(tensor)}, level=3")
+    gd.debuginfo(prj='ds', info=f"reduce_scatter_tensor->"
+                                f"op={op}, tensor={infoTensor(tensor)}, level=3")
     return cdb.reduce_scatter_tensor(output_tensor=output_tensor,
                                      input_tensor=tensor,
                                      op=op,
@@ -330,7 +353,7 @@ def all_gather_into_tensor(output_tensor,
                            log_name='all_gather_into_tensor',
                            debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"all_gather_into_tensor->group ={group}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"all_gather_into_tensor->tensor={infoTensor(tensor)}", level=3)
     return cdb.all_gather_into_tensor(output_tensor=output_tensor, input_tensor=tensor, group=group, async_op=async_op)
 
 
@@ -347,10 +370,10 @@ def allgather_fn(output_tensor, input_tensor, group=None, async_op=False, debug=
     assert cdb is not None and cdb.is_initialized(
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
     if cdb.has_all_gather_into_tensor():
-        gd.debuginfo(prj='ds', info=f"allgather_fn->group ={group}, input_tensor = {infoTensor(input_tensor)}", level=2)
+        gd.debuginfo(prj='ds', info=f"allgather_fn->input_tensor={infoTensor(input_tensor)}", level=2)
         return all_gather_into_tensor(output_tensor, input_tensor, group=group, async_op=async_op, debug=debug)
     else:
-        gd.debuginfo(prj='ds', info=f"allgather_fn->group ={group}, input_tensor = {infoTensor(input_tensor)}", level=2)
+        gd.debuginfo(prj='ds', info=f"allgather_fn->input_tensor={infoTensor(input_tensor)}", level=2)
         if get_rank() == 0:
             utils.logger.warning_once("unable to find torch.distributed.all_gather_into_tensor. will fall back to "
                                       "torch.distributed.all_gather which will result in suboptimal performance. "
@@ -370,7 +393,7 @@ def all_to_all_single(output,
                       log_name='all_to_all_single',
                       debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"all_to_all_single->output = {output}, group ={group}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"all_to_all_single->output={output}, tensor={infoTensor(tensor)}", level=3)
     return cdb.all_to_all_single(output=output,
                                  input=tensor,
                                  output_split_sizes=output_split_sizes,
@@ -382,28 +405,28 @@ def all_to_all_single(output,
 @timed_op
 def send(tensor, dst, group=None, tag=0, prof=False, log_name='send', debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"send->dst = {dst}, group ={group}, tag ={tag}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"send->dst={dst}, tag ={tag}, tensor={infoTensor(tensor)}", level=3)
     return cdb.send(tensor=tensor, dst=dst, group=group, tag=tag)
 
 
 @timed_op
 def recv(tensor, src=None, group=None, tag=0, prof=False, log_name='recv', debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"recv->src={src}, group ={group}, tag ={tag}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"recv->src={src}, tag ={tag}, tensor={infoTensor(tensor)}", level=3)
     return cdb.recv(tensor=tensor, src=src, group=group, tag=tag)
 
 
 @timed_op
 def isend(tensor, dst, group=None, tag=0, prof=False, log_name='isend', debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"isend->dst = {dst}, group ={group}, tag ={tag}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"isend->dst={dst}, tag ={tag}, tensor={infoTensor(tensor)}", level=3)
     return cdb.send(tensor=tensor, dst=dst, group=group, tag=tag)
 
 
 @timed_op
 def irecv(tensor, src=None, group=None, tag=0, prof=False, log_name='irecv', debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"irecv->src={src}, group ={group}, tag ={tag}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"irecv->src={src}, tag ={tag}, tensor={infoTensor(tensor)}", level=3)
     return cdb.recv(tensor=tensor, src=src, group=group, tag=tag)
 
 
@@ -417,7 +440,7 @@ def gather(tensor,
            log_name='gather',
            debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"gather->dst = {dst}, group ={group}, tensor = {infoTensor(tensor)}", level=3)
+    gd.debuginfo(prj='ds', info=f"gather->dst={dst}, tensor={infoTensor(tensor)}", level=3)
     return cdb.gather(tensor=tensor, gather_list=gather_list, dst=dst, group=group, async_op=async_op)
 
 
@@ -431,8 +454,8 @@ def scatter(tensor,
             log_name='scatter',
             debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"scatter->src={src}, group ={group}, "
-                                f"tensor = {infoTensor(tensor)} , scatter_list = {scatter_list}", level=3)
+    gd.debuginfo(prj='ds', info=f"scatter->src={src}, "
+                                f"tensor={infoTensor(tensor)} , scatter_list={scatter_list}", level=3)
     return cdb.scatter(tensor=tensor, scatter_list=scatter_list, src=src, group=group, async_op=async_op)
 
 
@@ -477,8 +500,8 @@ def reduce(tensor,
            log_name='reduce',
            debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"reduce->dst = {dst}, "
-                                f"group ={group}, tensor = {infoTensor(tensor)}, op = {op}", level=3)
+    gd.debuginfo(prj='ds', info=f"reduce->dst={dst}, "
+                                f"tensor={infoTensor(tensor)}, op={op}", level=3)
     return cdb.reduce(tensor=tensor, dst=dst, op=op, group=group, async_op=async_op)
 
 
@@ -492,8 +515,8 @@ def reduce_scatter(output,
                    log_name='reduce_scatter',
                    debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"reduce_scatter->input_list = {input_list}, "
-                                f"group ={group}, output = {infoTensor(output)}, op = {op}", level=3)
+    gd.debuginfo(prj='ds', info=f"reduce_scatter->input_list={input_list}, "
+                                f"output={infoTensor(output)}, op={op}", level=3)
     return cdb.reduce_scatter(output=output, input_list=input_list, op=op, group=group, async_op=async_op)
 
 
@@ -518,8 +541,8 @@ def has_coalescing_manager():
 
 def all_gather_coalesced(output_tensors, input_tensors, group=None, async_op=False):
     global cdb
-    gd.debuginfo(prj='ds', info=f"all_gather_coalesced->output_tensors = {infoTensor(output_tensors)}, group ={group}, "
-                                f"input_tensors = {infoTensor(input_tensors)}", level=2)
+    gd.debuginfo(prj='ds', info=f"all_gather_coalesced->output_tensors={infoTensor(output_tensors)}, "
+                                f"input_tensors={infoTensor(input_tensors)}", level=2)
     assert cdb is not None and cdb.is_initialized(
     ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
     return cdb.all_gather_coalesced(output_tensors, input_tensors, group=group, async_op=async_op)
@@ -538,9 +561,9 @@ def all_reduce(tensor,
     # timers.start()
     # TensorBoard logging for comm calls.?
     global cdb
-    gd.debuginfo(prj='ds', info=f"all_reduce->tensor = {infoTensor(tensor)}, "
-                                f"group ={group}, cdb= {cdb.name}", level=3)
-    # print(f'op = {op}, cdb= {cdb.name}')
+    gd.debuginfo(prj='ds', info=f"all_reduce->tensor={infoTensor(tensor)}, "
+                                f"cdb= {cdb.name}", level=3)
+    # print(f'op={op}, cdb= {cdb.name}')
     return cdb.all_reduce(tensor, op, group, async_op)
 
 
@@ -553,7 +576,7 @@ def all_reduce_coalesced(tensors,
                          log_name='all_reduce',
                          debug=get_caller_func()):
     global cdb
-    gd.debuginfo(prj='ds', info=f"all_reduce_coalesced->tensors = {infoTensor(tensors)}, group ={group}", level=3)
+    gd.debuginfo(prj='ds', info=f"all_reduce_coalesced->tensors={infoTensor(tensors)}", level=3)
     return cdb.all_reduce_coalesced(tensors, op, group, async_op)
 
 

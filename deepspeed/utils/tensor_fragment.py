@@ -149,7 +149,7 @@ def safe_get_full_grad(param):
 
 def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                             param_group_index, partition_start, partition_size, optimizer_state_dict):
-    gd.debuginfo(prj="ds")
+
     lp_end = lp_param.numel() + lp_start
     hp_start = partition_start
     hp_end = partition_start + partition_size
@@ -170,6 +170,18 @@ def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict
 
     lp_frag_address = fragment_address(start=fragment_start - lp_start, numel=fragment_numel)
     lp_fragment_tensor = lp_param.flatten().narrow(0, lp_frag_address.start, lp_frag_address.numel)
+
+    gd.debuginfo(prj="ds",
+                 info=f'T: lp_fragment_tensor={infoTensor(lp_fragment_tensor)}+++lp_frag_address={lp_frag_address}'
+                      f'+++T: hp_fragment_tensor={infoTensor(hp_fragment_tensor)}+++hp_frag_address={hp_frag_address}'
+                      f'+++offload_gradient_dict={offload_gradient_dict}'
+                      f'+++use_offload={use_offload}+++param_group_index={param_group_index}')
+
+    for k,v in gradient_dict.items():
+        gd.debuginfo(prj="ds", info=f'gradient_dict[{k}]={infoTensor(v)}')
+
+    for k, v in optim_fragment.items():
+        gd.debuginfo(prj="ds", info=f'optim_fragment[{k}]={infoTensor(v)}')
 
     return tensor_fragment(lp_fragment=lp_fragment_tensor,
                            lp_fragment_address=lp_frag_address,

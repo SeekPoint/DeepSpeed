@@ -18,7 +18,7 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
         contiguous_split_chunks: If True, make each chunk contiguous
                                  in memory.
     """
-    gd.debuginfo(prj="ds")
+    gd.debuginfo(prj="ds", info=f'T: input tensor={infoTensor(tensor)}')
     # Get the size and dimension.
     last_dim = tensor.dim() - 1
 
@@ -28,6 +28,8 @@ def split_tensor_along_last_dim(tensor, partitions, contiguous_split_chunks=Fals
     if contiguous_split_chunks:
         gd.debuginfo(prj="ds")
         return tuple(chunk.contiguous() for chunk in tensor_list)
+
+    gd.debuginfo(prj="ds", info=f'T: output tensor_list={tensor_list}')
 
     return tensor_list
 
@@ -173,7 +175,7 @@ class TiledLinear(torch.nn.Module):
         Returns:
             List[Any]: A list of the chunks of ``input``.
         """
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return split_tensor_along_last_dim(input, split_sizes)
 
     def _reduce_local_output(self, in_id, out_id, current_out, new_out):

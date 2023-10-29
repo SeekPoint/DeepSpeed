@@ -44,7 +44,7 @@ from pydebug import gd, infoTensor
 class NoGatherHandle:
 
     def __init__(self, param: Parameter) -> None:
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        gd.debuginfo(prj='ds', info=f"param={param}")
         if param.ds_status != ZeroParamStatus.INFLIGHT:
             raise RuntimeError(f"expected param {param.ds_summary()} to be available")
 
@@ -61,15 +61,17 @@ class NoGatherHandle:
 class NoGatherCoalescedHandle:
 
     def __init__(self, params: List[Parameter]) -> None:
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+
         self.__params = params
         self.__complete = False
 
         for param in self.__params:
+            gd.debuginfo(prj='ds', info=f"param={param}")
             if param.ds_status != ZeroParamStatus.INFLIGHT:
                 raise RuntimeError(f"expected param {param.ds_summary()} to not be available")
             param.data = param.ds_tensor.data.to(device=get_accelerator().current_device_name(),
                                                  non_blocking=True).view(param.ds_shape)
+            gd.debuginfo(prj='ds', info=f"param.data={infoTensor(param.data)}")
 
     @instrument_w_nvtx
     def wait(self) -> None:
@@ -278,7 +280,6 @@ def get_new_tensor_fn_for_dtype(dtype: torch.dtype) -> Callable:
 
 # https://stackoverflow.com/a/63851681/9201239
 def get_all_subclasses(cls):
-    gd.debuginfo(prj='ds')
     subclass_list = []
 
     def recurse(cl):
@@ -288,6 +289,8 @@ def get_all_subclasses(cls):
             recurse(subclass)
 
     recurse(cls)
+
+    gd.debuginfo(prj='ds', info=f'subclass_list={subclass_list}')
 
     return set(subclass_list)
 
@@ -762,10 +765,6 @@ def _no_gather_coalesced(params: Iterable[Parameter]) -> AllGatherCoalescedHandl
 
 from deepspeed.runtime.zero.partition_parameters import Init
 
-先看官方的注释:
-
-A context to enable massive model construction for training with ZeRO-3.
-Models are automatically partitioned (or, sharded) across the system and converted to half precision.
 这个 Init 类就是 Stage-3 阶段对参数进行分割的核心所在了， 还是先从 __init__ 方法开始。
 '''
 # Replaces all parameters in module with Scattered Parameters
@@ -1094,11 +1093,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         Init.param_id += 1
 
         def all_gather(param_list=None, async_op=False, hierarchy=0):
-            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             cls = param
+            gd.debuginfo(prj='ds', info=f"param={param}")
             if param_list is None:
                 gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
                 param_list = [cls]
+            gd.debuginfo(prj='ds', info=f"param_list={param_list}")
             return self._all_gather(param_list, async_op=async_op, hierarchy=hierarchy)
 
         ''''
@@ -2001,23 +2001,23 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         see_memory_usage("After partitioning gradients", force=False)
 
     def get_partition_dp_group(self, param):
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        # gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         return param.ds_process_group
 
     def get_partition_rank(self):
         """subclass can overload to specify different relative rank in
         parameter partition group"""
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        # gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         return self.rank
 
     @property
     def num_partitions(self):
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        # gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         return self.dp_world_size
 
     def get_dp_process_group(self):
         """ Return the communication group with all data-parallel ranks """
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        # gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         return self.ds_process_group
 
 

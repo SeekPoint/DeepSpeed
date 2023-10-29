@@ -59,12 +59,27 @@ class FP16_Optimizer(DeepSpeedOptimizer):
 
         # loop to deal with groups
         for i, param_group in enumerate(self.optimizer.param_groups):
+            #逐个打印
+            for k, v in param_group.items():
+                if isinstance(v,list):
+                    for j, m, in enumerate(v):
+                        gd.debuginfo(prj="ds", info=f'param_group["{k}"][{j}]={infoTensor(m)}')
+                else:
+                    gd.debuginfo(prj="ds", info=f'param_group["{k}"]={str(v)}')
+
             # push this group to list before modify
             self.fp16_groups.append(param_group['params'])
             # init fp16 weight buffer, flattened
             self.fp16_groups_flat.append(_flatten_dense_tensors([p.clone().detach() for p in self.fp16_groups[i]]))
             # set model fp16 weight to slices of flattened buffer
             updated_params = _unflatten_dense_tensors(self.fp16_groups_flat[i], self.fp16_groups[i])
+
+            if isinstance(updated_params, list) or isinstance(updated_params, tuple):
+                for j, m, in enumerate(updated_params):
+                    gd.debuginfo(prj="ds", info=f'{i}-updated_params[{j}]={infoTensor(m)}')
+            else:
+                gd.debuginfo(prj="ds", info=f'{i}-updated_params={str(updated_params)}')
+
             for p, q in zip(self.fp16_groups[i], updated_params):
                 p.data = q.data
             # init master weight, flattened
@@ -119,6 +134,8 @@ class FP16_Optimizer(DeepSpeedOptimizer):
         self.overflow = False
         self.overflow_checker = CheckOverflow(self.fp16_groups, mpu=self.mpu, deepspeed=deepspeed)
         self.initialize_optimizer_states()
+
+        gd.printall(prj='ds', cname=self)
 
     def initialize_optimizer_states(self):
         gd.debuginfo(prj="ds")

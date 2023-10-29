@@ -1000,12 +1000,12 @@ def align_dense_tensors(tensor_list, alignment):
     remaining = num_elements % alignment
 
     if remaining:
-        gd.debuginfo(prj="ds")
-        elements_to_add = alignment - remaining
+        # gd.debuginfo(prj="ds")
+        elements_to_add = alignment - remaining #需要填充的个数
         pad_tensor = torch.zeros(elements_to_add, device=tensor_list[0].device, dtype=tensor_list[0].dtype)
         padded_tensor_list = tensor_list + [pad_tensor]
     else:
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")  取模为0， 刚好对齐，不需要填充
         padded_tensor_list = tensor_list
 
     return padded_tensor_list

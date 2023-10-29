@@ -42,17 +42,18 @@ def input(msg):
 
 
 def split_half_float_double(tensors):
-    gd.debuginfo(prj="ds")
     device_type = get_accelerator().device_name()
     dtypes = [
         "torch.{}.HalfTensor".format(device_type), "torch.{}.FloatTensor".format(device_type),
         "torch.{}.DoubleTensor".format(device_type), "torch.{}.BFloat16Tensor".format(device_type)
     ]
+    gd.debuginfo(prj="ds", info=f'dtypes={dtypes}')
     buckets = []
     for i, dtype in enumerate(dtypes):
         bucket = [t for t in tensors if t.type() == dtype]
         if bucket:
             buckets.append(bucket)
+    gd.debuginfo(prj="ds", info=f'buckets={buckets}')
     return buckets
 
 
@@ -64,9 +65,9 @@ def lcm(x, y):
     from fractions import gcd  # or can import gcd from `math` in Python 3
     return x * y // gcd(x, y)
 
-
+# 获得对齐所需的填充个数
 def get_alignment_padding(tensor_list, alignment):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     num_elements = sum([tensor.numel() for tensor in tensor_list])
     remainder = num_elements % alignment
     return (alignment - remainder) if remainder else remainder
@@ -83,8 +84,9 @@ def print_rank_0(message):
     if dist.get_rank() == 0:
         gd.debuginfo(prj='ds', info=message, level = 2)
 
+# 返回填充后的tensor
 def _get_padded_tensor(src_tensor, size):
-    if src_tensor.numel() >= size:
+    if src_tensor.numel() >= size: #大于指定size，所以无需填充
         return src_tensor
     padded_tensor = torch.zeros(size, dtype=src_tensor.dtype, device=src_tensor.device)
     slice_tensor = torch.narrow(padded_tensor, 0, 0, src_tensor.numel())
@@ -544,7 +546,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self.reset_partition_gradient_structures()
 
         # creates backward hooks for gradient partitioning
-        if self.partition_gradients or self.overlap_comm:
+        if self.partition_gradients or self.overlap_comm: # z1 false, z2 true
             self.create_reduce_and_remove_grad_hooks()
 
         self.custom_loss_scaler = False
@@ -576,6 +578,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self._enable_universal_checkpoint()
         self._param_slice_mappings = self._create_param_mapping()
 
+        gd.printall(prj='ds', cname=self)
+
     def _enable_universal_checkpoint(self):
         gd.debuginfo(prj="ds")
         for lp_param_group in self.bit16_groups:
@@ -595,16 +599,40 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         return param_mapping
 
     def _link_all_hp_params(self):
-        gd.debuginfo(prj="ds")
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
         if self.cpu_offload:
+            gd.debuginfo(prj="ds")
             self._get_offload_gradient_dict()
 
+        # gd.debuginfo(prj="ds", info=f'self.optimizer.param_groups={self.optimizer.param_groups}')
+        '''
+        =[
+        {'params': [tensor([ 0.1150, -0.1438,  0.0555,  ...,  0.0183,  0.0088,  0.0258],
+        device='cuda:0', requires_grad=True)], 'weight_decay': 0.0, 'lr': 0.0, 'bias_correction': True, 'betas': (0.9, 0.95), 'eps': 1e-08, 'initial_lr': 9.65e-06, 'step': 0}, 
+        {'params': [tensor([ 0.0771,  0.0131, -0.0334,  ...,  0.0000,  0.0000,  0.0000],
+        device='cuda:0', requires_grad=True)], 'weight_decay': 0.0, 'lr': 0.0, 'bias_correction': True, 'betas': (0.9, 0.95), 'eps': 1e-08, 'initial_lr': 0.0005, 'step': 0}, 
+        {'params': [tensor([-0.1426,  0.3354, -0.0930,  ..., -0.0379,  0.0434,  0.0775],
+        device='cuda:0', requires_grad=True)], 'weight_decay': 0.0, 'lr': 0.0, 'bias_correction': True, 'betas': (0.9, 0.95), 'eps': 1e-08, 'initial_lr': 9.65e-06, 'step': 0}
+        ]
+       '''
         for i, _ in enumerate(self.optimizer.param_groups):
             # Link bit16 and fp32 params in partition
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
             partition_size = self.bit16_groups_flat[i].numel() // dp_world_size
             flat_hp_partition = self.single_partition_of_fp32_groups[i]
+
+            # lp_param_list={self.bit16_groups[i]  tensor 的列表
+
+            gd.debuginfo(prj='ds', info=f'flat_hp_partition={flat_hp_partition}'
+                           'gradient_dict={self.averaged_gradients}'
+                           'offload_gradient_dict={self.offload_gradient_dict}'
+                           'use_offload={self.cpu_offload}'
+                           'param_group_index={i}'
+                           'partition_start={partition_id * partition_size}'
+                           'partition_size={partition_size}'
+                           'partition_optimizer_state={self.optimizer.state[flat_hp_partition]}'
+                           'dp_group={self.real_dp_process_group[i]}')
+
             link_hp_params(lp_param_list=self.bit16_groups[i],
                            flat_hp_partition=flat_hp_partition,
                            gradient_dict=self.averaged_gradients,
@@ -845,22 +873,27 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     self.is_grad_computed[i][partition_id][param_id] = False
 
     def initialize_gradient_partition(self, i, param_group, partition_id):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'i={i}+++partition_id={partition_id}')
+        # param_group={infoTensor(param_group)} 是一个tensor的列表，太大
+        print(f"len of param_group={len(param_group)}")  # 防止消失，直接打印
+        for index, v in enumerate(param_group):
+            gd.debuginfo(prj='ds', info=f"param_group[{index}]={infoTensor(param_group[index])}")
 
+        # 如果key在里面，那么把value加入key到对应的列表中，否则新建立一个key->[value]  ??为什么不用defautdict(list)
         def set_key_value_list(dictionary, key, value):
             if key in dictionary:
-                gd.debuginfo(prj="ds")
+                # gd.debuginfo(prj="ds")
                 dictionary[key].append(value)
             else:
-                gd.debuginfo(prj="ds")
+                # gd.debuginfo(prj="ds")
                 dictionary[key] = [value]
-
+        # 如果key在里面，那么把对应的value加1，否则新建立一个key->1 ??为什么不用defautdict(1)
         def increment_value(dictionary, key):
             if key in dictionary:
-                gd.debuginfo(prj="ds")
+                # gd.debuginfo(prj="ds")
                 dictionary[key] += 1
             else:
-                gd.debuginfo(prj="ds")
+                # gd.debuginfo(prj="ds")
                 dictionary[key] = 1
 
         partition_size = self.partition_size[i]
@@ -868,16 +901,18 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         start_index = partition_size * partition_id
         end_index = partition_size * (partition_id + 1)
 
+        gd.debuginfo(prj="ds", info=f'start_index={start_index}+++end_index={end_index}+++partition_size={partition_size}')
+
         current_index = 0
         first_offset = 0
 
         for param in param_group:
-
             param_size = param.numel()
             param_id = self.get_param_id(param)
+            gd.debuginfo(prj="ds", info=f'param={infoTensor(param)}+++param_size={param_size}+++param_id={param_id}')
 
             if start_index <= current_index < end_index:
-                gd.debuginfo(prj="ds")
+                gd.debuginfo(prj="ds", info=f'start_index={start_index}+++current_index={current_index}+++end_index={end_index}')
                 set_key_value_list(self.param_to_partition_ids[i], param_id, partition_id)
                 increment_value(self.total_grads_in_partition[i], partition_id)
 
@@ -887,7 +922,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 self.grad_start_offset[i][partition_id][param_id] = 0
 
             elif current_index < start_index < (current_index + param_size):
-                gd.debuginfo(prj="ds")
+                gd.debuginfo(prj="ds", info=f'current_index={current_index}+++start_index={start_index}+++(current_index + param_size)={current_index + param_size}')
                 assert (first_offset == 0
                         ), "This can happen either zero or only once as this must be the first tensor in the partition"
                 first_offset = start_index - current_index
@@ -926,8 +961,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     wrapper(param, i)
 
     def get_param_id(self, param):
-        gd.debuginfo(prj="ds")
-        unique_id = id(param)
+        # gd.debuginfo(prj="ds")
+        unique_id = id(param) # id是python内置函数
         return self.param_id[unique_id]
 
     def report_ipg_memory_usage(self, tag, param_elems):

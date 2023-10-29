@@ -371,6 +371,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         self._link_all_hp_params()
 
+        gd.printall(prj='ds',cname=self)
+
         if dist.get_rank(group=self.dp_process_group) == 0:
             gd.debuginfo(prj="ds")
             see_memory_usage(f"After initializing ZeRO optimizer", force=True)
@@ -1130,7 +1132,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         print_rank_0(f'[End] Create gradient reduction hooks')
 
     def get_param_id(self, param):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         unique_id = id(param)
         return self.param_id[unique_id]
 

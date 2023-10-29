@@ -10,14 +10,34 @@ from pydebug import gd, infoTensor
 
 def link_hp_params(lp_param_list, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
                    param_group_index, partition_start, partition_size, partition_optimizer_state, dp_group):
-    gd.debuginfo(prj="ds")
     local_lp_param_and_offset = _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group)
+    # gd.debuginfo(prj="ds", info=f'local_lp_param_and_offset={local_lp_param_and_offset}')
+    '''
+    ds F# deepspeed/utils/mixed_precision_linkage.py f# link_hp_params L#: 14 I# local_lp_param_and_offset=[(Parameter containing:
+tensor([[ 0.0771,  0.0131, -0.0334,  ..., -0.0536,  0.2452,  0.1958],
+        ...,
+        [-0.1482,  0.2419, -0.2327,  ..., -0.0477,  0.0116,  0.1234]],
+       device='cuda:0', dtype=torch.float16, requires_grad=True), 0), (Parameter containing:
+tensor([[0., 0., 0.,  ..., 0., 0., 0.],
+        ...
+        [0., 0., 0.,  ..., 0., 0., 0.]], device='cuda:0', dtype=torch.float16,
+       requires_grad=True), 12288),
+    '''
+    pretensor = ''
+    print(f"len of output_tensor={len(local_lp_param_and_offset)}") #防止消失，直接打印 # len of output_tensor=21479424
+    for i, _ in enumerate(local_lp_param_and_offset):
+        for j, _ in enumerate(local_lp_param_and_offset[i]):
+            tmpstr = infoTensor(local_lp_param_and_offset[i][j])
+            if tmpstr != pretensor: #重复的不打印
+                gd.debuginfo(prj='ds', info=f"local_lp_param_and_offset[{i}]={tmpstr}")
+                pretensor = tmpstr
 
     for lp_param, lp_start in local_lp_param_and_offset:
         lp_param._hp_mapping = get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict,
                                                        offload_gradient_dict, use_offload, param_group_index,
                                                        partition_start, partition_size, partition_optimizer_state)
-
+        # 太大 gd.debuginfo(prj="ds", info=f'lp_param._hp_mapping={lp_param._hp_mapping}')
+        # 就是一个类的实例 tensor_fragment(lp_fragment=tensor([ 1.7517e-02,  8.3069e-02,  1.3237e-02,  3.7140e-02,  2.5650e-02,
 
 def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group):
     gd.debuginfo(prj="ds")

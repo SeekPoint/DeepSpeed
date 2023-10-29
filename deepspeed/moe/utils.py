@@ -22,9 +22,9 @@ def has_moe_layers(m):
 
 
 def is_moe_param(param: torch.Tensor) -> bool:
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     if hasattr(param, "allreduce") and not param.allreduce:
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return True
     return False
 

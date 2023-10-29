@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation.
+ # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-
+# 没有跑通！！！
 import torch
 from deepspeed.runtime.zero.contiguous_memory_allocator import ContiguousMemoryAllocator
 

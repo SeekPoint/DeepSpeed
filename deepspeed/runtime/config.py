@@ -105,13 +105,13 @@ class DtypeEnum(Enum):
     def __new__(cls, *values):
         gd.debuginfo(prj="ds", info=f'cls={cls}+++value={values}')
         obj = object.__new__(cls)
-        gd.debuginfo(prj="ds", info=f'1-obj={obj}')
+        # error ==  gd.debuginfo(prj="ds", info=f'1-obj={obj}')
         # first value is canonical value
         obj._value_ = values[0]
         for other_value in values[1:]:
             cls._value2member_map_[other_value] = obj
         obj._all_values = values
-        gd.debuginfo(prj="ds", info=f'2-obj={obj}')
+        # error == gd.debuginfo(prj="ds", info=f'2-obj={obj}')
         return obj
 
     def __repr__(self):
@@ -992,8 +992,8 @@ class DeepSpeedConfig(object):
 
         self.nebula_config = DeepSpeedNebulaConfig(param_dict)
 
-        for k, v in self.__dict__.items():
-            gd.debuginfo(prj="ds", info=f'{k} is {v}')
+        gd.printall(prj='ds',cname=self)
+
 
     def _batch_assertion(self):
         # gd.debuginfo(prj="ds")
