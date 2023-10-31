@@ -845,27 +845,34 @@ def empty_cache():
     get_accelerator().empty_cache()
     get_accelerator().reset_peak_memory_stats()
 
-
+#添加gd统一输出！！原来的还是保留
 def see_memory_usage(message, force=False):
-    gd.debuginfo(prj="ds")
-    if not force:
+    if not force: #可以 改为强制打印输出
+        # gd.debuginfo(prj="ds")
         return
-    if dist.is_initialized() and not dist.get_rank() == 0:
+    if dist.is_initialized() and not dist.get_rank() == 0: #只有dist初始化之后以及rank=0上面打印
+        gd.debuginfo(prj="ds")
         return
 
     # python doesn't do real-time garbage collection so do it explicitly to get the correct RAM reports
     gc.collect()
 
     # Print message except when distributed but not rank 0
+    gd.debuginfo(prj="ds", info=f'{message}')
     logger.info(message)
-    logger.info(f"MA {round(get_accelerator().memory_allocated() / (1024 * 1024 * 1024),2 )} GB \
+
+    tmp = f"MA {round(get_accelerator().memory_allocated() / (1024 * 1024 * 1024),2 )} GB \
         Max_MA {round(get_accelerator().max_memory_allocated() / (1024 * 1024 * 1024),2)} GB \
         CA {round(torch_memory_reserved() / (1024 * 1024 * 1024),2)} GB \
-        Max_CA {round(torch_max_memory_reserved() / (1024 * 1024 * 1024))} GB ")
+        Max_CA {round(torch_max_memory_reserved() / (1024 * 1024 * 1024))} GB "
+    logger.info(tmp)
+    gd.debuginfo(prj="ds", info=tmp)
 
     vm_stats = psutil.virtual_memory()
     used_GB = round(((vm_stats.total - vm_stats.available) / (1024**3)), 2)
-    logger.info(f'CPU Virtual Memory:  used = {used_GB} GB, percent = {vm_stats.percent}%')
+    tmp = f'CPU Virtual Memory:  used = {used_GB} GB, percent = {vm_stats.percent}%'
+    logger.info(tmp)
+    gd.debuginfo(prj="ds", info=tmp)
 
     # get the peak memory to report correct data, so reset the counter for the next call
     get_accelerator().reset_peak_memory_stats()

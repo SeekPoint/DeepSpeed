@@ -36,9 +36,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
     def __init__(self, args, model, **kwargs):
         gd.debuginfo(prj="ds")
 
-        super().__init__(args, model, **kwargs)
+        super().__init__(args, model, **kwargs) #初始化基类DeepSpeedEngine
 
-        # synch seed between all GPUs
+        # synch seed between all GPUs 同步所有gpu和cpu的种子状态
         _rng_state = get_accelerator().get_rng_state().to(get_accelerator().current_device_name())
         dist.broadcast(_rng_state, 0)
         get_accelerator().set_rng_state(_rng_state.cpu())
@@ -66,18 +66,21 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         if inference_cuda_module is None:
             builder = InferenceBuilder()
             inference_cuda_module = builder.load()
+            gd.debuginfo(prj="ds", info=f'builder={builder}+++inference_cuda_module={inference_cuda_module}')
 
         self.is_lora_fused = False
 
     def convert_to_linear_transposed(self, model):
         def _replace_linear_layer(r_module, parent_type=None, prev_type=None):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'A-r_module={r_module}')
             for name, child in r_module.named_children():
+                gd.debuginfo(prj="ds", info=f'name={name}+++child={child}')
                 if child.__class__ in [torch.nn.Linear] and \
                     (parent_type is torch.nn.ModuleList or prev_type is torch.nn.ModuleList):
                     setattr(r_module, name, TLinear(child, name))
                 else:
                     _replace_linear_layer(child, type(r_module), prev_type=parent_type)
+            gd.debuginfo(prj="ds", info=f'B-r_module={r_module}')
             return r_module
 
         _replace_linear_layer(model)
@@ -86,14 +89,13 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         policy = policy_cls(orig_layer, inference=True)
 
         if self._config.fp16_enabled:
-            gd.debuginfo(prj="ds")
             inference_dtype = torch.float16
         elif self._config.bfloat16_enabled:
-            gd.debuginfo(prj="ds")
             inference_dtype = torch.bfloat16
         else:
-            gd.debuginfo(prj="ds")
             inference_dtype = torch.float32
+
+        gd.debuginfo(prj="ds", info=f'policy={policy}+++inference_dtype={inference_dtype}')
 
         _container = policy_to_ds_container(
             policy=policy,
@@ -108,11 +110,15 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
             layer_id=layer_id,
             child=orig_layer)
 
+        gd.debuginfo(prj="ds", info=f'A-_container={_container}')
+
         if self.mpu is not None:
             if hasattr(self.mpu, 'get_model_parallel_world_size'):
+                gd.debuginfo(prj="ds")
                 _container.set_tensor_parallel_config(self.mpu.get_model_parallel_world_size(),
                                                       self.mpu.get_model_parallel_group())
             else:
+                gd.debuginfo(prj="ds")
                 _container.set_tensor_parallel_config(self.mpu.get_tensor_model_parallel_world_size(),
                                                       self.mpu.get_tensor_model_parallel_group())
         else:
@@ -121,18 +127,20 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         _container.create_ds_model_config()
         _container.create_module()
         _container.set_params_wo_copy(Z3_enabled=self.Z3_enabled)
+        gd.debuginfo(prj="ds", info=f'B-_container={_container}')
         return _container
 
     def populate_all_inference_policies(self):
-        gd.debuginfo(prj="ds")
         self.inference_policies = {}
         for plcy in replace_policies:
+            gd.debuginfo(prj="ds", info=f'plcy={plcy}')
             _ = plcy(None)
             if isinstance(plcy._orig_layer_class, list):
                 for orig_layer_class in plcy._orig_layer_class:
                     self.inference_policies.update({orig_layer_class: (self.new_inference_container, plcy)})
             elif plcy._orig_layer_class is not None:
                 self.inference_policies.update({plcy._orig_layer_class: (self.new_inference_container, plcy)})
+        gd.debuginfo(prj="ds", info=f'self.inference_policies={self.inference_policies}')
         self.inference_policies.update({
             nn.Linear: (LinearLayer, ),
             nn.Embedding: (EmbeddingLayer, ),
@@ -194,17 +202,19 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         if self.Z3_enabled and self.gather_all_layers:
             gd.debuginfo(prj="ds")
             if self._config.hybrid_engine.inference_tp_size > 1:
-                gd.debuginfo(prj="ds")
                 non_tp_params = []
                 for other_layer in self._other_layers:
+                    gd.debuginfo(prj="ds", info=f'other_layer={other_layer}')
                     non_tp_params.extend(list(other_layer.parameters()))
 
                 partition_size = self._config.hybrid_engine.tp_gather_partition_size
-
                 layer_groups = math.ceil(len(self.layer_params) / partition_size)
+
+                gd.debuginfo(prj="ds", inf0=f'partition_size={partition_size}+++layer_groups={layer_groups}')
+
                 for lg in range(layer_groups):
                     non_active_params = []
-                    non_active_lora_params = []
+                    non_active_lora_params = []  ##yknote????
                     for layer_id in range(lg * partition_size, min(len(self.layer_params), (lg + 1) * partition_size),
                                           1):
                         non_tp_params.extend(self.layer_params[layer_id][:4])
@@ -298,6 +308,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
     def create_inference_containers(self, module, layer_id=0):
         gd.debuginfo(prj="ds")
         for name, child in module.named_children():
+            gd.debuginfo(prj="ds", info=f'name={name}+++child={child}')
             if child.__class__ in self.inference_policies:
                 if self.inference_policies[child.__class__][0] == self.new_inference_container:
                     self._inference_containers.append(self.inference_policies[child.__class__][0](
@@ -384,7 +395,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
         self._t0 = time.time()
 
     def _zero3_forward(self, layer_id):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'layer_id={layer_id}')
 
         def run_forward(*inputs, **kwargs):
             gd.debuginfo(prj="ds")

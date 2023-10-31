@@ -254,7 +254,7 @@ def all_gather(tensor_list,
     global cdb
     # tensor_list 就是一个list，太大，不打印
     gd.debuginfo(prj='ds', info=f"all_gather=>tensor={infoTensor(tensor)}", level=3)
-    print(f"len of tensor_list={len(tensor_list)}")  # 防止消失，直接打印
+    if len(tensor_list) > 10 :print(f"len of tensor_list={len(tensor_list)}")  # 防止消失，直接打印
     for i, v in enumerate(tensor_list):
         gd.debuginfo(prj='ds', info=f"all_gather=>tensor_list[{i}]={infoTensor(tensor_list[i])}", level=3)
     return cdb.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)

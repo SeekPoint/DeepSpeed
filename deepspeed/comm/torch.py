@@ -119,8 +119,12 @@ class TorchBackend(Backend):
         self.reduce_scatter_function = self.get_reduce_scatter_function()
         gd.debuginfo(prj='ds', info=f"self.has_all_reduce_coalesced={self.has_all_reduce_coalesced}")
         gd.debuginfo(prj='ds', info=f"self.has_coalescing_manager={self.has_coalescing_manager}")
-        gd.debuginfo(prj='ds', info=f"self.all_gather_function={self.all_gather_function}")
-        gd.debuginfo(prj='ds', info=f"self.reduce_scatter_function={self.reduce_scatter_function}")
+        # gd.debuginfo(prj='ds', info=f"self.all_gather_function={self.all_gather_function}")
+        # gd.debuginfo(prj='ds', info=f"self.reduce_scatter_function={self.reduce_scatter_function}")
+        '''
+        self.all_gather_function=<function all_gather_into_tensor at 0x7fb995863040>
+        self.reduce_scatter_function=<function reduce_scatter_tensor at 0x7fb9958638b0>
+        '''
         self.initialized = True
         self.name = name
         # Future functionality to support ds.initialize() on a single GPU

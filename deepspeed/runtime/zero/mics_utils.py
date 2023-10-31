@@ -23,6 +23,7 @@ from pydebug import gd, infoTensor
 def _log_rank0(msg):
     if dist.get_rank() == 0:
         logger.info(msg)
+        gd.debuginfo(prj='ds', info=f'msg')
 
 
 @torch.jit.script
@@ -124,8 +125,10 @@ def create_mics_comm_groups(
             groups.param_shard_group = _group
             groups.param_shard_size = len(shard_ranks)
             groups.param_shard_rank = dist.get_rank(_group)
-            logger.info(f'rank {global_rank}, shard group'
-                        f' {groups.param_shard_rank}/{dist.get_world_size(group=_group)}')
+            tmp = f'rank {global_rank}, shard group'
+            f' {groups.param_shard_rank}/{dist.get_world_size(group=_group)}'
+            logger.info(tmp)
+            gd.debuginfo(prj='ds', info=tmp)
 
     # create replicate groups
     for repli_ranks in ranks_of_repli_group:
@@ -135,13 +138,17 @@ def create_mics_comm_groups(
                 groups.param_repli_group = _group
                 groups.param_repli_size = len(repli_ranks)
                 groups.param_repli_rank = dist.get_rank(group=_group)
-                logger.info(f'rank {global_rank} '
-                            f'replicate group {groups.param_repli_rank}/{dist.get_world_size(group=_group)}')
+                tmp = f'rank {global_rank} '
+                f'replicate group {groups.param_repli_rank}/{dist.get_world_size(group=_group)}'
+                logger.info(tmp)
+                gd.debuginfo(prj='ds', info=tmp)
         else:
             groups.param_repli_group = None
             groups.param_repli_size = 1
             groups.param_repli_rank = 0
-            logger.info(f'rank {global_rank} replicate group 0/1')
+            tmp = f'rank {global_rank} replicate group 0/1'
+            logger.info(tmp)
+            gd.debuginfo(prj='ds', info=tmp)
 
     # assign shard group size as world size
     assert groups.param_shard_size == len(ranks_of_shard_group[0])

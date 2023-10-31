@@ -193,7 +193,7 @@ def initialize(args=None,
             # 混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式，
             # 同时轻松应用DeepSpeed推理引擎进行生成/评估模式，
             # 为第三阶段的RLHF训练提供了一个明显更快的训练系统
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds")  #only ph3
             engine = DeepSpeedHybridEngine(args=args,
                                            model=model,
                                            optimizer=optimizer,

@@ -623,15 +623,15 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
             # lp_param_list={self.bit16_groups[i]  tensor 的列表
 
-            gd.debuginfo(prj='ds', info=f'flat_hp_partition={flat_hp_partition}'
-                           'gradient_dict={self.averaged_gradients}'
-                           'offload_gradient_dict={self.offload_gradient_dict}'
-                           'use_offload={self.cpu_offload}'
-                           'param_group_index={i}'
-                           'partition_start={partition_id * partition_size}'
-                           'partition_size={partition_size}'
-                           'partition_optimizer_state={self.optimizer.state[flat_hp_partition]}'
-                           'dp_group={self.real_dp_process_group[i]}')
+            gd.debuginfo(prj='ds', info=f'flat_hp_partition={infoTensor(flat_hp_partition)}=='
+                           f'gradient_dict={self.averaged_gradients}=='
+                           f'offload_gradient_dict={self.offload_gradient_dict}=='
+                           f'use_offload={self.cpu_offload}=='
+                           f'param_group_index={i}=='
+                           f'partition_start={partition_id * partition_size}=='
+                           f'partition_size={partition_size}=='
+                           f'partition_optimizer_state={self.optimizer.state[flat_hp_partition]}=='
+                           f'dp_group={self.real_dp_process_group[i]}')
 
             link_hp_params(lp_param_list=self.bit16_groups[i],
                            flat_hp_partition=flat_hp_partition,
@@ -946,12 +946,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self.grad_accs = []
         for i, param_group in enumerate(self.bit16_groups):
             for param in param_group:
+                gd.debuginfo(prj="ds", info=f'param={infoTensor(param)}')
                 if param.requires_grad:
-
                     def wrapper(param, i):
                         param_tmp = param.expand_as(param)
+                        gd.debuginfo(prj="ds", info=f'param_tmp={infoTensor(param_tmp)}')
                         grad_acc = param_tmp.grad_fn.next_functions[0][0]
-
+                        gd.debuginfo(prj="ds", info=f'grad_acc={infoTensor(grad_acc)}')
                         def reduce_partition_and_remove_grads(*notneeded):
                             self.reduce_ready_partitions_and_remove_grads(param, i)
 
@@ -966,8 +967,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         return self.param_id[unique_id]
 
     def report_ipg_memory_usage(self, tag, param_elems):
-        gd.debuginfo(prj="ds")
         elem_count = self.elements_in_ipg_bucket + param_elems
+        gd.debuginfo(prj="ds", info=f'param_elems={param_elems}')
         percent_of_bucket_size = (100.0 * elem_count) // self.reduce_bucket_size
         see_memory_usage(
             f"{tag}: elems in_bucket {self.elements_in_ipg_bucket} param {param_elems} max_percent {percent_of_bucket_size}"
