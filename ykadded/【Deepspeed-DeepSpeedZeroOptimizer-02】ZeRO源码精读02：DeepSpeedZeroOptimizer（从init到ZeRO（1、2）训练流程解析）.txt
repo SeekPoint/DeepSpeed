@@ -1,0 +1,290 @@
+【Deepspeed-DeepSpeedZeroOptimizer-02】ZeRO源码精读02：DeepSpeedZeroOptimizer（从init到ZeRO（1、2）训练流程解析）
+陈超帅
+已于 2023-10-29 17:02:18 修改
+
+写在本文之前，有一篇Deepspeed-DeepSpeedZeroOptimizer-01，是我在精读代码时对每个方法的注释版阅读笔记，是一个十一万字的长文，
+供日后复习查看，和在看到本文的叙述时，需要阅读某个方法的具体作用时，可以跳转到这篇前文中去进行Ctrl+F去搜索学习。
+还有一篇工作，是阅读Deepspeed-Adagrad的代码精读，这个一个c++文件，不在这里多说，仅放一个友情链接。
+
+本文将
+
+从DeepSpeedZeroOptimizer的_init_()开始
+逐渐深入到每个函数中然后走通整个训练流程
+更加顺畅地理解ZeRO的训练和加速流程。
+
+init（）方法详解：
+init方法的图示总结如下：    013.png
+
+更详细的ZeRO优化器初始化流程的归纳：
+
+1.参数设置和检查： 在这个阶段，ZeRO优化器会做许多预备工作，
+主要包括以下几个步骤：
+
+    初始化输入参数：
+        这包括优化器、模型参数名称、计时器、损失缩放比例、是否打印详细日志、
+        是否连续存储梯度、reduce操作的bucket大小、allgather操作的bucket大小、
+        数据并行的进程组、专家并行的进程组、专家数据并行的进程组等。
+
+    设定设备和梯度存储方式：
+        如果开启了cpu_offload，则把当前设备设置为cpu；且需要连续的梯度。
+
+    如果当前是主节点，打印一些设置的日志信息。
+
+    设定参数展平和反展平的函数：
+        设置参数展平和反展平的函数（在torch.util中有实现）。
+
+    设置是否进行梯度分区：
+        ZeRO-1不划分梯度，ZeRO-2划分梯度。
+
+    检查并设置模型并行的处理单元（mpu）：
+        根据是否设置mpu（模型并行），设置模型并行的值（ZeRO主张是使用数据并行，但也支持模型并行）。
+
+    设置其他内置参数：
+        包括是否溢出、微步id、需要reduce的额外大参数等。
+
+
+2.训练参数的初始化和管理： 在这个阶段，ZeRO优化器主要关注如何处理模型的参数，
+包括以下几个步骤：
+
+    初始化训练参数：
+        将需要训练的参数初始化并放到CPU中。
+
+    重排序参数组：
+        如果启用了Round-Robin梯度，则会调用一个函数进行重排序，以便在进行反向传播时平衡各个参数的梯度计算负载。
+
+    创建平坦缓冲区，并且移动到GPU上：
+        这里可能需要内存对齐，就要处理一下。
+
+    将模型的权重转换为16位浮点数（也就是bit16），用于混合精度训练以提高计算效率和减少内存使用。
+
+    将平坦的权重张量划分为几个近等的分区，每个分区将由一个数据并行进程处理。
+
+    创建一个fp32主权重的分区，这个分区会被每个进程分别更新。
+
+    通过创建映射关系，给模型的每个参数分配了一个唯一的索引。
+
+3.梯度处理： 这个阶段主要处理与梯度相关的操作，
+包括以下几个步骤：
+
+    标记每个参数是否在当前的数据分区中。
+
+    初始化一些参数和缓冲区，用于在CPU和GPU之间进行梯度的转移。
+
+    初始化一些用于梯度分区的参数：
+        包括参数到它所在分区的映射、存储分区是否已经进行了reduce操作、分区内还需要计算的梯度数量、分区内总共的梯度数量等。
+
+    如果启用了梯度分区或者通信重叠，创建后向钩子。
+
+4.损失缩放和优化器状态初始化： 在这个阶段，ZeRO优化器处理损失缩放和优化器状态的初始化，
+包括以下几个步骤：
+
+    创建损失缩放器，可能是静态或者动态的：
+        但是，只有当数据类型为float16时，才会使用动态损失缩放。
+
+    初始化优化器状态，如果是主节点，则打印优化器状态初始化成功的信息；
+                   如果是数据并行处理组的主节点，打印ZeRO优化器初始化后的内存使用情况。
+
+DeepSpeedZeroOptimizer中的各方法详解：
+写在最前，关于这些函数的详细描述，在本文不赘述，可参见Deepspeed-DeepSpeedZeroOptimizer-01
+
+初始化函数：
+    这一类函数主要用于初始化模型和优化器的状态，包括加载检查点，创建参数映射，初始化优化器状态以及梯度分区数据结构等。
+    这些函数在模型训练开始前被调用，以确保模型和优化器处于正确的状态。
+
+优化器状态管理：
+    这些函数用于管理和维护优化器的状态。
+    例如，_partition_base_optimizer_state 用于对基础优化器的状态进行分区，
+    state_dict和load_state_dict用于保存和加载优化器的状态，
+    _restore_base_optimizer_state用于恢复基础优化器的状态。
+
+梯度计算与更新：
+    这一类函数主要用于计算和更新模型的梯度。
+    例如，reduce_gradients用于进行梯度的Reduce操作，
+    fill_grad_accum_attribute用于累积梯度，
+    gradient_reduction_w_predivide用于进行梯度同步，
+    update_overflow_tracker_for_param_grad用于更新溢出的状态。
+
+权重更新：
+    这一类函数主要用于更新模型的权重。
+    例如，_update_model_bit16_weights用于使用16位的格式更新模型权重，
+    step函数是优化器的主要执行体，它会根据梯度和损失比例来更新优化器，并进行必要的同步操作。
+
+辅助工具函数：这一类函数主要提供了一些辅助功能，如获取参数的梯度属性，打印函数，设置学习率等。这些函数虽然不直接参与模型的训练过程，但在调试和优化过程中非常有用。
+
+一、初始化函数
+函数名	描述
+init	初始化函数
+_enable_universal_checkpoint	检查点启用
+_load_universal_checkpoint	检查点加载
+_create_param_mapping	创建参数映射
+_link_all_hp_params	链接超参数
+is_moe_group	检查是否moe的组
+_configure_moe_settings	检查moe的配置
+_round_robin_reorder	轮询重排序，为了分布式通信负载均衡
+initialize_optimizer_states	初始化优化器状态
+initialize_gradient_partitioning_data_structures	初始化梯度分区数据结构
+initialize_gradient_partition	初始化梯度分区
+二、优化器状态管理
+函数名	描述
+_partition_base_optimizer_state	为基础优化器的状态进行分区，优化器的状态（包括梯度、动量等）也需要在各个设备或节点间进行分配
+_get_state	获得优化器状态
+_set_state	设置优化器状态
+_get_base_optimizer_state	获取基础优化器状态
+state_dict	返回优化器的状态字典。获取FP16_Optimizer类实例的状态并将其保存为一个字典，每个状态设置一下
+load_state_dict	加载优化器状态字典。根据路径，从传统检查点或者通用检查点加载
+_load_legacy_checkpoint	加载旧版检查点。这个不太重要，应该是先恢复参数，然后检查Deepspeed版本是否兼容，然后恢复优化器状态，恢复模型权重等
+_load_hp_checkpoint_state	加载HP检查点状态。从指定的检查点目录加载模型的状态
+restore_elastic_base_optimizer_state	恢复基础优化器的状态，包括每个参数组的状态和全局的优化步骤数，调用了restore_base_optimizer_state
+_restore_base_optimizer_state	恢复基本优化器状态
+三、梯度计算与更新
+函数名	描述
+reduce_gradients	reduce梯度
+independent_gradient_partition_epilogue	实际上是ipg的梯度reduce方法，计算和通信之间可选重叠
+reset_partition_gradient_structures	重置梯度分区，应该在每次迭代后调用一下
+overlapping_partition_gradients_reduce_epilogue	调用了上述的independent_gradient_partition_epilogue方法
+fill_grad_accum_attribute	累积梯度填充，用在小内存开大Batch
+reduce_independent_p_g_buckets_and_remove_grads	将梯度放到桶中，满了就reduce然后删除
+gradient_reduction_w_predivide	梯度同步的函数。先检查需要同步的进程数、是否要类型转化、预分割，然后开始reduce，之后看情况缩放、恢复类型
+average_tensor	计算张量的均值。如果不允许reduce-scatter，则调用gradient_reduction_w_predivide
+update_overflow_tracker_for_param_grad	更新溢出的状态，只设置那个布尔值
+async_accumulate_grad_in_cpu_via_gpu	异步地将梯度累积在 CPU 中，可以节省GPU内存。GPU算，CPU存
+async_inplace_copy_grad_to_fp32_buffer_from_gpu	从GPU异步复制梯度到FP32缓冲区
+complete_grad_norm_calculation_for_cpu_offload	完成CPU卸载的梯度范数计算。计算范数和通过allreduce计算总的范数，如果总的范数没有溢出就返回否则返回-1
+copy_grads_in_partition	开启了cpu-offload，就复制梯度到CPU中
+reduce_ipg_grads	reduce那些ipg的梯度。首先看有无特大参数需要reduce，处理连续的梯度或者使用fallback的保底机制，最终还考虑了是否cpu-offload，overlap通信，梯度分区
+_clear_previous_reduced_grads	清除先前reduce的梯度
+allreduce_and_copy	用于进行 All-reduce 操作来同步不同计算设备之间的参数梯度，并将结果复制到原始数据结构
+allreduce_no_retain	做一个称为"allreduce"的操作。从一个大的数据桶（bucket）中取出数据，然后分组到一个小的数据桶（small_bucket）中
+buffered_reduce_fallback	reduce的保底机制，fallback。对于每个桶，执行allreduce_no_retain操作
+get_grad_norm_direct	直接获取梯度的L2范数，这个函数是从torch.nn.utils.clip_grad.clip_grad_norm_中调整而来的，其中加入了处理模型并行参数的功能
+scaled_global_norm	负责在分布式环境下计算全局梯度范数。首先，根据是否开启了CPU卸载，它会选择调用 self.complete_grad_norm_calculation_for_cpu_offload 或 self.get_grad_norm_direct 来计算梯度范数。如果存在混合专家（moe）层，它会平均这些层的梯度范数。最后，通过调用 get_global_norm 函数，将所有计算得到的梯度范数整合，计算并返回全局梯度范数。
+_average_expert_grad_norms	平均专家梯度范数
+unscale_and_clip_grads	梯度缩放和裁剪。unscale是指梯度的拟缩放
+has_overflow	分布式检查是否发生了溢出
+_update_scale	更新比例。如果发生了梯度溢出，就会减小缩放因子，否则就会增大缩放因子
+has_overflow_serial	检查是否串行溢出
+has_overflow_partitioned_grads_serial	同has_overflow_serial，只是加上了组内的遍历
+_has_inf_or_nan	检查是否正无穷、负无穷或者不是一个数字（NaN）
+check_overflow	调用_check_overflow方法，检查是否溢出
+
+
+四、权重更新
+函数名	描述
+_update_model_bit16_weights	用fp16去更新模型权重
+_release_ipg_buffers	释放ipg的buffer
+sequential_execution	顺序执行方法，按照rank去执行，最后有一个同步检查点
+allreduce_bucket	基于桶的allreduce，可以点对点（reduce），也可以allreduce
+step	优化器的step步骤，真正执行的方法体。检查是否溢出，溢出了就清除梯度然后退出step
+update_lp_params	将高精度（fp32）的模型参数复制到低精度（fp16）的存储空间，然后集合所有分区的数据。
+五：辅助工具函数
+函数名	描述
+get_first_param_index	获取第一个参数的index
+get_gradient_for_reduction	获取梯度的方法，就是简单的get方法（直接获取/获取累积的）
+get_param_gradient_attribute	获取参数的梯度属性
+clear_grad_attribute	清除梯度
+create_reduce_and_remove_grad_hooks	创建钩子：先reduce然后remove梯度
+get_param_id	获取参数的id
+report_ipg_memory_usage	打印ipg的内存使用情况
+print_rank_0	打印函数，可以输入message，如果是主进程就打印（rank_0）
+get_grad_position	计算和存储每个张量在梯度中的位置信息的
+_get_offload_gradient_dict	构建一个名为offload_gradient_dict的字典，该字典用于存储优化器中每个参数组的梯度信息。用上面的get_grad_position从位置去找fp32的梯度信息。
+set_norm_for_param_grad	为梯度设置L2范数
+set_norm_for_param_grad_in_gpu	为在GPU上的梯度设置L2范数
+reduce_ready_partitions_and_remove_grads	reduce已准备好的分区并删除梯度。
+zero_reduced_gradients	将reduce的梯度设置为零。
+flatten_and_print	压平张量并且打印出来
+get_grads_to_reduce	获取梯度部分，这些梯度部分是可以被reduce的
+set_none_gradients_to_zero	把None的设置为0
+get_data_parallel_partitions	获得数据并行分区。将一个给定的张量（tensor）数据平均分配到多个分布式处理单元（dp）中
+get_partition_info	获取分区信息。返回在分区内的参数、不在分区内的参数以及第一个偏移值
+zero_grad	经典，把梯度全部设置为0
+free_grad_in_param_list	释放参数列表中的梯度。
+reset_cpu_buffers	重置CPU缓冲区
+set_lr	设置学习率
+get_lr	获取学习率
+override_loss_scale	覆盖损失比例。就是一个修改的方法。
+get_bit16_param_group	获取16位参数组。
+_optimizer_step	执行优化器的步骤。把优化器参数设置上，去执行step的方法，完毕后恢复优化器参数。
+_get_param_groups	获得参数组
+_set_param_groups	set~
+_get_loss_scale	获取~
+_set_loss_scale	设置~
+_get_groups_without_padding	get
+_get_state_without_padding	set
+_restore_from_elastic_fp32_weights	从弹性检查点，恢复优化器的FP32参数。把分布式训练中分散在各个设备或节点上的模型参数，重新集合起来，形成一个完整的模型参数。
+_restore_from_bit16_weights	从16位格式的模型参数中，恢复出32位格式的模型参数。
+refresh_fp32_params	属性fp32参数，实际上调用了_restore_from_bit16_weights
+get_ep_ranks	获取EP等级。EP是专家并行。
+param_groups	获取参数组。get方法。
+
+
+ZeRO训练流程
+    以下是一个从头到尾的ZeRO优化器的训练过程：
+    请先看流程图： 014.png
+
+
+初始化：
+    首先，ZeRO通过init()函数进行初始化，设置各种参数和状态。
+    它还会在初始化过程中通过_enable_universal_checkpoint和_load_universal_checkpoint方法设置和加载检查点，
+    通过_create_param_mapping和_link_all_hp_params进行参数映射和链接超参数。
+    同时，它还会通过is_moe_group和_configure_moe_settings检查和配置moe（混合专家）设置。
+    如果需要，它还会通过initialize_optimizer_states、initialize_gradient_partitioning_data_structures
+    和initialize_gradient_partition初始化优化器状态和梯度分区数据结构。
+    它会通过_round_robin_reorder进行轮询重排序以负载均衡
+
+前向传播：
+    在模型进行前向传播计算损失函数值时，ZeRO不需要进行特殊处理。
+
+后向传播：
+    在反向传播计算梯度时，ZeRO会首先通过backward方法更新微步进ID，创建新的缓存来存储连续梯度，对损失进行缩放，然后进行反向传播。
+    在这个过程中，它会填充一个名为grad_accum的属性，用于存储梯度的累积值。
+    此外，flatten_dense_tensors_aligned方法被用于对输入的张量列表进行对齐，然后再将所有张量压平成一个单个的张量。
+
+梯度减少：
+    在反向传播后，ZeRO会通过reduce_gradients方法对梯度进行减少操作，以便在不同的设备或节点之间同步梯度。
+    此外，通过independent_gradient_partition_epilogue
+    和overlapping_partition_gradients_reduce_epilogue方法，
+    ZeRO可以选择在计算和通信之间重叠梯度减少。
+
+梯度裁剪：
+    ZeRO通过get_grad_norm_direct和scaled_global_norm方法来计算梯度的L2范数，
+    并通过unscale_and_clip_grads方法进行梯度裁剪，以防止梯度爆炸。
+
+检查溢出：
+    ZeRO通过check_overflow、has_overflow_serial、
+    has_overflow_partitioned_grads_serial和_has_inf_or_nan方法检查是否发生了梯度溢出。
+    如果发生了溢出，ZeRO将通过_update_scale方法调整损失缩放因子。
+
+更新权重：
+    ZeRO通过step方法进行权重更新。在这个步骤中，ZeRO首先检查是否溢出，如果溢出就清除梯度然后退出步骤。
+    然后，它会根据梯度和损失比例来更新优化器，按照优化器和混合精度训练去做。
+    在每次优化步骤之后，该方法会清除FP32的梯度（因为它们不再需要），并将更新后的FP32参数复制回FP16参数。
+    最后，它会同步所有计算节点上的模型参数。
+
+保存和加载模型：
+    ZeRO通过state_dict和load_state_dict方法保存和加载模型。
+    在保存模型时，ZeRO会获取FP16_Optimizer类实例的状态并将其保存为一个字典；
+    在加载模型时，ZeRO会根据路径，从传统检查点或者通用检查点加载。
+
+这个过程涵盖了ZeRO优化器的主要运行流程，但是在实际使用中，还需要根据具体的模型和任务需求，可能会调用其他的一些辅助函数，
+例如get_lr获取当前的学习率，set_lr设置学习率，zero_grad将梯度全部设置为0，get_param_id获取参数的id等。
+在整个训练过程中，ZeRO的主要优点是减少了内存使用并加速了训练。这是通过以下主要方法实现的：
+
+参数并行：
+    ZeRO通过分割优化器状态、梯度、模型参数减少了内存使用。
+    在每个计算节点上，只存储模型的一部分优化器状态和对应的梯度，而不是像传统的数据并行那样，每个计算节点上都存储完整的优化器状态和梯度。
+    这大大减少了内存使用，使得更大的模型可以在有限的硬件资源上进行训练。（本文先讨论ZeRO-1和ZeRO-2）
+
+梯度累积和缩放：
+    ZeRO在每个微步进中累积梯度，而不是在每个微步进中都进行梯度减少和权重更新。这减少了通信开销，提高了计算效率。同时，ZeRO还采用了梯度缩放技术，通过动态调整损失缩放因子，来防止在低精度计算中出现梯度溢出，从而保证训练的稳定性。
+
+延迟更新：
+    ZeRO通过延迟更新技术，将梯度减少和权重更新的操作延迟到一个微步进结束后进行。这进一步减少了通信开销，提高了计算效率。
+
+选择性通信：
+    ZeRO通过选择性通信技术，只在需要的时候才进行梯度减少和权重更新的通信。这降低了网络带宽的使用，提高了训练速度。
+
+总的来说，ZeRO大大优化了大规模深度学习训练的效率和可扩展性，使得在有限的硬件资源上可以训练更大、更复杂的模型。
+————————————————
+版权声明：本文为CSDN博主「陈超帅」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_43207982/article/details/134103572

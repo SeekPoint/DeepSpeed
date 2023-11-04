@@ -165,9 +165,10 @@ class BF16_Optimizer(ZeROOptimizer):
         self._enable_universal_checkpoint()
         self._param_slice_mappings = self._create_param_mapping()
 
+    #检查点启用
     def _enable_universal_checkpoint(self):
-        gd.debuginfo(prj="ds")
         for lp_param_group in self.bf16_groups:
+            gd.debuginfo(prj="ds", info=f'lp_param_group={lp_param_group}')
             enable_universal_checkpoint(param_list=lp_param_group)
 
     def _create_param_mapping(self):

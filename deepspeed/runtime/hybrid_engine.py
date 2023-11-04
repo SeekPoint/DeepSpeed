@@ -36,9 +36,9 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
     def __init__(self, args, model, **kwargs):
         gd.debuginfo(prj="ds")
 
-        super().__init__(args, model, **kwargs) #初始化基类DeepSpeedEngine
+        super().__init__(args, model, **kwargs) #璋冪敤鍩虹被鐨凞eepSpeedEngine
 
-        # synch seed between all GPUs 同步所有gpu和cpu的种子状态
+        # synch seed between all GPUs 鍦╟pu鍜実pu涔嬮棿鍚屾闅忔満绉嶅瓙
         _rng_state = get_accelerator().get_rng_state().to(get_accelerator().current_device_name())
         dist.broadcast(_rng_state, 0)
         get_accelerator().set_rng_state(_rng_state.cpu())
@@ -190,12 +190,12 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
                 if not retake_success:
                     raise RuntimeError("Unable to retake inference workspace.")
 
-    def generate(self, *inputs, **kwargs):
+    def generate(self, *inputs, **kwargs):  # seq = self.actor_model.module.generate 瑙﹀彂
         if self._total_batch_size is None:
-            gd.debuginfo(prj="ds")
             bsz = inputs[0].shape[0] if len(inputs) > 0 else \
                 kwargs['input_ids'].shape[0]
             self._total_batch_size = bsz * dist.get_world_size()
+            gd.debuginfo(prj="ds", info=f'bsz={bsz}, self._total_batch_size= {self._total_batch_size}')
 
         self._t0 = time.time()
 
@@ -276,17 +276,17 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
 
                     self.retake_inference_cache()
                     generate_ret_vals = self._generate(*inputs, **kwargs)
-
+                    gd.debuginfo(prj="ds", info=f'generate_ret_vals={generate_ret_vals}')
                     if len(self.all_lora_params) > 0:
                         self.unfuse_lora_weight()
         else:
-            gd.debuginfo(prj="ds")
             if len(self.all_lora_params) > 0 and (not self.Z3_enabled):
                 gd.debuginfo(prj="ds")
                 self.fuse_lora_weight()
 
             self.retake_inference_cache()
             generate_ret_vals = self._generate(*inputs, **kwargs)
+            gd.debuginfo(prj="ds", info=f'generate_ret_vals={generate_ret_vals}')
 
             if len(self.all_lora_params) > 0:
                 if (not self.Z3_enabled):

@@ -57,7 +57,7 @@ class LinearLayer(nn.Module):
         if self.bias is not None:
             gd.debuginfo(prj="ds")
             output += self.bias
-        gd.debuginfo(prj='ds', info=f"output={output}")
+        gd.debuginfo(prj='ds', info=f"output={infoTensor(output)}")
         return output
 
 
@@ -79,7 +79,7 @@ class Normalize(nn.Module):
 
     def forward(self, input):
         tmp = nn.functional.layer_norm(input, input.shape[-1:], self.weight, self.bias, eps=self.eps)
-        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+        gd.debuginfo(prj="ds", info=f"T:tmp-A={infoTensor(tmp)}")
         return tmp
 
 
@@ -100,7 +100,7 @@ class EmbeddingLayer(nn.Module):
 
     def forward(self, input):
         tmp = F.embedding(input, self.weight)
-        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+        gd.debuginfo(prj="ds", info=f"T:tmp-B={infoTensor(tmp)}")
         return tmp
 
 
@@ -117,7 +117,7 @@ class OPTEmbedding(EmbeddingLayer):
         super().__init__(weight_shape, weight=weight)
 
     def forward(self, attention_mask: torch.LongTensor, past_key_values_length: int = 0):
-        gd.debuginfo(prj="ds")
+
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         attention_mask = attention_mask.long()
 
@@ -126,10 +126,10 @@ class OPTEmbedding(EmbeddingLayer):
 
         # cut positions if `past_key_values_length` is > 0
         positions = positions[:, past_key_values_length:]
-        gd.debuginfo(prj="ds", info=f"positions={positions}")
+        gd.debuginfo(prj="ds", info=f"positions={infoTensor(positions)}")
 
         tmp = positions + self.offset
-        gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+        gd.debuginfo(prj="ds", info=f"T:tmp-C={infoTensor(tmp)}")
 
         return super().forward(tmp)
 

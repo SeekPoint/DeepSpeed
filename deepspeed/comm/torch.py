@@ -232,7 +232,7 @@ class TorchBackend(Backend):
 
     def all_gather_into_tensor(self, output_tensor, input_tensor, group=None, async_op=False):
         if self.has_all_gather_into_tensor():
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds") 直接调用
             return self.all_gather_function(output_tensor=output_tensor,
                                             input_tensor=input_tensor,
                                             group=group,

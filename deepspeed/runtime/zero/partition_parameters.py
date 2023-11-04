@@ -50,6 +50,9 @@ class NoGatherHandle:
 
         param.data = param.ds_tensor.data.to(device=get_accelerator().current_device_name(),
                                              non_blocking=True).view(param.ds_shape)
+
+        gd.debuginfo(prj='ds', info=f"param.data={infoTensor(param.data)}")
+
         self.__param = param
 
     def wait(self) -> None:
@@ -246,16 +249,16 @@ _orig_torch_eye = torch.eye
 
 
 def zero_wrapper_for_fp_tensor_constructor(fn: Callable, target_fp_dtype: torch.dtype) -> Callable:
-    gd.debuginfo(prj='ds')
+    # gd.debuginfo(prj='ds')
 
     def wrapped_fn(*args, **kwargs) -> Tensor:
-        gd.debuginfo(prj='ds')
+        # gd.debuginfo(prj='ds')
         if kwargs.get("device", None) is None:
-            gd.debuginfo(prj='ds')
+            # gd.debuginfo(prj='ds')
             kwargs['device'] = torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"]))
         tensor: Tensor = fn(*args, **kwargs)
         if tensor.is_floating_point():
-            gd.debuginfo(prj='ds')
+            # gd.debuginfo(prj='ds')
             tensor = tensor.to(target_fp_dtype)
 
         return tensor
@@ -266,11 +269,11 @@ def zero_wrapper_for_fp_tensor_constructor(fn: Callable, target_fp_dtype: torch.
 def get_new_tensor_fn_for_dtype(dtype: torch.dtype) -> Callable:
 
     def new_tensor(cls, *args) -> Tensor:
-        gd.debuginfo(prj='ds')
+        # gd.debuginfo(prj='ds')
         device = torch.device(get_accelerator().device_name(os.environ["LOCAL_RANK"]))
         tensor = _orig_torch_empty(0, device=device).new_empty(*args)
         if tensor.is_floating_point():
-            gd.debuginfo(prj='ds')
+            # gd.debuginfo(prj='ds')
             tensor = tensor.to(dtype)
 
         return tensor
@@ -746,14 +749,16 @@ class CUDAQuantizer:
         return self.quantizer_cuda_module.dequantize(quantized_param, scale, scale.numel(), 8,
                                                      self.quantizer_cuda_module.Symmetric)
 
+#coalesce = come together to form one mass or whole.
 def _no_gather_coalesced(params: Iterable[Parameter]) -> AllGatherCoalescedHandle:
-    gd.debuginfo(prj='ds')
     for param in params:
         if param.ds_status != ZeroParamStatus.NOT_AVAILABLE:
             raise RuntimeError(param.ds_summary())
         param.ds_status = ZeroParamStatus.INFLIGHT
 
     params = sorted(params, key=lambda p: p.ds_id)
+    gd.debuginfo(prj='ds', info=f'len of params={len(params)}')
+
     if len(params) == 1:
         param, = params
         return NoGatherHandle(param)
@@ -1100,16 +1105,13 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             tensor([], device='cuda:0', dtype=torch.float16)
             '''
             if param_list is None:
-                gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
                 param_list = [cls]
+                gd.debuginfo(prj='ds', info=f"len of param_list={len(param_list)}")
 
-            for index, ele in enumerate(param_list):
-                gd.debuginfo(prj="ds_chat", info=f"param_list[{index}]={infoTensor(ele)}")
-            '''
-            大多数是
-            param_list=[Parameter containing:
-            tensor([], device='cuda:0', dtype=torch.float16, requires_grad=True)]
-            '''
+            # for index, ele in enumerate(param_list):
+            #     gd.debuginfo(prj="ds", info=f"param_list[{index}]={infoTensor(ele)}")
+            # param_list[11]=_Size([0])_float16_cuda:0_
+
             return self._all_gather(param_list, async_op=async_op, hierarchy=hierarchy)
 
         ''''
@@ -1462,7 +1464,7 @@ class Init(InsertPostInitMethodToModuleSubClasses):
                     all_gather_list.append(param)
 
         for index, ele in enumerate(all_gather_list):
-            gd.debuginfo(prj="ds_chat", info=f"all_gather_list[{index}]={infoTensor(ele)}")
+            gd.debuginfo(prj="ds", info=f"all_gather_list[{index}]={infoTensor(ele)}")
         gd.debuginfo(prj='ds', info=f"handles={handles}")
         if not async_op:  #非异步
             gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
@@ -1482,7 +1484,8 @@ class Init(InsertPostInitMethodToModuleSubClasses):
     def _partition(self, param_list, force=False, has_been_updated=False):
         gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         for param in param_list:
-            print_rank_0(f"Before Partitioning Param {param.ds_id}", force=False)
+            # print_rank_0(f"Before Partitioning Param {param.ds_id}", force=False)
+            # Before Partitioning Param 225
             if self.zero_param_process_group is not None:
                 self._partition_param_sec(param, has_been_updated=has_been_updated)
             self._partition_param(param, has_been_updated=has_been_updated)
@@ -1504,9 +1507,12 @@ class Init(InsertPostInitMethodToModuleSubClasses):
     def _partition_param(self, param, buffer=None, has_been_updated=False):
         assert param.ds_status is not ZeroParamStatus.INFLIGHT, f" {param} Cannot partition a param in flight"
         global reuse_buffers
-        print_rank_0(f"Param id {param.ds_id} status is {param.ds_status}", force=False)
+        if param.ds_status != ZeroParamStatus.AVAILABLE:
+            print_rank_0(f"Param id {param.ds_id} status is {param.ds_status}", force=False)
         if param.ds_status is ZeroParamStatus.AVAILABLE:
-            print_rank_0(f"Partitioning param id {param.ds_id} reuse buffers {reuse_buffers}", force=False)
+            if reuse_buffers:
+                # 大部分是 reuse buffers False
+                print_rank_0(f"Partitioning param id {param.ds_id} reuse buffers {reuse_buffers}", force=False)
             # if reuse_buffers and False:
             #     numel = buffer.numel()
             #     buffer = param.data.view(-1)
@@ -1651,11 +1657,17 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             partition_size = tensor_size // self.dp_world_size
 
             secondary_partition_size = int(tensor_size // self.num_ranks_in_param_group)
+
+            gd.debuginfo(prj='ds', info=f"tensor_size={tensor_size}, \
+                                            partition_size={partition_size}, \
+                                            secondary_partition_size={secondary_partition_size}")
+
             if param.ds_secondary_tensor is None:
                 final_location = None
                 secondary_partitioned_tensor = torch.empty(secondary_partition_size,
                                                            dtype=param.dtype,
                                                            device=self.remote_device)
+                gd.debuginfo(prj='ds', info=f"secondary_partitioned_tensor={infoTensor(secondary_partitioned_tensor)}")
 
                 if self.pin_memory:
                     secondary_partitioned_tensor = secondary_partitioned_tensor.pin_memory()
@@ -1672,14 +1684,26 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             secondary_end = secondary_start + secondary_partition_size
 
             one_dim_param = param.contiguous().view(-1)
+
             start = partition_size * self.rank
             end = start + partition_size
+
+            gd.debuginfo(prj='ds', info=f"secondary_start={secondary_start}, \
+                                            secondary_end={secondary_end}, \
+                                            start={start},\
+                                            end={end}")
+
+            gd.debuginfo(prj='ds', info=f"one_dim_param={infoTensor(one_dim_param)}")
+
             if start < param.ds_numel and end <= param.ds_numel:
+                gd.debuginfo(prj='ds')
                 if secondary_start < param.ds_numel and secondary_end <= param.ds_numel:
                     sec_src_tensor = one_dim_param.narrow(0, secondary_start, secondary_partition_size)
+                    gd.debuginfo(prj='ds', info=f"sec_src_tensor={infoTensor(sec_src_tensor)}")
                     param.ds_secondary_tensor.copy_(sec_src_tensor)
 
             else:
+                gd.debuginfo(prj='ds')
                 if start < param.ds_numel:
                     elements_to_copy = param.ds_numel - start
                     elements_to_copy_sec = elements_to_copy * param.ds_secondary_tensor_num_of_groups
@@ -2142,13 +2166,15 @@ class GatheredParameters:
             # deal with generators like model.parameters()
             # must convert to list to be able to iterate more than once if we get a generator
             params = list(params)
-            for index, ele in enumerate(params):
-                gd.debuginfo(prj="ds_chat", info=f"params[{index}]={infoTensor(ele)}")
+            gd.debuginfo(prj="ds", info=f"len of params={len(params)}")
+            # for index, ele in enumerate(params):
+            #     gd.debuginfo(prj="ds", info=f"params[{index}]={infoTensor(ele)}")
+            # self.params[10]=_Size([0])_float16_cuda:0_
         else:
             # single param
             params = [params]
             for index, ele in enumerate(params):
-                gd.debuginfo(prj="ds_chat", info=f"params[{index}]={infoTensor(ele)}")
+                gd.debuginfo(prj="ds", info=f"params[{index}]={infoTensor(ele)}")
         # enable if at least one is zero-param, otherwise a noop
         if not any(is_zero_param(p) for p in params):
             gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")  # ph2-z3 全部，所以日志很短
@@ -2157,13 +2183,13 @@ class GatheredParameters:
 
         self.params = [p for p in params if hasattr(p, "ds_id")]
         for index, ele in enumerate(self.params):
-            gd.debuginfo(prj="ds_chat", info=f"self.params[{index}]={infoTensor(ele)}")
+            gd.debuginfo(prj="ds", info=f"self.params[{index}]={infoTensor(ele)}")
 
         self.params = sorted(
             set(self.params), key=lambda x: x.ds_id
         )  # remove the duplicates to prevent racing condition, we must also make sure the order is the same on all ranks otherwise we'll get deadlocks
         for index, ele in enumerate(self.params):
-            gd.debuginfo(prj="ds_chat", info=f"self.params[{index}]={infoTensor(ele)}")
+            gd.debuginfo(prj="ds", info=f"self.params[{index}]={infoTensor(ele)}")
 
         self.src_rank = None
         if modifier_rank is not None:

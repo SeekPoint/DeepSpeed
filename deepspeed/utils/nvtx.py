@@ -19,3 +19,8 @@ def instrument_w_nvtx(func):
         return ret_val
 
     return wrapped_fn
+
+'''
+NVTX ranges are typically used to profile applications that use the GPU. 
+Such NVTX profiles, once captured can be visually analyzed using NVIDIA NSight Systems.
+'''

@@ -1,0 +1,569 @@
+【Deepspeed-Adagrad】Deepspeed的Adagrad实现代码精读
+
+陈超帅
+
+这篇博客用来记录与分享Deepspeed团队的Adam实现的代码精读。
+对于代码的理解写在了代码周围的注释中，用中文注释的方法与大家一起读代码。若要读懂本文所述，要多看一下代码中的中文注释。
+
+其代码结构如下：
+1.adagrad.cpp
+2.cpu_adam.h
+
+代码可以在https://github.com/microsoft/DeepSpeed/tree/master/csrc/adagrad中找到。
+
+adagrad.cpp
+这段代码实现了一个Adagrad优化器，并提供了C++和Python接口。以下是各部分的详细解释：
+
+1.Adagrad优化器：
+Adagrad是一种用于随机梯度下降的优化算法，在处理稀疏数据时表现出色。
+其主要思想是对低频的参数给予更大的学习率，对高频的参数给予较小的学习率。
+在代码中，使用了Step_1，Step_4和Step_8函数进行更新操作，其中包括了对于不同数据精度和硬件支持（如AVX和CUDA）的处理。
+
+2.优化器管理器：
+std::unordered_map> s_optimizers; 用来存储创建的Adagrad优化器实例，通过一个唯一的整数ID进行索引。
+
+3.创建和销毁优化器：
+create_adagrad_optimizer函数负责创建一个新的Adagrad优化器，并存储在优化器管理器中。
+destroy_adagrad_optimizer函数负责移除一个已经创建的优化器。
+
+4更新步骤：
+ds_adagrad_step函数负责执行一次Adagrad的更新步骤，包括处理参数，梯度，和梯度的平方平均值。
+ds_adagrad_step_plus_copy函数除了执行更新步骤，还会将参数复制到GPU上。
+
+5.Python绑定：
+最后部分的代码使用了pybind11库，将C++的函数暴露给Python。
+这样，Python用户可以直接调用这些函数，无需关心底层的C++实现。
+对应的Python函数名分别为：“adagrad_update”, “adagrad_update_copy”, “create_adagrad”, “destroy_adagrad”。
+整体来看，这段代码实现了一个可高效运行在CPU和GPU上的Adagrad优化器，并提供了方便的Python接口，使得可以直接在Python环境下使用。
+
+其创新之处和特性主要体现在以下几个方面：
+
+1.多精度支持：
+该代码中实现的Adagrad优化器支持半精度（half precision）计算，这可以在一些GPU硬件上提供更高的计算效率和内存使用效率。
+
+2.向量化计算：
+根据代码中的条件编译选项，这份代码支持使用AVX512或AVX256进行向量化计算，这可以在支持这些指令集的硬件上显著提高计算速度。
+
+3.CUDA支持：
+如果定义了__ENABLE_CUDA__，则Adagrad优化器将支持CUDA，这意味着它可以在NVIDIA的GPU硬件上运行。
+
+4.自定义优化器管理：
+通过std::unordered_map> s_optimizers;，这份代码实现了一个自定义的优化器管理器，使得用户可以通过一个整数ID来管理和调用特定的优化器实例。
+
+5.C++和Python接口：
+最后，这份代码使用pybind11提供了Python接口，使得Python用户可以在不需要理解底层C++实现的情况下使用这个优化器。
+
+总的来说，这份代码提供了一个高度优化和定制的Adagrad优化器实现，与PyTorch内置的Adagrad优化器相比，它提供了更多的功能和更高的计算效率。
+
+// 保存优化器的哈希表
+static std::unordered_map<int, std::shared_ptr<void>> s_optimizers;
+
+// C++ 接口
+
+// Adagrad优化器的第一步
+void Adagrad_Optimizer::Step_1(float *_params,     // 参数
+                               float *grads,       // 梯度
+                               float *_exp_avg_sq, // 平方梯度的滑动平均值
+                               size_t _param_size, // 参数的大小
+                               ds_half_precision_t *dev_params,
+                               bool half_precision)
+{
+    size_t rounded_size = 0;
+#if defined(__AVX512__) or defined(__AVX256__)
+    // 如果定义了AVX，则使用AVX版本的步骤
+    Step_AVX<1>(
+        &rounded_size, _params, grads, _exp_avg_sq, _param_size, dev_params, half_precision);
+#endif
+    // 如果参数的大小大于rounded_size
+    if (_param_size > rounded_size)
+    {
+        // 步长
+        float step_size = -1 * _alpha;
+        ds_half_precision_t *grads_cast_h;
+        ds_half_precision_t *params_cast_h;
+        // 如果半精度为真
+        if (half_precision)
+        {
+            // 对梯度和参数进行类型转换
+            grads_cast_h = reinterpret_cast<ds_half_precision_t *>(grads);
+            params_cast_h = reinterpret_cast<ds_half_precision_t *>(_params);
+        }
+        // 从rounded_size开始，以TILE为步长，遍历参数
+        for (size_t t = rounded_size; t < _param_size; t += TILE)
+        {
+            size_t copy_size = TILE;
+            // 如果 t+TILE 大于参数的大小，则 copy_size 等于参数的大小减 t
+            if ((t + TILE) > _param_size)
+                copy_size = _param_size - t;
+            size_t offset = copy_size + t;
+#if defined(__ENABLE_CUDA__)
+            // 如果 t/TILE 大于等于2，则同步CUDA流
+            if ((t / TILE) >= 2)
+            {
+                cudaStreamSynchronize(_streams[_buf_index]);
+            }
+#endif
+            // 并行处理每个元素
+#pragma omp parallel for
+            for (size_t k = t; k < offset; k++)
+            {
+                // 根据精度获取梯度和参数
+                float grad = half_precision ? (float)grads_cast_h[k] : grads[k];
+                float param = half_precision ? (float)params_cast_h[k] : _params[k];
+                float momentum = grads[k];
+                float variance = _exp_avg_sq[k];
+                // 如果权重衰减大于0，则梯度等于参数乘以权重衰减加上梯度
+                if (_weight_decay > 0)
+                {
+                    grad = param * _weight_decay + grad;
+                }
+
+                // 平方梯度的滑动平均值加上梯度的平方
+                variance += grad * grad;
+
+                // 梯度等于平方梯度的滑动平均值的平方根
+                grad = sqrt(variance);
+                grad += _eps;
+                grad = momentum / grad;
+                param = grad * step_size + param;
+#if defined(__ENABLE_CUDA__)
+                // 如果 dev_params 不为空，则更新 _doubled_buffer
+                if (dev_params)
+                    _doubled_buffer[_buf_index][k - t] = param;
+#endif
+                // 更新参数
+                if (half_precision)
+                    params_cast_h[k] = (ds_half_precision_t)param;
+                else
+                    _params[k] = param;
+                // 将更新项存储到梯度的内存中
+                grads[k] = grad * step_size;
+                // 更新平方梯度的滑动平均值
+                _exp_avg_sq[k] = variance;
+            }
+
+#if defined(__ENABLE_CUDA__)
+            // 如果 dev_params 不为空，启动参数更新
+            if (dev_params) {
+                    launch_param_update(
+                        _doubled_buffer[_buf_index], dev_params + t, (copy_size), _streams[_buf_index]);
+                    // 更新缓冲区索引
+                    _buf_index = !_buf_index;
+            }
+#endif
+            }
+        }
+    }
+
+    // Adagrad优化器的四步
+    void Adagrad_Optimizer::Step_4(float *_params,     // 参数
+                                   float *grads,       // 梯度
+                                   float *_exp_avg_sq, // 平方梯度的滑动平均值
+                                   size_t _param_size, // 参数的大小
+                                   ds_half_precision_t *dev_params,
+                                   bool half_precision)
+    {
+        size_t rounded_size = 0;
+#if defined(__AVX512__) or defined(__AVX256__)
+        // 如果定义了AVX，则使用AVX版本的步骤
+        Step_AVX<4>(
+            &rounded_size, _params, grads, _exp_avg_sq, _param_size, dev_params, half_precision);
+#endif
+        // 如果参数的大小大于rounded_size
+        if (_param_size > rounded_size)
+            // 执行第一步
+            Step_1((_params + rounded_size),
+                   (grads + rounded_size),
+                   (_exp_avg_sq + rounded_size),
+                   (_param_size - rounded_size),
+                   (dev_params != nullptr ? (dev_params + rounded_size) : dev_params),
+                   half_precision);
+    }
+
+
+// 创建Adagrad优化器
+int create_adagrad_optimizer(int optimizer_id,
+                             float alpha = 1e-2,
+                             float eps = 1e-8,
+                             float weight_decay = 0,
+                             bool should_log = false)
+{
+    // 创建一个Adagrad优化器对象
+    auto opt = std::make_shared<Adagrad_Optimizer>(alpha, eps, weight_decay);
+
+    // 将新创建的优化器存储到全局的优化器管理器中
+    s_optimizers[optimizer_id] = opt;
+
+    // 如果需要打印日志
+    if (should_log) {
+        // 判断处理器的向量计算能力
+        std::string avx_type = "";
+#if defined(__AVX512__)
+        avx_type = "AVX512";
+#else
+#if defined(__AVX256__)
+        avx_type = "AVX2";
+#else
+        avx_type = "scalar";
+#endif
+#endif
+        // 打印信息
+        printf("Adagrad Optimizer #%d is created with %s arithmetic capability.\n",
+               optimizer_id,
+               avx_type.c_str());
+        printf("Config: alpha=%f, weight_decay=%f\n", alpha, weight_decay);
+    }
+
+    // 返回0表示成功
+    return 0;
+}
+
+// Adagrad优化器的更新步骤
+void Adagrad_Optimizer::Step_8(float* _params,
+                               float* grads,
+                               float* _exp_avg_sq,
+                               size_t _param_size,
+                               ds_half_precision_t* dev_params,
+                               bool half_precision)
+{
+    // 初始化向量化计算的大小
+    size_t rounded_size = 0;
+#if defined(__AVX512__) or defined(__AVX256__)
+    // 如果支持AVX，进行向量化计算
+    Step_AVX<8>(
+        &rounded_size, _params, grads, _exp_avg_sq, _param_size, dev_params, half_precision);
+#endif
+    // 对剩余的部分进行计算
+    if (_param_size > rounded_size)
+        Step_4((_params + rounded_size),
+               (grads + rounded_size),
+               (_exp_avg_sq + rounded_size),
+               (_param_size - rounded_size),
+               (dev_params != nullptr ? (dev_params + rounded_size) : dev_params),
+               half_precision);
+}
+
+// Adagrad优化器的更新步骤
+int ds_adagrad_step(int optimizer_id,
+                    size_t step,
+                    float lr,
+                    float epsilon,
+                    float weight_decay,
+                    torch::Tensor& params,
+                    torch::Tensor& grads,
+                    torch::Tensor& exp_avg_sq)
+{
+    // 获取连续的数据
+    auto params_c = params.contiguous();
+    auto grads_c = grads.contiguous();
+    auto exp_avg_sq_c = exp_avg_sq.contiguous();
+
+    // 获取指针
+    float* params_ptr = (float*)params_c.data_ptr();
+    float* grads_ptr = (float*)grads_c.data_ptr();
+    float* exp_avg_sq_ptr = (float*)exp_avg_sq_c.data_ptr();
+
+    // 获取优化器
+    std::shared_ptr<Adagrad_Optimizer> opt =
+        std::static_pointer_cast<Adagrad_Optimizer>(s_optimizers[optimizer_id]);
+    // 更新步数
+    opt->IncrementStep(step);
+    // 更新状态
+    opt->update_state(lr, epsilon, weight_decay);
+    // 执行更新步骤
+    opt->Step_8(params_ptr, grads_ptr, exp_avg_sq_ptr, params_c.numel());
+
+#if defined(__ENABLE_CUDA__)
+    // 同步CUDA流
+    opt->SynchronizeStreams();
+#endif
+    // 返回0表示成功
+    return 0;
+}
+
+// Adagrad优化器的更新步骤，并复制参数到GPU
+int ds_adagrad_step_plus_copy(int optimizer_id,
+                              size_t step,
+                              float lr,
+                              float epsilon,
+                              float weight_decay,
+                              torch::Tensor& params,
+                              torch::Tensor& grads,
+                              torch::Tensor& exp_avg_sq,
+                              torch::Tensor& gpu_params)
+{
+#if defined(__ENABLE_CUDA__)
+    // 获取连续的数据
+    auto params_c = params.contiguous();
+    auto gpu_params_c = gpu_params.contiguous();
+    auto exp_avg_sq_c = exp_avg_sq.contiguous();
+    auto grads_c = grads.contiguous();
+
+    // 获取指针
+    float* params_ptr = (float*)params_c.data_ptr();
+    float* grads_ptr = (float*)grads_c.data_ptr();
+    ds_half_precision_t* gpu_params_ptr = (ds_half_precision```cpp
+_t*)gpu_params_c.data_ptr();
+    float* exp_avg_sq_ptr = (float*)exp_avg_sq_c.data_ptr();
+
+    // 获取优化器
+    std::shared_ptr<Adagrad_Optimizer> opt =
+        std::static_pointer_cast<Adagrad_Optimizer>(s_optimizers[optimizer_id]);
+    // 更新步数
+    opt->IncrementStep(step);
+    // 更新状态
+    opt->update_state(lr, epsilon, weight_decay);
+    // 执行更新步骤，并复制参数到GPU
+    opt->Step_8(params_ptr,
+                grads_ptr,
+                exp_avg_sq_ptr,
+                params_c.numel(),
+                gpu_params_ptr,
+                (params.options().dtype() == at::kHalf));
+
+    // 同步CUDA流
+    opt->SynchronizeStreams();
+#else
+    // 如果没有启用CUDA，直接报错退出
+    assert(false);
+#endif
+    // 返回0表示成功
+    return 0;
+}
+
+// 销毁Adagrad优化器
+int destroy_adagrad_optimizer(int optimizer_id)
+{
+    // 从全局的优化器管理器中移除
+    s_optimizers.erase(optimizer_id);
+
+    // 返回0表示成功
+    return 0;
+}
+
+// Python绑定
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
+{
+    m.def("adagrad_update", &ds_adagrad_step, "DeepSpeed CPU Adagrad update (C++)");
+    m.def("adagrad_update_copy",
+          &ds_adagrad_step_plus_copy,
+          "DeepSpeed CPU Adagrad update and param copy (C++)");
+    m.def("create_adagrad", &create_adagrad_optimizer, "DeepSpeed CPU Adagrad (C++)");
+    m.def("destroy_adagrad", &destroy_adagrad_optimizer, "DeepSpeed CPU Adagrad destroy (C++)");
+}
+
+
+cpu_adam.h
+
+#pragma once
+
+#define NOMINMAX  // Windows的特殊性，防止min和max宏定义冲突
+                   // https://stackoverflow.com/questions/4913922/possible-problems-with-nominmax-on-visual-c
+
+#include <stdio.h>
+#include <cassert>
+#include "simd.h"
+
+#if defined(__ENABLE_CUDA__)  // 如果定义了__ENABLE_CUDA__，则包含CUDA相关的头文件
+#include <cuda_fp16.h>
+#include <cuda_runtime_api.h>
+#include "cuda.h"
+#include "custom_cuda_layers.h"
+typedef __half ds_half_precision_t;  // 定义半精度浮点类型
+#else
+typedef unsigned short ds_half_precision_t;  // 如果没有定义__ENABLE_CUDA__，则使用unsigned short作为半精度浮点类型
+#endif
+
+#define STEP(SPAN)                                             \
+    void Step_##SPAN(float* _params,                           \
+                     float* grads,                             \
+                     float* _exp_avg_sq,                       \
+                     size_t _param_size,                       \
+                     ds_half_precision_t* dev_param = nullptr, \
+                     bool half_precision = false);  // 定义一个宏，用于生成不同SPAN的Step函数
+
+class Adagrad_Optimizer {  // 定义Adagrad优化器类
+public:
+    Adagrad_Optimizer(float alpha = 1e-2, float eps = 1e-8, float weight_decay = 0)
+        : _alpha(alpha), _eps(eps), _weight_decay(weight_decay)
+    {
+#if defined(__ENABLE_CUDA__)  // 如果定义了__ENABLE_CUDA__，则分配和初始化CUDA相关的资源
+        cudaMallocHost((void**)_doubled_buffer, TILE * sizeof(float));
+        cudaMallocHost((void**)(_doubled_buffer + 1), TILE * sizeof(float));
+
+        _streams[0] = TrainingContext::Instance().GetCurrentStream();
+        _streams[1] = TrainingContext::Instance().GetNewStream();
+        _buf_index = false;
+#endif
+    }
+    ~Adagrad_Optimizer()  // 析构函数，释放相关资源
+    {
+#if defined(__ENABLE_CUDA__)  // 如果定义了__ENABLE_CUDA__，则释放CUDA相关的资源
+        cudaFreeHost(_doubled_buffer[0]);
+        cudaFreeHost(_doubled_buffer[1]);
+#endif
+    }
+#if defined(__AVX512__) or defined(__AVX256__)  // 如果定义了__AVX512__或__AVX256__，则生成AVX版本的Step函数
+    template <int span>
+    void Step_AVX(size_t* rounded_size,
+                  float* _params,
+                  float* grads,
+                  float* _exp_avg_sq,
+                  size_t param_size,
+                  ds_half_precision_t* dev_param = nullptr,
+                  bool half_precision = false);
+#endif
+    STEP(1)  // 生成SPAN为1的Step函数
+    STEP(4)  // 生成SPAN为4的Step函数
+    STEP(8)  // 生成SPAN为8的Step函数
+#if defined(__ENABLE_CUDA__)  // 如果定义了__ENABLE_CUDA__，则生成用于同步CUDA流的函数
+    inline void SynchronizeStreams()
+    {
+        for (int i = 0; i < 2; i++) cudaStreamSynchronize(_streams[i]);
+    }
+#endif
+    inline void IncrementStep(size_t step)  // 增加步数
+    {
+        _step++;
+        if (_step != step) { _step = step; }
+    }
+    inline void update_state(float lr, float epsilon, float weight_decay)  // 更新状态
+    {
+        _alpha = lr;
+        _eps = epsilon;
+        _weight_decay = weight_decay;
+    }
+
+private:
+    float _alpha;  // 学习率
+    float _eps;  // epsilon，用于防止除零错误
+    float _weight_decay;  // 权重衰减
+
+    float _betta1_t;
+    float _betta2_t;
+    size_t _step;  // 步数
+
+#if defined(__ENABLE_CUDA__)  // 如果定义了__ENABLE_CUDA__，则定义CUDA相关的成员变量
+    bool _buf_index;
+    float* _doubled_buffer[2];
+    cudaStream_t _streams[2];
+#endif
+};
+
+
+#if defined(__AVX512__) or defined(__AVX256__)
+template <int span>
+void Adagrad_Optimizer::Step_AVX(size_t* rounded_size,
+                                 float* _params,
+                                 float* grads,
+                                 float* _exp_avg_sq,
+                                 size_t _param_size,
+                                 ds_half_precision_t* dev_params,
+                                 bool half_precision)
+{
+    // 初始化变量
+    size_t new_rounded_size = 0;
+    AVX_Data eps_4;
+    eps_4.data = SIMD_SET(_eps);
+
+    // 计算步长，步长等于学习率的负数
+    float step_size = -1 * _alpha;
+    AVX_Data step_size_4;
+    step_size_4.data = SIMD_SET(step_size);
+
+    // 初始化权重衰减变量
+    AVX_Data weight_decay4;
+    if (_weight_decay > 0) weight_decay4.data = SIMD_SET(_weight_decay);
+    new_rounded_size = ROUND_DOWN(_param_size, SIMD_WIDTH * span);
+
+    // 对参数进行循环
+    for (size_t t = 0; t < new_rounded_size; t += TILE) {
+        size_t copy_size = TILE;
+        if ((t + TILE) > new_rounded_size) copy_size = new_rounded_size - t;
+        size_t offset = copy_size + t;
+
+#if defined(__ENABLE_CUDA__)
+        // 如果使用CUDA，则同步CUDA流
+        if ((t / TILE) >= 2) { cudaStreamSynchronize(_streams[_buf_index]); }
+#endif
+#pragma omp parallel for
+        // 对每个参数进行并行处理
+        for (size_t i = t; i < offset; i += SIMD_WIDTH * span) {
+            // 加载参数及相关数据
+            AVX_Data grad_4[span];
+            simd_load<span>(grad_4, grads + i, half_precision);
+
+            AVX_Data momentum_4[span];
+            simd_load<span>(momentum_4, grads + i, false);
+
+            AVX_Data variance_4[span];
+            simd_load<span>(variance_4, _exp_avg_sq + i, false);
+
+            AVX_Data param_4[span];
+            simd_load<span>(param_4, _params + i, half_precision);
+
+            // 如果存在权重衰减，则应用权重衰减
+            if (_weight_decay > 0) { simd_fma<span>(grad_4, param_4, weight_decay4, grad_4); }
+
+            // 计算梯度和参数更新
+            simd_fma<span>(variance_4, grad_4, grad_4, variance_4);
+            simd_sqrt<span>(grad_4, variance_4);
+            simd_add<span>(grad_4, grad_4, eps_4);
+            simd_div<span>(grad_4, momentum_4, grad_4);
+            simd_fma<span>(param_4, grad_4, step_size_4, param_4);
+
+            // 存储更新后的参数
+            simd_store<span>(_params + i, param_4, half_precision);
+#if defined(__ENABLE_CUDA__)
+            // 如果使用CUDA，则在设备上存储参数
+            if (dev_params) {
+                simd_store<span>(_doubled_buffer[_buf_index] + (i - t), param_4, half_precision);
+            }
+#endif
+            // 存储更新后的平方梯度平均值
+            simd_store<span>(_exp_avg_sq + i, variance_4, false);
+        }
+#if defined(__ENABLE_CUDA__)
+        // 如果使用CUDA，则在设备上更新参数
+        if (dev_params) {
+            if (half_precision)
+                launch_param_update_half(
+                    _doubled_buffer[_buf_index], dev_params + t, copy_size, _streams[_buf_index]);
+            else
+                launch_param_update(
+                    _doubled_buffer[_buf_index], dev_params + t, copy_size, _streams[_buf_index]);
+
+            // 切换缓冲区索引
+            _buf_index = !_buf_index;
+        }
+#endif
+    }
+    // 存储更新后的参数大小
+    *rounded_size = new_rounded_size;
+}
+#endif
+
+这个代码段是一个自定义的Adagrad优化器的实现，主要特点和创新点包括：
+
+1.平台兼容性：
+这个优化器的实现考虑到了在多种硬件环境下的运行情况，包括支持AVX512和AVX256指令集的CPU，
+以及CUDA加速的GPU设备，在编译时可以根据定义的宏来选择对应的实现方式。
+
+2.半精度浮点数支持：
+在CUDA环境下，优化器支持半精度浮点数（half precision float），这可以节省内存和带宽，提升计算效率。
+
+3.权重衰减（Weight Decay）：
+这个Adagrad优化器实现了权重衰减功能，这是一种正则化方法，可以在训练过程中防止过拟合。
+
+4.并行计算：
+在对参数进行处理时，使用了OpenMP的并行for循环，可以在多线程环境下提高计算效率。
+
+使用宏定义生成不同版本的Step函数：通过预处理宏定义，可以生成处理不同数据宽度（SPAN）的Step函数，提高代码的复用性。
+
+虽然这些特点和创新点在一些深度学习库（例如PyTorch）中可能已经实现，
+但这个代码段的价值在于展示了如何自定义实现这样的优化器，并且这个实现是在底层进行的，
+直接操作内存和硬件资源，提供了更高的灵活性和可能的优化空间。
+
+————————————————
+版权声明：本文为CSDN博主「陈超帅」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_43207982/article/details/134046954

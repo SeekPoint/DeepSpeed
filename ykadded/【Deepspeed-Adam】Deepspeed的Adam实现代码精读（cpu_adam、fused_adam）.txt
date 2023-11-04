@@ -1,0 +1,1281 @@
+【Deepspeed-Adam】Deepspeed的Adam实现代码精读（cpu_adam、fused_adam）
+陈超帅
+已于 2023-10-22 14:05:13 修改
+
+这篇博客用来记录与分享Deepspeed团队的Adam实现的代码精读。其中包括了CPU上Adam实现，还有高度优化的GPU上的代码实现。
+对于代码的理解写在了代码周围的注释中，用中文注释的方法与大家一起读代码。若要读懂本文所述，要多看一下代码中的中文注释。
+
+其代码结构如下：
+    cpu_adam.cpp
+    cpu_adam_impl.cpp
+    fused_adam_frontend.cpp
+    multi_tensor adam.cu
+    multi_tensor_apply.cuh
+代码可以在https://github.com/microsoft/DeepSpeed/tree/master/csrc/adam中找到。
+
+这里引用了cpu_adam.h，在介绍完上述5个代码文件后，将给出cpu_adam.h的阅读理解。
+
+cpu_adam.h可以在https://github.com/microsoft/DeepSpeed/tree/master/csrc/includes/cpu_adam.h中找到
+
+cpu_adam.cpp
+这段代码的主要目的是使用 pybind11 创建一个 Python 模块，该模块包含与 C++ 函数绑定的 Python 函数。
+这些 Python 函数可以在 Python 环境中直接调用，而实际执行的是 C++ 函数的代码，实现了 Python 对 C++ 代码的调用。
+
+#include "cpu_adam.h"
+// 引入 'cpu_adam.h' 的头文件，该文件声明了这段代码中使用的函数和类型(这个将在最后一个文件进行介绍)
+
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
+
+// 使用 pybind11 定义一个 Python 模块，该模块是一个 torch 扩展
+{
+    // 向模块中添加一个 Python 函数 'adam_update'。此函数绑定到 C++ 函数 'ds_adam_step'
+    m.def("adam_update", &ds_adam_step, "DeepSpeed CPU Adam update (C++)");
+
+    // 向模块中添加一个 Python 函数 'adam_update_copy'。此函数绑定到 C++ 函数 'ds_adam_step_plus_copy'
+    m.def("adam_update_copy", &ds_adam_step_plus_copy, "DeepSpeed CPU Adam update and param copy (C++)");
+
+    // 向模块中添加一个 Python 函数 'create_adam'。此函数绑定到 C++ 函数 'create_adam_optimizer'
+    m.def("create_adam", &create_adam_optimizer, "DeepSpeed CPU Adam (C++)");
+
+    // 向模块中添加一个 Python 函数 'destroy_adam'。此函数绑定到 C++ 函数 'destroy_adam_optimizer'
+    m.def("destroy_adam", &destroy_adam_optimizer, "DeepSpeed CPU Adam destroy (C++)");
+}
+
+cpu_adam_impl.cpp
+设计了step_1，step_4，step_8的原因：
+
+在高性能计算库中，我们常常会看到针对不同数据大小使用不同的函数或方法的设计模式。
+这主要是为了优化计算性能和硬件资源的使用。
+
+在这段代码中，Step_1，Step_4，和Step_8就是一个很好的例子。它们各自处理一组具有不同大小（1、4、8）的参数。
+以下是这种设计的可能原因：
+
+1.向量化：
+现代处理器具有向量化指令（如SIMD），能够在一个指令周期内处理多个数据。
+例如，使用SIMD，处理器可能能够一次处理4个或8个浮点数。Step_4 和 Step_8 可能是利用这种硬件特性来提高性能。
+而 Step_1 则用于处理不能被4或8整除的参数。
+
+2.内存对齐：
+处理器访问内存时，对于对齐的数据（即数据的起始地址是某个数（如4，8或16）的倍数）访问更快。
+Step_4 和 Step_8 可能是按照内存对齐的方式处理数据，以提高内存访问效率。
+
+3.并行化：
+在GPU或多核CPU上，将计算任务分解为小任务可以提高并行度并利用更多的硬件资源。
+Step_4 和 Step_8 可能是在处理更大的数据块，以便并行化。
+
+总的来说，Step_1，Step_4，和Step_8这样的设计是为了优化性能，以便更有效地使用硬件资源。
+
+// 用于保存优化器实例的全局变量
+static std::unordered_map<int, std::shared_ptr<void>> s_optimizers;
+
+// Adam优化器的一步操作，处理一次优化步骤
+void Adam_Optimizer::Step_1(...)
+{
+    // 具体的优化步骤，包括计算梯度、更新参数等
+}
+
+// 处理4次优化步骤，如果参数数量大于已处理的参数数量，调用Step_1来处理剩余的参数
+void Adam_Optimizer::Step_4(...)
+{
+    // 处理4次优化步骤
+    // 如果还有剩余参数，调用Step_1处理剩余参数
+}
+
+// 处理8次优化步骤，如果参数数量大于已处理的参数数量，调用Step_4来处理剩余的参数
+void Adam_Optimizer::Step_8(...)
+{
+    // 处理8次优化步骤
+    // 如果还有剩余参数，调用Step_4处理剩余参数
+}
+
+// 创建一个新的Adam优化器，并将它存储在全局变量s_optimizers中
+int create_adam_optimizer(int optimizer_id,
+                          float alpha,
+                          float betta1,
+                          float betta2,
+                          float eps,
+                          float weight_decay,
+                          bool adamw_mode,
+                          bool should_log)
+{
+    // 创建一个新的Adam优化器
+    auto opt =
+        std::make_shared<Adam_Optimizer>(alpha, betta1, betta2, eps, weight_decay, adamw_mode);
+
+    // 将新创建的优化器添加到全局变量中
+    s_optimizers[optimizer_id] = opt;
+
+    // 如果需要打印日志，打印创建的优化器信息
+}
+
+// 使用指定的优化器进行一步优化操作
+int ds_adam_step(int optimizer_id,
+                 size_t step,
+                 float lr,
+                 float beta1,
+                 float beta2,
+                 float epsilon,
+                 float weight_decay,
+                 bool bias_correction,
+                 torch::Tensor& params,
+                 torch::Tensor& grads,
+                 torch::Tensor& exp_avg,
+                 torch::Tensor& exp_avg_sq)
+{
+    // 从全局变量中获取指定的优化器
+    auto opt =
+        std::static_pointer_cast<Adam_Optimizer>(s_optimizers[optimizer_id]);
+    // 调用优化器的函数进行一步优化
+}
+
+// 使用指定的优化器进行一步优化，并将结果复制到GPU中
+int ds_adam_step_plus_copy(int optimizer_id,
+                           size_t step,
+                           float lr,
+                           float beta1,
+                           float beta2,
+                           float epsilon,
+                           float weight_decay,
+                           bool bias_correction,
+                           torch::Tensor& params,
+                           torch::Tensor& grads,
+                           torch::Tensor& exp_avg,
+                           torch::Tensor& exp_avg_sq,
+                           torch::Tensor& gpu_params)
+{
+    // 从全局变量中获取指定的优化器
+    auto opt =
+        std::static_pointer_cast<Adam_Optimizer>(s_optimizers[optimizer_id]);
+    // 调用优化器的函数进行一步优化，并将结果复制到GPU中
+}
+
+// 销毁指定的优化器
+int destroy_adam_optimizer(int optimizer_id)
+{
+    // 从全局变量s_optimizers中移除指定的优化器
+    s_optimizers.erase(optimizer_id);
+
+    return 0;
+}
+
+
+这段代码中定义了一个全局的unordered_map，用于存储Adam优化器的实例。
+每个Adam优化器都有一个唯一的ID，可以通过这个ID来获取对应的优化器实例。
+
+create_adam_optimizer函数用于创建一个新的Adam优化器并将其添加到全局变量中，destroy_adam_optimizer函数用于销毁指定的优化器实例。
+
+ds_adam_step和ds_adam_step_plus_copy函数用于执行一步优化操作，后者还会将优化结果复制到GPU中。
+
+Step_1、Step_4和Step_8函数是Adam优化器的内部函数，用于执行一次、四次和八次优化步骤。
+
+下面，我们深入看一下step1的步骤
+
+void Adam_Optimizer::Step_1(float *_params,                  // 参数数组
+                            float *grads,                    // 梯度数组
+                            float *_exp_avg,                 // 梯度的指数移动平均值
+                            float *_exp_avg_sq,              // 梯度平方的指数移动平均值
+                            size_t _param_size,              // 参数数组的大小
+                            ds_half_precision_t *dev_params, // 设备参数
+                            bool half_precision)             // 是否使用半精度
+{
+    size_t rounded_size = 0;
+#if defined(__AVX512__) or defined(__AVX256__)
+    // 如果定义了AVX512或AVX256，使用AVX版本的步骤
+    Step_AVX<1>(&rounded_size,
+                _params,
+                grads,
+                _exp_avg,
+                _exp_avg_sq,
+                _param_size,
+                dev_params,
+                half_precision);
+#endif
+    if (_param_size > rounded_size)
+    {
+        // 计算一些常量
+        float betta1_minus1 = 1 - _betta1;
+        float betta2_minus1 = 1 - _betta2;
+
+        float step_size = -1 * _alpha / _bias_correction1;
+        float w_decay = -1 * _alpha * _weight_decay;
+        ds_half_precision_t *grads_cast_h;
+        ds_half_precision_t *params_cast_h;
+        if (half_precision)
+        {
+            // 如果使用半精度，进行类型转换
+            grads_cast_h = reinterpret_cast<ds_half_precision_t *>(grads);
+            params_cast_h = reinterpret_cast<ds_half_precision_t *>(_params);
+        }
+
+        // 遍历未处理的部分
+        for (size_t t = rounded_size; t < _param_size; t += TILE)
+        {
+            size_t copy_size = TILE;
+            if ((t + TILE) > _param_size)
+                copy_size = _param_size - t;
+            size_t offset = copy_size + t;
+#if defined(__ENABLE_CUDA__)
+            // 如果是在GPU上运行，需要同步CUDA流
+            if ((t / TILE) >= 2)
+            {
+                cudaStreamSynchronize(_streams[_buf_index]);
+            }
+#endif
+#pragma omp parallel for
+            // 对每个元素进行更新
+            for (size_t k = t; k < offset; k++)
+            {
+                // 读取参数和对应的梯度
+                float grad = half_precision ? (float)grads_cast_h[k] : grads[k];
+                float param = half_precision ? (float)params_cast_h[k] : _params[k];
+                float momentum = _exp_avg[k];
+                float variance = _exp_avg_sq[k];
+                // 根据模式选择是否添加权重衰减
+                if (_weight_decay > 0 && !_adamw_mode)
+                {
+                    grad = param * _weight_decay + grad;
+                }
+                // 更新指数移动平均值
+                momentum = momentum * _betta1;
+                momentum = grad * betta1_minus1 + momentum;
+
+                variance = variance * _betta2;
+                grad = grad * grad;
+                variance = grad * betta2_minus1 + variance;
+
+                // 计算新的梯度值
+                grad = sqrt(variance);
+                grad = grad * _bias_correction2 + _eps;
+                grad = momentum / grad;
+                // 根据模式选择是否添加权重衰减
+                if (_weight_decay > 0 && _adamw_mode)
+                {
+                    param += w_decay * param;
+                }
+                // 更新参数值
+                param = grad * step_size + param;
+#if defined(__ENABLE_CUDA__)
+                // 如果是在GPU上运行，更新设备缓冲区
+                if (dev_params)
+                    _doubled_buffer[_buf_index][k - t] = param;
+#endif
+                // 保存新的参数值
+                if (half_precision)
+                    params_cast_h[k] = (ds_half_precision_t)param;
+                else
+                    _params[k] = param;
+                // 保存新的指数移动平均值
+                _exp_avg[k] = momentum;
+                _exp_avg_sq[k] = variance;
+            }
+#if defined(__ENABLE_CUDA__)
+            // 如果是在GPU上运行，更新设备参数
+            if (dev_params)
+            {
+                launch_param_update(
+                    _doubled_buffer[_buf_index], dev_params + t, (copy_size), _streams[_buf_index]);
+                _buf_index = !_buf_index;
+            }
+#endif
+        }
+    }
+}
+
+
+关注到这个代码块的一些创新点：
+
+1.混合精度计算：
+这个函数支持半精度（half precision）和单精度（float precision）的计算。
+对于许多深度学习应用，使用半精度浮点数可以大大提高计算速度，同时只有很小的精度损失。
+这是因为半精度浮点数使用较少的内存，从而可以加速内存访问，同时还能在同样的内存空间内存储更多的数据。
+
+2.并行计算：
+这个函数使用了OpenMP进行并行计算。
+在循环中，每个元素的更新都是独立的，因此可以并行进行，从而大大提高了计算速度。
+
+OpenMP（Open Multi-Processing）是一个支持多平台共享内存多处理器编程的API，主要用于C，C++，和Fortran语言。
+OpenMP是一种并行编程模型，它使用编译器指令（在C和C++中表现为#pragma）来指示哪些代码块应该并行执行。
+这种模型非常适合于循环密集型任务，因为它允许开发者只需添加几个编译器指令，就能在多个处理器核心之间分配循环的迭代。
+
+3.硬件优化：
+这个函数对AVX512和AVX256进行了特殊处理，这两者都是Intel的矢量化指令集，可以一次性处理多个数据，从而大大提高了计算效率。
+此外，如果定义了__ENABLE_CUDA__，这个函数还会使用CUDA进行GPU加速。
+AVX512和AVX256是指向量处理指令集。AVX代表"Advanced Vector Extensions"，数字则代表向量的宽度（以位为单位）。
+这些指令集允许CPU执行SIMD（Single Instruction, Multiple Data）操作，也就是说，使用一个指令同时对多个数据进行操作。
+在处理大量数据的计算密集型任务时，这种方法可以显著提高性能。
+
+例如，假设你有两个包含浮点数的数组，你想要将它们相加。在没有使用SIMD的情况下，你需要遍历这两个数组，一次处理一个元素。
+但是，如果你的CPU支持AVX256，你可以一次处理8个浮点数；如果支持AVX512，你可以一次处理16个浮点数。这种方式可以极大地提高计算效率。
+
+但是只有当任务能够被分解成大量独立并且相同的子任务时，SIMD才能发挥作用。此外，使用SIMD还需要保证数据在内存中是连续并且对齐的。
+
+4.权重衰减方式的选择：
+这个函数提供了两种权重衰减（weight decay）方式的选择，一种是在更新梯度之前添加权重衰减项，另一种是在更新参数之后添加权重衰减项。
+这两种方式在某些情况下会有不同的效果。
+
+5.双缓冲技术：
+在CUDA代码中，使用了双缓冲技术（double buffering）。
+当一个CUDA流正在处理一部分数据时，CPU可以继续更新另一部分数据，从而实现CPU和GPU的并行计算。
+
+论文有提到，叫延迟更新参数技术，也就是说在GPU处理数据的时候，CPU去更新优化器的数据，这样就可以提高并行度，
+让CPU的慢速计算与GPU的高速计算并行，用高速计算掩盖低速计算的延迟，就不会卡在CPU运算的瓶颈了
+
+以上就是这个函数的一些创新点，它们大大提高了计算效率，使得这个函数可以在大规模的深度学习任务中高效地进行参数更新。
+
+而对于函数step4，step8，就不额外粘贴代码进行分析了。
+
+Step_4和Step_1的主要区别在于处理了AVX优化时的四倍宽度优化。
+具体来说，如果定义了__AVX512__或__AVX256__，Step_4会调用Step_AVX<4>函数（处理一次四个元素），
+而Step_1会调用Step_AVX<1>函数（处理一次一个元素）。
+这种差别可以使得在支持宽向量操作的机器上，Step_4比Step_1更有效率。
+
+此外，如果参数数组的大小（_param_size）大于已经处理的大小（rounded_size），Step_4将调用Step_1函数处理剩余的部分，
+但在传递参数时，会将已处理部分的大小加到每个数组的起始地址上，并将参数数组的大小减去已处理部分的大小。
+
+fused_adam_frontend.cpp
+这段代码主要定义了一个CUDA版本的多张量Adam优化器，并通过Pybind11定义了一个Python扩展模块，使得Python可以直接调用这个优化器。
+多张量优化器可以同时处理多个张量，从而提高计算效率。
+
+这个代码看名字，像是一个前端（frontend），真正的实现还得看后面的代码。
+
+#include <torch/extension.h>
+
+// CUDA版本的多张量Adam优化器
+// chunk_size：每个块的大小
+// noop_flag：一个标志张量，用于控制是否进行操作
+// tensor_lists：一个包含多个张量列表的列表，每个列表表示一个参数的不同部分
+// lr：学习率
+// beta1：Adam优化器的第一个参数
+// beta2：Adam优化器的第二个参数
+// epsilon：Adam优化器的epsilon参数，用于防止除以零
+// step：当前训练步数
+// mode：优化器的模式
+// bias_correction：是否进行偏差校正
+// weight_decay：权重衰减系数
+void multi_tensor_adam_cuda(int chunk_size,
+                            at::Tensor noop_flag,
+                            std::vector<std::vector<at::Tensor>> tensor_lists,
+                            const float lr,
+                            const float beta1,
+                            const float beta2,
+                            const float epsilon,
+                            const int step,
+                            const int mode,
+                            const int bias_correction,
+                            const float weight_decay);
+
+// Pybind11模块定义
+// "multi_tensor_adam"：函数名
+// &multi_tensor_adam_cuda：函数实现
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
+{
+    m.def("multi_tensor_adam",
+          &multi_tensor_adam_cuda,
+          "Compute and apply gradient update to parameters for Adam optimizer");
+}
+
+
+multi_tensor_adam.cu
+这段代码是在GPU上实现Adam优化器的并行化计算。主要包括以下步骤：
+
+1.首先，定义了一个枚举类型adamMode_t，用于区分Adam优化器的两种模式：L2正则化模式 (ADAM_MODE_0) 和分离的权重衰减模式（AdamW，ADAM_MODE_1）。
+
+在深度学习中，权重衰减通常用于防止模型过拟合，通过在损失函数中添加一个正则项（权重的L2范数）来抑制模型的复杂性。
+然而，在Adam优化器中直接使用权重衰减可能会导致一些问题。
+具体来说，由于Adam优化器在更新权重时考虑了梯度的一阶矩和二阶矩，直接在损失函数中添加L2正则项并不能达到预期的效果。
+因此，一个叫做AdamW的优化器被提出。在AdamW中，权重衰减被分离出来，不再直接添加到损失函数中，而是在计算梯度后直接对权重应用衰减。
+具体来说，更新步骤如下：
+w = w - lr * (grad + wd * w)
+其中，w是权重，lr是学习率，grad是梯度，wd是权重衰减因子。
+这种方法更直观地实现了权重衰减的原意（即每一步都减小一部分权重），并且在实践中表现得更好。
+
+2.AdamFunctor是一个模板类，它定义了一个可以在设备（GPU）上执行的函数。
+这个函数实现了Adam优化器中的计算步骤，包括梯度计算、权重更新等。
+这里使用了__device__ __forceinline__关键字，表示这个函数是在CUDA设备上执行并内联的。
+AdamFunctor的具体实现中，涉及到了并行化计算技术，包括一些CUDA中的优化技巧，例如线程块的使用、并行化循环的使用等。
+“内联” 是一种编程概念，它来自于函数的 “内联” 属性。当一个函数被声明为内联函数时，编译器会尝试将其
+“内联扩展”，也就是说，它会尝试将函数调用替换为函数体的实际代码。
+如：inline int add(int a, int b) { return a + b; }编译器可能会将main函数中的add(1, 2)调用直接替换为1 + 2，从而避免函数调用的开销。
+而我们这里的__forceinline__，意思是无论如何都要将其变成内联的，这可以提高性能。
+
+3.multi_tensor_adam_cuda函数是主函数，它接收一系列参数，包括学习率、权重衰减率等，以及待优化的张量列表。
+在这个函数中，首先处理了偏差校正模式。然后，根据输入张量的数据类型，调用了适当的AdamFunctor，并使用multi_tensor_apply函数进行并行化计算。
+这里的DISPATCH_DOUBLE_FLOAT_AND_HALF是一个宏，用于根据输入张量的数据类型调用相应的函数。
+在Adam优化器中，一阶矩估计（梯度的移动平均值）和二阶矩估计（梯度的平方的移动平均值）都是通过指数衰减的方式得到的。
+然而，由于这两个估计在初始化时都是0，这就导致了在早期阶段，这两个估计会有偏低的趋势。
+为了修正这种偏差，Adam优化器引入了偏差校正。偏差校正的公式如下：
+m_hat = m / (1 - beta1^t)
+v_hat = v / (1 - beta2^t)
+其中，m和v分别是未校正的一阶矩估计和二阶矩估计，beta1和beta2是衰减因子，t是当前步数。
+偏差校正可以确保在早期阶段，一阶矩估计和二阶矩估计都趋向于它们的真实值。
+
+4.最后，使用AT_CUDA_CHECK宏检查CUDA操作是否存在错误。
+总的来说，这段代码的工作流程就是根据输入的参数和数据，使用Adam算法进行并行化的优化计算，并更新原来的参数。
+
+// 引入多张量处理库，这个就在下面的代码文件中讲到
+#include "multi_tensor_apply.cuh"
+
+#define BLOCK_SIZE 512
+#define ILP 4
+
+// 枚举类型，定义Adam优化器的模式
+typedef enum
+{
+    ADAM_MODE_0 = 0, // L2正则化模式
+    ADAM_MODE_1 = 1  // 分离的权重衰减模式(AdamW)
+} adamMode_t;
+
+using MATH_T = float;
+
+// 定义AdamFunctor模板类，实现自定义的操作
+template <typename T>
+struct AdamFunctor
+{
+    __device__ __forceinline__ void operator()(/* 参数省略，原理同下 */)
+    {
+        // 暂时省略具体实现，主要包含Adam优化器在CUDA中的并行计算步骤
+    }
+};
+
+// 多张量Adam优化器的CUDA实现
+void multi_tensor_adam_cuda(int chunk_size,
+                            at::Tensor noop_flag,
+                            std::vector<std::vector<at::Tensor>> tensor_lists,
+                            const float lr,
+                            const float beta1,
+                            const float beta2,
+                            const float epsilon,
+                            const int step,
+                            const int mode,
+                            const int bias_correction,
+                            const float weight_decay)
+{
+    using namespace at;
+
+    // 处理偏差校正模式
+    float bias_correction1 = 1.0f, bias_correction2 = 1.0f;
+    if (bias_correction == 1)
+    {
+        bias_correction1 = 1 - std::pow(beta1, step);
+        bias_correction2 = 1 - std::pow(beta2, step);
+    }
+
+    // 假设p,g,m1,m2现在都是同一种类型
+    DISPATCH_DOUBLE_FLOAT_AND_HALF(tensor_lists[0][0].scalar_type(),
+                                   0,
+                                   "adam",
+                                   // 使用多张量处理库函数multi_tensor_apply
+                                   multi_tensor_apply<4>(BLOCK_SIZE,
+                                                         chunk_size,
+                                                         noop_flag,
+                                                         tensor_lists,
+                                                         AdamFunctor<scalar_t_0>(),
+                                                         beta1,
+                                                         beta2,
+                                                         bias_correction1,
+                                                         bias_correction2,
+                                                         epsilon,
+                                                         lr,
+                                                         (adamMode_t)mode,
+                                                         weight_decay);)
+
+    // 检查CUDA是否有错误
+    AT_CUDA_CHECK(cudaGetLastError());
+}
+
+
+我们来看一下AdamFunctor的代码，这部分较为底层：
+
+template <typename T>
+struct AdamFunctor
+{
+    // 在CUDA设备上定义一个操作函数
+    __device__ __forceinline__ void operator()(int chunk_size,
+                                               volatile int *noop_gmem,
+                                               TensorListMetadata<4> &tl,
+                                               const float beta1,
+                                               const float beta2,
+                                               const float beta1_correction,
+                                               const float beta2_correction,
+                                               const float epsilon,
+                                               const float lr,
+                                               adamMode_t mode,
+                                               const float decay)
+    {
+        // 定义校正模式的索引
+        int tensor_loc = tl.block_to_tensor[blockIdx.x];
+
+        // 定义chunk的索引
+        int chunk_idx = tl.block_to_chunk[blockIdx.x];
+
+        // 当前tensor的大小
+        int n = tl.sizes[tensor_loc];
+
+        // 以下四个指针分别是梯度、参数、一阶矩和二阶矩的开始地址
+        T *g = (T *)tl.addresses[0][tensor_loc];
+        g += chunk_idx * chunk_size;
+
+        T *p = (T *)tl.addresses[1][tensor_loc];
+        p += chunk_idx * chunk_size;
+
+        T *m = (T *)tl.addresses[2][tensor_loc];
+        m += chunk_idx * chunk_size;
+
+        T *v = (T *)tl.addresses[3][tensor_loc];
+        v += chunk_idx * chunk_size;
+
+        // 调整tensor的大小以适应chunk的大小
+        n -= chunk_idx * chunk_size;
+
+        // 以ILP（Instruction Level Parallelism）为步长并行处理每个tensor
+        for (int i_start = 0; i_start < n && i_start < chunk_size; i_start += blockDim.x * ILP)
+        {
+            MATH_T r_g[ILP];
+            MATH_T r_p[ILP];
+            MATH_T r_m[ILP];
+            MATH_T r_v[ILP];
+
+            // 加载每个tensor的梯度、参数、一阶矩和二阶矩
+#pragma unroll
+            for (int ii = 0; ii < ILP; ii++)
+            {
+                int i = i_start + threadIdx.x + ii * blockDim.x;
+                if (i < n && i < chunk_size)
+                {
+                    r_g[ii] = g[i];
+                    r_p[ii] = p[i];
+                    r_m[ii] = m[i];
+                    r_v[ii] = v[i];
+                }
+                else
+                {
+                    // 如果超过tensor的大小，用0填充
+                    r_g[ii] = MATH_T(0);
+                    r_p[ii] = MATH_T(0);
+                    r_m[ii] = MATH_T(0);
+                    r_v[ii] = MATH_T(0);
+                }
+            }
+
+            // 根据Adam优化器的计算公式更新参数
+#pragma unroll
+            for (int ii = 0; ii < ILP; ii++)
+            {
+                if (mode == ADAM_MODE_0)
+                { // L2正则化模式
+                    r_g[ii] = r_g[ii] + (decay * r_p[ii]);
+                    r_m[ii] = beta1 * r_m[ii] + (1 - beta1) * r_g[ii];
+                    r_v[ii] = beta2 * r_v[ii] + (1 - beta2) * r_g[ii] * r_g[ii];
+                    MATH_T next_m_unbiased = r_m[ii] / beta1_correction;
+                    MATH_T next_v_unbiased = r_v[ii] / beta2_correction;
+                    MATH_T denom = sqrtf(next_v_unbiased) + epsilon;
+                    MATH_T update = next_m_unbiased / denom;
+                    r_p[ii] = r_p[ii] - (lr * update);
+                }
+                else
+                { // 分离的权重衰减模式（AdamW）
+                    r_m[ii] = beta1 * r_m[ii] + (1 - beta1) * r_g[ii];
+                    r_v[ii] = beta2 * r_v[ii] + (1 - beta2) * r_g[ii] * r_g[ii];
+                    MATH_T next_m_unbiased = r_m[ii] / beta1_correction;
+                    MATH_T next_v_unbiased = r_v[ii] / beta2_correction;
+                    MATH_T denom = sqrtf(next_v_unbiased) + epsilon;
+                    MATH_T update = (next_m_unbiased / denom) + (decay * r_p[ii]);
+                    r_p[ii] = r_p[ii] - (lr * update);
+                }
+            }
+
+            // 更新原始tensor的参数、一阶矩和二阶矩
+#pragma unroll
+            for (int ii = 0; ii < ILP; ii++)
+            {
+                int i = i_start + threadIdx.x + ii * blockDim.x;
+                if (i < n && i < chunk_size)
+                {
+                    p[i] = r_p[ii];
+                    m[i] = r_m[ii];
+                    v[i] = r_v[ii];
+                }
+            }
+        }
+    }
+};
+
+
+这里的ILP（Instruction Level Parallelism），我解释一下。
+
+指令级并行（Instruction Level Parallelism, ILP）
+是一种微处理器设计技术，旨在减少处理器在执行指令序列时的空闲时间，从而提高性能。
+在单个处理器核心内部，一次只能执行一个指令，这就导致了许多潜在的效率损失。
+例如，一个指令可能需要读取内存中的数据，而内存访问可能需要数十个或数百个处理器周期。
+在此期间，处理器核心可能会空闲，如果没有其他工作要做的话。ILP通过在同一处理器周期内启动多个指令的执行来解决这个问题。
+这些指令可能来自于程序的不同部分（这称为乱序执行或动态调度），或者来自于一段可以并行执行的代码（这称为循环展开或静态调度）。
+
+尽管ILP可以显著提高处理器性能，但是它也有一些挑战和限制。
+其中一个挑战是数据依赖性：如果一个指令需要使用另一个指令的结果，那么这两个指令就不能并行执行。
+另一个挑战是硬件复杂性：支持ILP需要更复杂的处理器设计，以同时跟踪和管理多个并行指令。
+
+接下来我们看看multi_tensor_adam_cuda的实现。
+
+// 各参数的含义
+// chunk_size：每个块的大小，用于并行计算。
+// noop_flag：一个标志，如果为真，那么这个函数将不会进行任何操作。
+// tensor_lists：一个嵌套的向量，包含了所有需要更新的张量列表，每个列表包括参数张量（p）、梯度张量（g）、一阶矩张量（m1）和二阶矩张量（m2）。
+// lr：学习率。
+// beta1、beta2：Adam优化器中的超参数。
+// epsilon：一个极小的常数，用于防止除以零的错误。
+// step：当前的优化步骤。
+// mode：优化模式，可以选择L2正则化模式或AdamW模式。
+// bias_correction：是否进行偏差修正，如果为1，则进行修正。
+// weight_decay：权重衰减系数。
+void multi_tensor_adam_cuda(int chunk_size,
+                            at::Tensor noop_flag,
+                            std::vector<std::vector<at::Tensor>> tensor_lists,
+                            const float lr,
+                            const float beta1,
+                            const float beta2,
+                            const float epsilon,
+                            const int step,
+                            const int mode,
+                            const int bias_correction,
+                            const float weight_decay)
+{
+    using namespace at;
+
+    // 处理偏差修正模式
+    float bias_correction1 = 1.0f, bias_correction2 = 1.0f;
+    if (bias_correction == 1)
+    {
+        // 如果启用了偏差修正（bias_correction=1），则根据当前步骤计算修正因子
+        bias_correction1 = 1 - pow(beta1, step);
+        bias_correction2 = 1 - pow(beta2, step);
+    }
+
+    // 目前假设p,g,m1,m2类型相同
+    // DISPATCH_DOUBLE_FLOAT_AND_HALF是一个宏,决定了应该使用哪种数据类型的AdamFunctor，这个AdamFunctor被用于multi_tensor_apply函数中，进行实际的优化操作。
+    DISPATCH_DOUBLE_FLOAT_AND_HALF(tensor_lists[0][0].scalar_type(),
+                                   0,
+                                   "adam",
+                                   multi_tensor_apply<4>(BLOCK_SIZE,
+                                                         chunk_size,
+                                                         noop_flag,
+                                                         tensor_lists,
+                                                         AdamFunctor<scalar_t_0>(),
+                                                         beta1,
+                                                         beta2,
+                                                         bias_correction1,
+                                                         bias_correction2,
+                                                         epsilon,
+                                                         lr,
+                                                         (adamMode_t)mode,
+                                                         weight_decay);)
+
+    // 检查CUDA是否有任何错误
+    AT_CUDA_CHECK(cudaGetLastError());
+}
+
+这段代码的高性能和并行计算主要体现在以下几个方面：
+
+1.并行处理多个张量：
+代码中使用了multi_tensor_apply函数来并行处理多个张量。
+每个张量由多个线程块（block）来处理，每个线程块处理一个chunk，即一部分元素。
+这样可以充分利用GPU的多处理器和多线程，提高并行计算的效率。
+
+2.指令级并行（ILP）：
+对每个张量的处理采用了指令级并行（Instruction Level Parallelism, ILP）。
+即在一个线程中并行处理多个元素，这样可以进一步提高并行计算的效率。
+
+3.使用共享内存和寄存器：
+代码中使用了CUDA的共享内存和寄存器来存储中间变量，如r_g、r_p、r_m和r_v。
+这些内存是在GPU上的，访问速度比主内存快，可以减少内存访问的延迟，提高计算的速度。
+
+4.减少内存访问：
+代码中在一个线程中并行处理多个元素，可以减少内存访问的次数，提高计算的速度。
+此外，代码中还使用了#pragma unroll指令，这个指令可以使编译器自动展开循环，减少循环的开销，提高计算的速度。
+
+#pragma unroll
+是一种编译器指令，它告诉编译器尝试将循环"展开"。
+循环展开是一种优化技术，通过减少循环控制结构的开销（例如条件测试和跳转），来提高程序的执行速度。
+这样，我们就消除了每次迭代时的条件检查和跳转，从而减少了执行开销。
+需要注意的是，虽然循环展开可以在某些情况下提高性能，但它并不总是最优的选择。
+首先，它可能会增加代码的大小，这可能导致更多的缓存未命中，从而降低性能。
+其次，它可能会阻止其他的优化，例如循环交换或并行化。
+
+ ```
+ for (int i = 0; i < 4; i++) {
+     // do something
+ }
+
+ // 会变成如下的↓
+
+ // do something
+ // do something
+ // do something
+ // do something
+ ```
+
+5.优化计算公式：
+代码中使用了一些优化的计算公式，如偏差修正的公式、权重衰减的公式等。这些优化的公式可以减少计算的复杂性，提高计算的速度。
+
+6.减少同步的开销：
+代码中只在必要的地方使用同步操作，如__syncthreads()函数。这可以减少同步的开销，提高计算的速度。
+
+总的来说，这段代码通过并行处理多个张量、指令级并行、使用共享内存和寄存器、减少内存访问、优化计算公式和减少同步的开销等技术，实现了高性能的并行计算。
+
+multi_tensor_apply.cuh
+这段代码涵盖了一种处理多张量（multi-tensor）操作的优化方法，主要在以下几个方面体现创新：
+
+并行处理: 这段代码中引入了CUDA内核，使得多张量操作可以并行处理。通过并行处理，可以显著提高处理多张量的速度，特别是在处理大规模张量数据时。
+
+灵活的用户函数接口: 代码中的multi_tensor_apply_kernel函数采用了模板参数，可以接受任意的用户定义函数进行处理。这样一来，用户可以根据需要自定义函数，以处理各种不同的张量操作。
+
+优化的数据管理: 在处理多张量操作时，代码中采用了TensorListMetadata结构来存储张量的元数据，包括地址、大小、块到张量的映射、块到块的映射以及启动张量的索引。这种方法使得数据的管理更加方便和高效。
+
+设备保护: 通过使用OptionalCUDAGuard，可以确保所有的CUDA操作都在同一个设备上执行，防止在多设备环境下出现设备不匹配的问题。
+
+设备保护这个概念在CUDA编程中非常重要。在CUDA中，你可以有多个GPU设备，每个设备都有自己的内存和计算资源。当你在写CUDA程序时，你需要明确指定你的代码在哪个设备上运行，以及在哪个设备上分配和使用内存。
+
+适应性强: 这段代码中的multi_tensor_apply函数采用了模板参数，可以接受任意深度的张量列表，使得这段代码能够处理各种不同深度的多张量操作。
+总的来说，这段代码实现了一种高效、灵活且适应性强的多张量处理方法，具有较高的创新性。
+
+#include <ATen/ATen.h>
+#include <ATen/AccumulateType.h>
+#include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/Exceptions.h>
+#include <c10/cuda/CUDAGuard.h>
+#include "compat.h"
+
+#include <assert.h>
+
+// 为了处理多张量应用这个需求，这个头文件是你的一站式解决方案。（DS团队的话，直译）
+// TODO: 对于其他一些设备（例如：Jetson），内核参数大小限制可能小于4KB （DS团队的TODO，还没有实现的）
+constexpr int depth_to_max_tensors[5] = {110, 64, 48, 36, 30};
+constexpr int depth_to_max_blocks[5] = {320, 320, 320, 320, 320};
+
+// 用于存储元数据的结构，包含了地址、大小、块到张量的映射、块到块的映射以及启动张量的索引。
+template <int n>
+struct TensorListMetadata
+{
+    void *addresses[n][depth_to_max_tensors[n - 1]];
+    int sizes[depth_to_max_tensors[n - 1]];
+    unsigned char block_to_tensor[depth_to_max_blocks[n - 1]];
+    int block_to_chunk[depth_to_max_blocks[n - 1]]; // 这可能需要是一个完整的int.（原文，可能正在开发中）
+    int start_tensor_this_launch;
+};
+
+// 定义了一个全局的CUDA内核函数，它将块信息传递给用户提供的函数进行处理。
+template <typename T, typename U, typename... ArgTypes>
+__global__ void multi_tensor_apply_kernel(int chunk_size,
+                                          volatile int *noop_flag,
+                                          T tl,
+                                          U callable,
+                                          ArgTypes... args)
+{
+    // Hand the chunk information to the user-supplied functor to process however it likes.（原文）
+    callable(chunk_size, noop_flag, tl, args...);
+}
+
+// 这个函数用于处理多张量应用，它将块大小、块数量以及张量列表等信息传递给CUDA内核函数进行处理。
+template <int depth, typename T, typename... ArgTypes>
+void multi_tensor_apply(int block_size,
+                        int chunk_size,
+                        const at::Tensor &noop_flag,
+                        const std::vector<std::vector<at::Tensor>> &tensor_lists,
+                        T callable,
+                        ArgTypes... args)
+{
+    // 检查张量列表的深度是否正确
+    TORCH_CHECK(tensor_lists.size() == depth, "tensor_lists.size() != depth");
+    // 检查张量列表的大小是否大于0
+    int len0 = tensor_lists[0].size();
+    TORCH_CHECK(len0 > 0, "tensor_lists[0].size() is not > 0");
+    // 获取参考设备并检查是否为CUDA设备
+    auto ref_device = tensor_lists[0][0].device();
+    TORCH_CHECK(ref_device.type() == at::kCUDA, "expected input to be on cuda");
+    // 检查每个张量列表的大小、设备以及元素数量是否与第一个张量列表一致
+    for (int l = 0; l < tensor_lists.size(); l++) // No range-based for because I need indices
+    {
+        TORCH_CHECK(tensor_lists[l].size() == len0, "Size mismatch among tensor lists");
+        for (int t = 0; t < tensor_lists[l].size(); t++)
+        {
+            bool contiguous_memory = tensor_lists[l][t].is_contiguous();
+#ifdef VERSION_GE_1_5
+            contiguous_memory = (contiguous_memory ||
+                                 tensor_lists[l][t].is_contiguous(at::MemoryFormat::ChannelsLast));
+#endif
+            TORCH_CHECK(contiguous_memory, "A tensor was not contiguous.");
+            TORCH_CHECK(tensor_lists[l][t].device() == ref_device,
+                        "A tensor was not on the same device as the first tensor");
+            TORCH_CHECK(tensor_lists[l][t].numel() == tensor_lists[0][t].numel(), "Size mismatch");
+        }
+    }
+
+    int ntensors = tensor_lists[0].size();
+
+    // 创建一个TensorListMetadata实例，用于保存张量元数据
+    TensorListMetadata<depth> tl;
+
+    // 设备保护，确保所有的操作都在张量所在的设备上进行
+    const at::cuda::OptionalCUDAGuard device_guard(device_of(tensor_lists[0][0]));
+    // 获取当前的CUDA流
+    auto stream = at::cuda::getCurrentCUDAStream();
+
+    tl.start_tensor_this_launch = 0;
+    int loc_block_info = 0;
+    int loc_tensor_info = 0;
+    // 遍历每一个张量
+    for (int t = 0; t < ntensors; t++)
+    {
+        // 将当前张量的元素数量保存到元数据中
+        tl.sizes[loc_tensor_info] = tensor_lists[0][t].numel();
+        // 遍历每一个深度，将每个深度的张量数据地址保存到元数据中
+        for (int d = 0; d < depth; d++)
+            tl.addresses[d][loc_tensor_info] = tensor_lists[d][t].data_ptr();
+        loc_tensor_info++;
+
+        // 计算当前张量需要的块数量
+        int chunks_this_tensor = (tensor_lists[0][t].numel() + chunk_size - 1) / chunk_size;
+
+        // 遍历每一个块
+        for (int chunk = 0; chunk < chunks_this_tensor; chunk++)
+        {
+            // 将块到张量的映射和块到块的映射保存到元数据中
+            tl.block_to_tensor[loc_block_info] = loc_tensor_info - 1;
+            tl.block_to_chunk[loc_block_info] = chunk;
+            loc_block_info++;
+
+            // 检查是否触及到张量的最大数量，块的最大数量或者已经是最后一个块
+            bool tensors_full = (loc_tensor_info == depth_to_max_tensors[depth - 1] &&
+                                 chunk == chunks_this_tensor - 1);
+            bool blocks_full = (loc_block_info == depth_to_max_blocks[depth - 1]);
+            bool last_chunk = (t == ntensors - 1 && chunk == chunks_this_tensor - 1);
+
+            // 如果满足以上任意一个条件，那么就启动CUDA内核函数进行处理
+            if (tensors_full || blocks_full || last_chunk)
+            {
+                multi_tensor_apply_kernel<<<loc_block_info, block_size, 0, stream>>>(
+                    chunk_size, noop_flag.DATA_PTR<int>(), tl, callable, args...);
+
+                // 检查CUDA内核函数是否有错误发生
+                AT_CUDA_CHECK(cudaGetLastError());
+
+                // 重置块信息的位置
+                loc_block_info = 0;
+                // 如果是当前张量的最后一个块，那么重置张量信息的位置，并更新启动张量的索引
+                if (chunk == chunks_this_tensor - 1)
+                {
+                    loc_tensor_info = 0;
+                    tl.start_tensor_this_launch = t + 1;
+                }
+                else
+                {
+                    // 如果不是当前张量的最后一个块，那么将当前张量的元数据移动到元数据的首部，并更新启动张量的索引
+                    tl.sizes[0] = tl.sizes[loc_tensor_info - 1];
+                    for (int d = 0; d < depth; d++)
+                        tl.addresses[d][0] = tl.addresses[d][loc_tensor_info - 1];
+                    loc_tensor_info = 1;
+                    tl.start_tensor_this_launch = t;
+                }
+            }
+        }
+    }
+
+
+在Adam优化器中，这个多张量操作的框架可以大大提高计算效率。
+Adam优化器对每个参数（即每个张量）进行独立的更新，而这个更新过程可以并行处理以提高速度。
+
+具体来说，Adam优化器在每次迭代中，需要对每一个模型参数进行一次更新。
+每次更新包括计算梯度、计算梯度的移动平均值和平方值，然后使用这些信息来更新参数值。
+这些操作对于所有的参数都是相同的，因此可以并行处理。
+
+在这个框架中，每个参数（即每个张量）都被分割成多个块，然后并行处理。这既可以减少GPU的内存需求，又可以利用GPU的并行计算能力，提高计算效率。
+同时，这个框架也考虑了处理的块大小和数量，以保证所有的CUDA线程都被充分利用。
+
+因此，在Adam优化器中，这个多张量操作的框架可以大大提高参数更新的效率，从而加快模型的训练速度。
+
+cpu_adam.h
+1.使用SIMD指令：
+这个实现使用了SIMD（Single Instruction Multiple Data）指令来并行处理数据，这可以极大地提高代码的执行效率。
+这一点可以在Step_AVX函数中看到。
+
+2.支持半精度浮点数：
+这个实现支持使用半精度浮点数（half precision）来表示参数，这可以减小内存的使用量和提高计算速度。
+这一点可以在ds_half_precision_t类型和half_precision参数中看到。
+
+3.支持权重衰减：
+这个实现支持权重衰减（weight decay），这是一种常见的正则化技术，可以防止模型过拟合。
+这一点可以在_weight_decay成员变量和update_state函数中看到。
+
+4.支持AdamW模式：
+这个实现支持AdamW模式，这是一种改进版的Adam优化器，可以更好地支持权重衰减。
+这一点可以在_adamw_mode成员变量和Step_AVX函数中看到。
+
+5.支持CUDA：
+如果启用了CUDA，这个实现会使用CUDA来加速计算，并且会使用CUDA流来同步数据。
+这一点可以在__ENABLE_CUDA__宏和SynchronizeStreams函数中看到。
+
+6.提供了一套完整的API：
+这个实现提供了一套完整的API，包括创建优化器、执行优化步骤、销毁优化器等函数，这使得这个优化器可以很容易地被集成到其他的框架中。
+
+7.模块化设计：
+代码将Adam优化器封装为一个单独的类，将参数更新、权重衰减等关键逻辑分别封装在不同的方法中，
+这种模块化设计使得代码结构清晰，易于理解和维护，也方便进行功能扩展。
+
+8.偏差矫正机制：
+代码中实现了偏差矫正机制，有效防止了在训练初期由于梯度的大幅震荡导致的训练不稳定问题。
+
+9.双缓冲技术：
+在使用CUDA进行参数更新时，代码使用了双缓冲技术，即使用两块缓冲区交替进行数据的读写，可以避免读写冲突，提高数据处理速度。
+
+10.兼容多种硬件平台：
+代码同时支持CPU和GPU两种硬件平台，通过宏定义来控制使用哪种平台，使得代码具有良好的平台兼容性。
+（创新了cpu_adam，这个可以看论文ZeRo-offload，几乎追上pytorch的cuda-adam，而对比cpu版本提速很多倍）
+
+#pragma once
+
+#define NOMINMAX // Windows的特殊性质，详情可见（这个没看，可能是在window上运行会有问题，但是我不在window上运行，需要可自行关注）
+                 // https://stackoverflow.com/questions/4913922/possible-problems-with-nominmax-on-visual-c
+
+#include <stdio.h>
+#include <torch/extension.h>
+#include <cassert>
+#include "simd.h"
+
+#if defined(__ENABLE_CUDA__)
+#include <cuda_fp16.h>
+#include <cuda_runtime_api.h>
+#include "cuda.h"
+#include "custom_cuda_layers.h"
+typedef __half ds_half_precision_t; // 使用半精度浮点数，如果启用了CUDA
+#else
+#include <cmath>
+typedef unsigned short ds_half_precision_t; // 如果没有启用CUDA，使用无符号短整型表示半精度
+#endif
+
+#define STEP(SPAN)                                             \
+    void Step_##SPAN(float *_params,                           \
+                     float *grads,                             \
+                     float *_exp_avg,                          \
+                     float *_exp_avg_sq,                       \
+                     size_t _param_size,                       \
+                     ds_half_precision_t *dev_param = nullptr, \
+                     bool half_precision = false); // 定义一个宏，用于创建不同步长的优化步骤函数
+
+class Adam_Optimizer
+{ // 定义一个Adam优化器类
+public:
+    Adam_Optimizer(float alpha = 1e-3,
+                   float betta1 = 0.9,
+                   float betta2 = 0.999,
+                   float eps = 1e-8,
+                   float weight_decay = 0,
+                   bool adamw_mode = true)
+        : _alpha(alpha),
+          _betta1(betta1),
+          _betta2(betta2),
+          _eps(eps),
+          _weight_decay(weight_decay),
+          _betta1_t(1.0),
+          _betta2_t(1.0),
+          _step(0),
+          _adamw_mode(adamw_mode)
+    {
+#if defined(__ENABLE_CUDA__)
+        cudaMallocHost((void **)_doubled_buffer, TILE * sizeof(float)); // 如果启用了CUDA，分配双缓冲区
+        cudaMallocHost((void **)(_doubled_buffer + 1), TILE * sizeof(float));
+
+        _streams[0] = TrainingContext::Instance().GetCurrentStream(); // 获取当前CUDA流
+        _streams[1] = TrainingContext::Instance().GetNewStream();     // 获取新的CUDA流
+        _buf_index = false;
+#endif
+    }
+    ~Adam_Optimizer() // 析构函数，用于清理资源
+    {
+#if defined(__ENABLE_CUDA__)
+        cudaFreeHost(_doubled_buffer[0]); // 如果启用了CUDA，释放双缓冲区
+        cudaFreeHost(_doubled_buffer[1]);
+#endif
+    }
+
+#if defined(__AVX512__) or defined(__AVX256__)
+    template <int span>
+    void Step_AVX(size_t *rounded_size,
+                  float *_params,
+                  float *grads,
+                  float *_exp_avg,
+                  float *_exp_avg_sq,
+                  size_t param_size,
+                  ds_half_precision_t *dev_param = nullptr,
+                  bool half_precision = false); // 如果启用了AVX512或AVX256，定义一个特化的步进函数
+#endif
+    STEP(1) // 定义步长为1的优化步骤函数
+    STEP(4) // 定义步长为4的优化步骤函数
+    STEP(8) // 定义步长为8的优化步骤函数
+#if defined(__ENABLE_CUDA__)
+    inline void SynchronizeStreams() // CUDA流同步函数
+    {
+        for (int i = 0; i < 2; i++)
+            cudaStreamSynchronize(_streams[i]);
+    }
+#endif
+    // 用于更新步骤和beta值的函数
+    inline void IncrementStep(size_t step, float beta1, float beta2)
+    {
+        // 如果传入的beta值与当前的beta值不匹配，更新beta值和步骤数，并计算相应的beta的幂次
+        if (beta1 != _betta1 || beta2 != _betta2)
+        {
+            _step = step;                        // 更新步骤数
+            _betta1 = beta1;                     // 更新beta1
+            _betta2 = beta2;                     // 更新beta2
+            _betta1_t = std::pow(_betta1, step); // 计算beta1的指数
+            _betta2_t = std::pow(_betta2, step); // 计算beta2的指数
+        }
+        else
+        {
+            // 如果beta值未改变，则只更新步骤数，并根据新的步骤数更新beta的幂次
+            _step++;
+            if (_step != step)
+            {
+                _betta1_t = std::pow(_betta1, step);
+                _betta2_t = std::pow(_betta2, step);
+                _step = step;
+            }
+            else
+            {
+                _betta1_t *= _betta1;
+                _betta2_t *= _betta2;
+            }
+        }
+    }
+
+    // 用于更新学习率、epsilon值、权重衰减和偏差矫正的函数
+    inline void update_state(float lr, float epsilon, float weight_decay, bool bias_correction)
+    {
+        // 更新学习率、epsilon值和权重衰减
+        _alpha = lr;                  // 更新学习率
+        _eps = epsilon;               // 更新epsilon值
+        _weight_decay = weight_decay; // 更新权重衰减
+
+        // 初始化偏差矫正因子
+        _bias_correction1 = 1.0f;
+        _bias_correction2 = 1.0f;
+
+        // 如果需要偏差矫正，更新偏差矫正因子
+        if (bias_correction == 1)
+        {
+            _bias_correction1 = 1 - _betta1_t;           // 更新偏差矫正因子1
+            _bias_correction2 = 1 / sqrt(1 - _betta2_t); // 更新偏差矫正因子2
+        }
+    }
+};
+
+private:
+// 私有变量
+float _alpha;        // 学习率
+float _betta1;       // beta1 参数
+float _betta2;       // beta2 参数
+float _eps;          // epsilon 参数
+float _weight_decay; // 权重衰减参数
+
+float _betta1_t; // beta1 的幂次
+float _betta2_t; // beta2 的幂次
+size_t _step;    // 步骤计数器
+
+float _bias_correction1; // 偏差矫正因子1
+float _bias_correction2; // 偏差矫正因子2
+
+bool _adamw_mode; // AdamW 模式标志
+
+#if defined(__ENABLE_CUDA__)
+// 如果启用了 CUDA，定义一些额外的私有变量
+float *_doubled_buffer[2]; // 双缓冲区
+cudaStream_t _streams[2];  // CUDA 流
+bool _buf_index;           // 缓冲区索引
+#endif
+}
+;
+
+#if defined(__AVX512__) or defined(__AVX256__)
+// 使用 AVX 的优化器步骤函数
+template <int span>
+void Adam_Optimizer::Step_AVX(size_t *rounded_size,
+                              float *_params,
+                              float *grads,
+                              float *_exp_avg,
+                              float *_exp_avg_sq,
+                              size_t _param_size,
+                              ds_half_precision_t *dev_params,
+                              bool half_precision)
+{
+    // 初始化新的舍入大小
+    size_t new_rounded_size = 0;
+    // 判断是否为半精度
+    int rshft = half_precision ? 1 : 0;
+
+    // 设置 beta1 和 beta2 的 SIMD 数据
+    AVX_Data betta1_4;
+    betta1_4.data = SIMD_SET(_betta1);
+    AVX_Data betta2_4;
+    betta2_4.data = SIMD_SET(_betta2);
+
+    // 计算 1 - beta1 和 1 - beta2
+    float betta1_minus1 = 1 - _betta1;
+    float betta2_minus1 = 1 - _betta2;
+    // 设置 1 - beta1 和 1 - beta2 的 SIMD 数据
+    AVX_Data betta1_minus1_4;
+    betta1_minus1_4.data = SIMD_SET(betta1_minus1);
+    AVX_Data betta2_minus1_4;
+    betta2_minus1_4.data = SIMD_SET(betta2_minus1);
+
+    // 设置偏差矫正因子2的 SIMD 数据
+    AVX_Data bias2_sqrt;
+    bias2_sqrt.data = SIMD_SET(_bias_correction2);
+
+    // 设置 epsilon 的 SIMD 数据
+    AVX_Data eps_4;
+    eps_4.data = SIMD_SET(_eps);
+
+    // 计算步长大小
+    float step_size = -1 * _alpha / _bias_correction1;
+    // 设置步长大小的 SIMD 数据
+    AVX_Data step_size_4;
+    step_size_4.data = SIMD_SET(step_size);
+
+    // 计算权重衰减
+    float w_decay = -1 * _alpha * _weight_decay;
+    AVX_Data weight_decay4;
+    if (_weight_decay > 0)
+        // 如果启用了 AdamW 模式，设置权重衰减的 SIMD 数据
+        weight_decay4.data = (_adamw_mode ? SIMD_SET(w_decay) : SIMD_SET(_weight_decay));
+
+    // 设置新的舍入大小
+    new_rounded_size = ROUND_DOWN(_param_size, SIMD_WIDTH * span);
+
+    // 主循环
+    for (size_t t = 0; t < new_rounded_size; t += TILE)
+    {
+        size_t copy_size = TILE;
+        if ((t + TILE) > new_rounded_size)
+            copy_size = new_rounded_size - t;
+        size_t offset = copy_size + t;
+#if defined(__ENABLE_CUDA__)
+        // 如果启用了 CUDA，同步 CUDA 流
+        if ((t / TILE) >= 2)
+        {
+            cudaStreamSynchronize(_streams[_buf_index]);
+        }
+#endif
+
+#pragma omp parallel for // 使用OpenMP并行化for循环
+        for (size_t i = t; i < offset; i += SIMD_WIDTH * span)
+        {                                                                  // 在SIMD指令的帮助下并行处理数据
+            AVX_Data grad_4[span];                                         // 创建梯度数据的AVX数组
+            simd_load<span>(grad_4, grads + (i >> rshft), half_precision); // 从内存中加载梯度数据
+
+            AVX_Data momentum_4[span];                        // 创建动量数据的AVX数组
+            simd_load<span>(momentum_4, _exp_avg + i, false); // 从内存中加载动量数据
+
+            AVX_Data variance_4[span];                           // 创建方差数据的AVX数组
+            simd_load<span>(variance_4, _exp_avg_sq + i, false); // 从内存中加载方差数据
+
+            AVX_Data param_4[span];                                           // 创建参数数据的AVX数组
+            simd_load<span>(param_4, _params + (i >> rshft), half_precision); // 从内存中加载参数数据
+
+            if (_weight_decay > 0 && !_adamw_mode)
+            {                                                           // 如果权重衰减大于0且不是AdamW模式
+                simd_fma<span>(grad_4, param_4, weight_decay4, grad_4); // 计算梯度的权重衰减
+            }
+
+            // 更新动量和方差
+            simd_mul<span>(momentum_4, momentum_4, betta1_4);
+            simd_fma<span>(momentum_4, grad_4, betta1_minus1_4, momentum_4);
+            simd_mul<span>(variance_4, variance_4, betta2_4);
+            simd_mul<span>(grad_4, grad_4, grad_4);
+            simd_fma<span>(variance_4, grad_4, betta2_minus1_4, variance_4);
+
+            // 计算新的梯度
+            simd_sqrt<span>(grad_4, variance_4);
+            simd_fma<span>(grad_4, grad_4, bias2_sqrt, eps_4);
+            simd_div<span>(grad_4, momentum_4, grad_4);
+
+            if (_weight_decay > 0 && _adamw_mode)
+            {                                                             // 如果权重衰减大于0且是AdamW模式
+                simd_fma<span>(param_4, param_4, weight_decay4, param_4); // 计算参数的权重衰减
+            }
+
+            // 更新参数
+            simd_fma<span>(param_4, grad_4, step_size_4, param_4);
+
+            // 将新的参数、动量和方差存回内存
+            simd_store<span>(_params + (i >> rshft), param_4, half_precision);
+#if defined(__ENABLE_CUDA__)
+            if (dev_params)
+            {
+                simd_store<span>(_doubled_buffer[_buf_index] + (i - t), param_4, half_precision);
+            }
+#endif
+            simd_store<span>(_exp_avg + i, momentum_4, false);
+            simd_store<span>(_exp_avg_sq + i, variance_4, false);
+        }
+#if defined(__ENABLE_CUDA__)
+        if (dev_params)
+        {
+            // 如果启用了CUDA，根据精度将参数更新到GPU
+            if (half_precision)
+                launch_param_update_half(
+                    _doubled_buffer[_buf_index], dev_params + t, copy_size, _streams[_buf_index]);
+            else
+                launch_param_update(
+                    _doubled_buffer[_buf_index], dev_params + t, copy_size, _streams[_buf_index]);
+
+            _buf_index = !_buf_index; // 切换缓冲区索引
+        }
+#endif
+    }
+    *rounded_size = new_rounded_size; // 更新rounded_size值
+}
+#endif
+
+// 创建Adam优化器的函数声明
+int create_adam_optimizer(int optimizer_id,
+                          float alpha = 1e-3,
+                          float betta1 = 0.9,
+                          float betta2 = 0.999,
+                          float eps = 1e-8,
+                          float weight_decay = 0,
+                          bool adamw_mode = true,
+                          bool should_log = false);
+
+// Adam优化器步骤的函数声明
+int ds_adam_step(int optimizer_id,
+                 size_t step,
+                 float lr,
+                 float beta1,
+                 float beta2,
+                 float epsilon,
+                 float weight_decay,
+                 bool bias_correction,
+                 torch::Tensor &params,
+                 torch::Tensor &grads,
+                 torch::Tensor &exp_avg,
+                 torch::Tensor &exp_avg_sq);
+
+// 带有参数复制的Adam优化器步骤的函数声明
+int ds_adam_step_plus_copy(int optimizer_id,
+                           size_t step,
+                           float lr,
+                           float beta1,
+                           float beta2,
+                           float epsilon,
+                           float weight_decay,
+                           bool bias_correction,
+                           torch::Tensor &params,
+                           torch::Tensor &grads,
+                           torch::Tensor &exp_avg,
+                           torch::Tensor &exp_avg_sq,
+                           torch::Tensor &gpu_params);
+
+// 销毁Adam优化器的函数声明
+int destroy_adam_optimizer(int optimizer_id);
+————————————————
+版权声明：本文为CSDN博主「陈超帅」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_43207982/article/details/133972312

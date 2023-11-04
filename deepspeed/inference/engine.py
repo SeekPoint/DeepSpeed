@@ -695,9 +695,11 @@ class InferenceEngine(Module):
             self.module.reset_cache()
         num_beams = 1
         if "generation_config" in kwargs:
+            gd.debuginfo(prj="ds")
             gen_config = kwargs["generation_config"]
             num_beams = getattr(gen_config, "num_beams", 1)
         if "num_beams" in kwargs:
+            gd.debuginfo(prj="ds")
             num_beams = kwargs["num_beams"]
 
         if num_beams > 1:

@@ -18,7 +18,7 @@ FWD_MODULE_STACK = list()
 
 
 def is_builtin_type(obj):
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     # https://stackoverflow.com/a/17795199
     return obj.__class__.__module__ == '__builtin__' or obj.__class__.__module__ == "builtins"
 
@@ -34,7 +34,7 @@ def isinstance_namedtuple(obj: object) -> bool:
     Returns:
         bool: True if namedtuple/NamedTuple else False.
     """
-    gd.debuginfo(prj="ds")
+    # gd.debuginfo(prj="ds")
     return isinstance(obj, tuple) and hasattr(obj, '_asdict') and hasattr(obj, '_fields')
 
 
@@ -83,7 +83,7 @@ def _apply_to_tensors_only(module, functional, backward_function, outputs):
 
         # restore zero param attributes if those get stripped by `backward_function`
         if not is_zero_param(touched_outputs) and is_zero_param(outputs):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'outputs={outputs}')
             touched_outputs.ds_param_alias = outputs
         return touched_outputs
     else:
@@ -102,7 +102,7 @@ def _apply_to_tensors_only(module, functional, backward_function, outputs):
 #for each tensor in outputs run the forward_function and register backward_function as hook
 def _apply_forward_and_backward_to_tensors_only(module, forward_function, backward_function, outputs):
     if type(outputs) is tuple:
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         touched_outputs = []
         for output in outputs:
             touched_output = _apply_forward_and_backward_to_tensors_only(module, forward_function, backward_function,
@@ -110,7 +110,7 @@ def _apply_forward_and_backward_to_tensors_only(module, forward_function, backwa
             touched_outputs.append(touched_output)
         return tuple(touched_outputs)
     elif type(outputs) is torch.Tensor:
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'outputs={outputs}')
         forward_function(outputs)
         if outputs.requires_grad:
             gd.debuginfo(prj="ds")
@@ -148,16 +148,19 @@ class ZeROOrderedDict(OrderedDict):
                 gd.debuginfo(prj="ds")
                 register_external_parameter(FWD_MODULE_STACK[-1], param)
                 param.all_gather()
-                print_rank_0(f'Registering external parameter from getter {key} ds_id = {param.ds_id}', force=False)
+
+                tmp = f'Registering external parameter from getter {key} ds_id = {param.ds_id}'
+                # print_rank_0(tmp, force=False)
+                gd.debuginfo(prj='ds', info=tmp)
 
         return param
 
 
 def _inject_parameters(module, cls):
-    # gd.debuginfo(prj="ds")
     for module in module.modules():
+        gd.debuginfo(prj="ds", info=f'module={module}', cls={cls})
         if cls == ZeROOrderedDict:
-            # gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds")  目前代码只能走这里
             new_param = cls(parent_module=module)
         else:
             gd.debuginfo(prj="ds")
@@ -165,6 +168,7 @@ def _inject_parameters(module, cls):
 
         for key, param in module._parameters.items():
             new_param[key] = param
+            gd.debuginfo(prj="ds", info=f'new_param[{key}]={param}')
         module._parameters = new_param
 
 
@@ -172,7 +176,7 @@ class PreBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, module, pre_backward_function, outputs):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds",info=f"After Forward: {ctx.module.__class__.__name__}")
         ctx.module = module
         ctx.pre_backward_function = pre_backward_function
         if not hasattr(module, "applied_pre_backward_ref_cnt"):
@@ -184,7 +188,7 @@ class PreBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, *args):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds",info=f"Before Backward: {ctx.module.__class__.__name__}")
         #print(f"Before Backward: {ctx.module.__class__.__name__}")
         ctx.pre_backward_function(ctx.module)
         return (None, None) + args
@@ -216,8 +220,8 @@ class PostBackwardFunction(torch.autograd.Function):
         # gd.debuginfo(prj="ds")
         ctx.module.ds_grads_remaining = ctx.module.ds_grads_remaining - 1
         if ctx.module.ds_grads_remaining == 0:
-            gd.debuginfo(prj="ds")
             ctx.pre_backward_function(ctx.module)
+            gd.debuginfo(prj="ds", info=f"After Backward: {ctx.module.__class__.__name__}")
             #print(f"After Backward: {ctx.module.__class__.__name__}")
         return (None, None) + args
 
@@ -244,7 +248,9 @@ class DeepSpeedZeRoOffload(object):
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [begin]", force=True)
 
-        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)
+        tmp = f"initialized {__class__.__name__} with args: {locals()}"
+        # print_rank_0(tmp, force=False)
+        gd.debuginfo(prj='ds', info=tmp)
 
         self.module = module
         self.timers = timers
@@ -289,9 +295,10 @@ class DeepSpeedZeRoOffload(object):
         self.forward_hooks = []
         self.backward_hooks = []
         self.setup_zero_stage3_hooks()
-        print_rank_0(
-            f'Created module hooks: forward = {len(self.forward_hooks)}, backward = {len(self.backward_hooks)}',
-            force=False)
+
+        tmp = f'Created module hooks: forward = {len(self.forward_hooks)}, backward = {len(self.backward_hooks)}'
+        # print_rank_0(tmp, force=False)
+        gd.debuginfo(prj='ds', info=tmp)
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [end]", force=True)
 
@@ -303,6 +310,7 @@ class DeepSpeedZeRoOffload(object):
         trigger post call and will therefore will remain unpartitioned"""
         self.get_param_coordinator(training=self.module.training).release_and_reset_all(self.module)
         for param in iter_params(self.module, recurse=True):
+            gd.debuginfo(prj="ds", info=f'param={param}')
             if param.ds_status != ZeroParamStatus.NOT_AVAILABLE:
                 raise RuntimeError(f"{param.ds_summary()} expected to be released")
 
@@ -374,8 +382,10 @@ class DeepSpeedZeRoOffload(object):
             gd.debuginfo(prj="ds")
             hook.remove()
 
-        print_rank_0(f'Deleted module hooks: forward = {num_forward_hooks}, backward = {num_backward_hooks}',
-                     force=False)
+
+        tmp = f'Deleted module hooks: forward = {num_forward_hooks}, backward = {num_backward_hooks}'
+        # print_rank_0(tmp ,force=False)
+        gd.debuginfo(prj='ds', info=tmp)
 
     '''
     5. Stage3 - hook 注册
@@ -426,9 +436,9 @@ class DeepSpeedZeRoOffload(object):
                 persistent_params.append(param)
                 total_persistent_parameters += param.ds_numel
 
-        print_rank_0(
-            f"Parameter Offload: Total persistent parameters: {total_persistent_parameters} in {params_count} params",
-            force=True)
+        tmp = f"Parameter Offload: Total persistent parameters: {total_persistent_parameters} in {params_count} params"
+        # print_rank_0(tmp, force=True)
+        gd.debuginfo(prj='ds', info=tmp)
 
         return persistent_params
 
@@ -446,7 +456,7 @@ class DeepSpeedZeRoOffload(object):
 
         @instrument_w_nvtx
         def _pre_forward_module_hook(module, *args):
-            gd.debuginfo(prj="ds")
+             # gd.debuginfo(prj="ds") 必定进入下一个，可以省略
             self.pre_sub_module_forward_function(module)
 
         @instrument_w_nvtx
@@ -478,16 +488,18 @@ class DeepSpeedZeRoOffload(object):
                     actual_external_param.is_external_param = True
                     module_to_register = FWD_MODULE_STACK[-1]
                     register_external_parameter(module_to_register, actual_external_param)
-                    print_rank_0(
-                        f'Registering dangling parameter for module {module_to_register.__class__.__name__}, ds_id = {actual_external_param.ds_id}.',
-                        force=False)
+
+                    tmp = f'Registering dangling parameter for module {module_to_register.__class__.__name__}, ds_id = {actual_external_param.ds_id}.'
+                    # print_rank_0(tmp,force=False)
+                    gd.debuginfo(prj='ds', info=tmp)
 
                     # It's possible that the parameter was already external to the completed module. If so, remove it the
                     # registration as it will be covered by the outer module instead.
                     if key in module._external_params:
-                        print_rank_0(
-                            f'  Unregistering nested dangling parameter from module {module.__class__.__name__}, ds_id = {actual_external_param.ds_id}',
-                            force=False)
+                        tmp = f'  Unregistering nested dangling parameter from module {module.__class__.__name__}, ds_id = {actual_external_param.ds_id}'
+                        # print_rank_0(tmp, force=False)
+                        gd.debuginfo(prj='ds', info=tmp)
+
                         unregister_external_parameter(module, actual_external_param)
 
                     actual_external_param.all_gather()
@@ -582,16 +594,16 @@ class DeepSpeedZeRoOffload(object):
     '''
     @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
-        gd.debuginfo(prj="ds")
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=False)
 
         global FWD_MODULE_STACK
         FWD_MODULE_STACK.append(sub_module)
 
         param_coordinator = self.get_param_coordinator(training=sub_module.training)
+        gd.debuginfo(prj="ds", info=f'param_coordinator={param_coordinator}')
         param_coordinator.trace_prologue(sub_module)
         if param_coordinator.is_record_trace():
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds") 直接进入
             param_coordinator.record_module(sub_module)
 
         # 真正的参数聚合动作是在这里
