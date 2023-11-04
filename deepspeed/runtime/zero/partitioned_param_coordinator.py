@@ -335,7 +335,10 @@ class PartitionedParameterCoordinator:
         # 统计一下需要聚合的参数数量
         fetch_numel = sum(
             [p.partition_numel() for p in params_to_fetch if p.ds_status == ZeroParamStatus.NOT_AVAILABLE])
-        gd.debuginfo(prj='ds', info=f'params_to_fetch={params_to_fetch}, fetch_numel={fetch_numel}')
+        # gd.debuginfo(prj='ds', info=f'params_to_fetch={params_to_fetch}, fetch_numel={fetch_numel}')
+        # params_to_fetch=frozenset({Parameter containing:
+        # tensor([ 0.3567,  0.2676,  0.3447,  0.3306,  0.3420,  0.3752,  0.3474,  0.3611,
+
         if fetch_numel > 0:
             # 判断前向还是后向
             event_name = __class__.FORWARD_FETCH_SUBMIT if forward else __class__.BACKWARD_FETCH_SUBMIT
@@ -346,7 +349,7 @@ class PartitionedParameterCoordinator:
                                  [p.ds_id for p in params_to_fetch if p.ds_status == ZeroParamStatus.NOT_AVAILABLE])
             self.__profiler.start_event(event_name)
             # kick off all gather for params in the immediately required submodule
-            #for param in params_to_fetch:
+            # for param in params_to_fetch:
 
             for param in params_to_fetch:
                 tmp = f"-fetch: {param.ds_summary()}"

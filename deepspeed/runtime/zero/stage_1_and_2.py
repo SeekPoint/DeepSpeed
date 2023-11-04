@@ -397,13 +397,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 为了能尽量的均匀分配，这里采用循环分配（round_robin 方法）
                 round_robin_tensors, round_robin_indices = self._round_robin_reorder(
                     self.bit16_groups[i], dist.get_world_size(group=self.real_dp_process_group[i]))
-                gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
-                            round_robin_tensors={infoTensor(round_robin_tensors)}')
+                # gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
+                #             round_robin_tensors={infoTensor(round_robin_tensors)}') ==不是tensor，而是tensor list
             else:
                 round_robin_tensors = self.bit16_groups[i]
                 round_robin_indices = list(range(len(self.bit16_groups[i])))
-                gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
-                            round_robin_tensors={infoTensor(round_robin_tensors)}')
+                # gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
+                #             round_robin_tensors={infoTensor(round_robin_tensors)}')
 
             self.round_robin_bit16_groups.append(round_robin_tensors)
             self.round_robin_bit16_indices.append(round_robin_indices)
@@ -672,7 +672,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     def _enable_universal_checkpoint(self):
         # 遍历bit16_groups中的所有参数组
         for lp_param_group in self.bit16_groups:
-            gd.debuginfo(prj="ds", info=f'lp_param_group={lp_param_group}')
+            # gd.debuginfo(prj="ds", info=f'lp_param_group={lp_param_group}') #tensor的list
             # 对每个参数组启用通用检查点
             enable_universal_checkpoint(param_list=lp_param_group)
 
@@ -692,11 +692,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     lp_name = self.param_names[lp]
                     # 在有序字典中添加一个新的键值对，键是层或参数的名称，值是超参数的映射地址
                     param_mapping_per_group[lp_name] = lp._hp_mapping.get_hp_fragment_address()
-                    gd.printall(prj='ds', info=f'param_mapping_per_group[{lp_name}]={param_mapping_per_group[lp_name]}')
+                    gd.debuginfo(prj='ds', info=f'param_mapping_per_group[{lp_name}]={param_mapping_per_group[lp_name]}')
             # 将该参数组的映射添加到整体的参数映射列表中
             param_mapping.append(param_mapping_per_group)
 
-        gd.printall(prj='ds', info=f'len of param_mapping={len(param_mapping)}')
+        gd.debuginfo(prj='ds', info=f'len of param_mapping={len(param_mapping)}')
         # 返回参数映射列表
         return param_mapping
 
@@ -709,7 +709,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 如果启用了CPU卸载，获取卸载梯度字典
         if self.cpu_offload:
             # gd.debuginfo(prj="ds")
-            self.# gd.debuginfo(()
+            self._get_offload_gradient_dict()
 
         # gd.debuginfo(prj="ds", info=f'self.optimizer.param_groups={self.optimizer.param_groups}')
         '''
@@ -814,7 +814,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 解压缩16位小组的数据
         updated_params = self.unflatten(self.bit16_groups_flat[group_index],
                                         self.round_robin_bit16_groups[group_index])
-        gd.debuginfo(prj="ds", info=f'T: updated_params={infoTensor(updated_params)}')
+        # gd.debuginfo(prj="ds", info=f'T: updated_params={infoTensor(updated_params)}') tensor list
 
         # 遍历原始小组和更新的参数，用更新的参数来更新原始参数
         for p, q in zip(self.round_robin_bit16_groups[group_index], updated_params):
@@ -947,8 +947,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 设置ipg索引为0
             self.ipg_index = 0
 
-        gd.debuginfo(prj="ds", info=f'len of self.ipg_buffer={len(self.ipg_buffer)},\
-                    T: one self.ipg_buffer={infoTensor(self.ipg_buffer[0])}')
+            gd.debuginfo(prj="ds", info=f'len of self.ipg_buffer={len(self.ipg_buffer)},\
+                        T: one self.ipg_buffer={infoTensor(self.ipg_buffer[0])}')
 
         # 如果不使用通信重叠
         if not self.overlap_comm:
@@ -1278,7 +1278,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # flatten 函数的返回值是一个新的扁平化后的张量
         flattened_tensor = self.flatten(aligned_tensors)
 
-        gd.debuginfo(prj="ds", info=f'T: aligned_tensors={infoTensor(aligned_tensors)}, flattened_tensor={infoTensor(flattened_tensor)}')
+        # gd.debuginfo(prj="ds", info=f'T: aligned_tensors={infoTensor(aligned_tensors)}, flattened_tensor={infoTensor(flattened_tensor)}') tensor list
 
         # 返回扁平化处理后的张量
         return flattened_tensor
@@ -2133,8 +2133,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 将bucket中的tensor扁平化
         tensor = self.flatten(bucket)
 
+        # 待进行allreduce操作的tensor
         tensor_to_allreduce = tensor
 
+        # 在进行pg_correctness_test的情况下，通信数据类型设置为float32
+        # 否则，使用预设的通信数据类型
         if pg_correctness_test:
             gd.debuginfo(prj="ds")
             communication_data_type = torch.float32
@@ -2142,73 +2145,120 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             gd.debuginfo(prj="ds")
             communication_data_type = self.communication_data_type
 
+        # 如果通信数据类型与tensor的数据类型不一致，将tensor转为通信数据类型
         if communication_data_type != tensor.dtype:
             gd.debuginfo(prj="ds")
             tensor_to_allreduce = tensor.to(communication_data_type)
 
+        # 将待allreduce的tensor除以进程组的大小，以进行平均操作
         tensor_to_allreduce.div_(dist.get_world_size(group=self.dp_process_group))
 
         if rank is None:
+            # 执行allreduce操作，所有进程共享数据
             gd.debuginfo(prj="ds")
             #    "All Reducing"
             dist.all_reduce(tensor_to_allreduce, group=self.dp_process_group)
         else:
             gd.debuginfo(prj="ds")
+            # 获取全局rank
             global_rank = dist.get_global_rank(self.dp_process_group, rank)
+
+            # 执行reduce操作，将数据发送到指定的进程
             dist.reduce(tensor_to_allreduce, global_rank, group=self.dp_process_group)
 
+        # 如果通信数据类型与tensor的数据类型不一致，并且tensor不等于tensor_to_allreduce
+        # 在rank为None或者等于当前进程的rank的情况下，将tensor_to_allreduce的值复制给tensor
         if communication_data_type != tensor.dtype and tensor is not tensor_to_allreduce:
             if rank is None or rank == dist.get_rank(group=self.dp_process_group):
                 tensor.copy_(tensor_to_allreduce)
 
+        # 返回处理后的tensor
         return tensor
 
+    # 清除先前reduce的梯度
     def _clear_previous_reduced_grads(self):
         gd.debuginfo(prj="ds")
+        # 如果之前的梯度不为None，即之前计算过梯度
         if self.previous_reduced_grads is not None:
+            # 遍历每一个之前计算的梯度
             for param in self.previous_reduced_grads:
+                # 清除对应的梯度信息
                 param.grad = None  # overlap enabled
+
+            # 清空之前的梯度列表，准备下一次计算
             self.previous_reduced_grads = None
 
+    # allreduce操作和复制
     # if rank is specified do a reduction instead of an allreduce
     def allreduce_and_copy(self, small_bucket, rank=None, log=None):
+        # 如果启用了overlap_comm，进行通信和计算的重叠
         if self.overlap_comm:
             gd.debuginfo(prj="ds")
+            # 确保所有设备上的运行都已完成
             get_accelerator().synchronize()
+
             # It is safe to clear the previously reduced grads of other partitions
+            # 清除其他分区之前reduce的梯度，这是安全的
             self._clear_previous_reduced_grads()
+
+            # 使用专门的流进行reduce操作
             stream = self.reduction_stream
         else:
+            # 如果没有启用overlap_comm，使用当前设备的当前流
             gd.debuginfo(prj="ds")
             stream = get_accelerator().current_stream()
 
+        # 使用指定的流
         with get_accelerator().stream(stream):
+            # 对small_bucket进行allreduce操作，然后返回结果
             allreduced = self.allreduce_bucket(small_bucket, rank=rank, log=log)
+
+            # 如果rank是None（即没有指定），或者rank等于当前进程的rank
+            # 就对small_bucket中的每个buf和对应的synced进行copy操作
             if rank is None or rank == dist.get_rank(group=self.dp_process_group):
                 for buf, synced in zip(small_bucket, self.unflatten(allreduced, small_bucket)):
+                    # 将synced的内容复制到buf中
                     buf.copy_(synced)
 
+    # allreduce且不保留  only call by buffered_reduce_fallback
     def allreduce_no_retain(self, bucket, numel_per_bucket=500000000, rank=None, log=None):
         gd.debuginfo(prj="ds")
+        # 初始化一个空的小桶
         small_bucket = []
+
+        # 初始化元素数量为0
         numel = 0
+
+        # 对bucket中的每一个tensor进行遍历
         for tensor in bucket:
+            # 将当前tensor添加到小桶中
             small_bucket.append(tensor)
+
+            # 计算小桶中所有tensor的元素总数
             numel = numel + tensor.numel()
+
+            # 如果小桶中的元素总数超过了设定的阈值，那么就对小桶进行allreduce_and_copy操作
+            # 然后清空小桶，为接下来的tensors做准备
             if numel > numel_per_bucket:
                 self.allreduce_and_copy(small_bucket, rank=rank, log=None)
                 small_bucket = []
 
+        # 如果bucket中的所有tensors都已经被处理完，但是小桶中还剩下一些tensors没有被处理
+        # 就对这些剩下的tensors进行allreduce_and_copy操作
         if len(small_bucket) > 0:
             self.allreduce_and_copy(small_bucket, rank=rank, log=log)
 
     # allows using reduction of gradients instead of using all_reduce
-
+    # 缓冲reduce，fallback那个钩子（也许？fallback，回调，也许在某个地方调用了）
     def buffered_reduce_fallback(self, rank, grads, elements_per_buffer=500000000, log=None):
         gd.debuginfo(prj="ds")
+        # 将 grads 分为半精度浮点数和双精度浮点数两部分
         split_buckets = split_half_float_double(grads)
 
+        # 遍历每一个 bucket
         for i, bucket in enumerate(split_buckets):
+            # 进行全局归约操作，这是一种并行算法，用于在所有进程中累加每个进程的输入值
+            # 并将结果返回给所有进程
             self.allreduce_no_retain(bucket, numel_per_bucket=elements_per_buffer, rank=rank, log=log)
 
     #############################################################################
@@ -2216,86 +2266,127 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     #############################################################################
 
     # views the tensor as multiple partitions and returns
-    # those partitions
+    # those partitions  获取数据并行分区
     def get_data_parallel_partitions(self, tensor, group_id):
         gd.debuginfo(prj="ds")
+        # 初始化一个空列表，用于存储每个分区的数据
         partitions = []
 
+        # 获取分布式处理（dp）的大小，即有多少个处理单元参与分布式计算
         dp = dist.get_world_size(group=self.real_dp_process_group[group_id])
         # dp_id = dist.get_rank(group=self.real_dp_process_group[group_id])
 
+        # 计算张量（tensor）中的总元素数量
         total_num_elements = tensor.numel()
 
+        # 计算每个处理单元应分配的基本元素数量，这里使用了整数除法
         base_size = total_num_elements // dp
+
+        # 计算不能被均匀分配的剩余元素数量
         remaining = total_num_elements % dp
 
+        # 初始化起始索引为0，这个索引表示当前处理的张量部分的起始位置
         start = 0
+
+        # 遍历每个处理单元
         for id in range(dp):
+            # 默认每个处理单元分配的元素数量为base_size
             partition_size = base_size
+
             if id < remaining:
+                # 如果当前处理单元的id小于剩余元素数量remaining，那么就给这个处理单元多分配一个元素
                 partition_size = partition_size + 1
+
+            # 使用narrow函数从张量中抽出一部分数据，0表示要操作的维度（这里是第一维），start表示开始的索引，partition_size表示长度
+            # 抽出的部分数据作为一个分区，添加到partitions列表中
             partitions.append(tensor.narrow(0, start, partition_size))
+
+            # 更新开始索引，准备处理下一个分区
             start = start + partition_size
+
+        # 返回分区列表，列表中的每个元素都是一个张量，表示一个分区的数据
         return partitions
 
+    # 获取分区信息 only call in __init__
     def get_partition_info(self, tensor_list, partition_size, partition_id):
         gd.debuginfo(prj="ds")
+        # 初始化两个列表，用于存储在分区内的参数和不在分区内的参数
         params_in_partition = []
         params_not_in_partition = []
 
+        # 计算分区的起始和结束索引
         start_index = partition_size * partition_id
         end_index = partition_size * (partition_id + 1)
 
+        # 初始化当前索引和第一个偏移值
         current_index = 0
         first_offset = 0
 
+        # 遍历tensor列表
         for tensor in tensor_list:
-
+            # 获取tensor的元素数量
             tensor_size = tensor.numel()
 
+            # 如果当前索引在分区的范围内，将tensor添加到params_in_partition列表中
             if start_index <= current_index < end_index:
                 params_in_partition.append(tensor)
 
             elif current_index < start_index < (current_index + tensor_size):
+                # 如果当前索引小于分区起始索引，且分区起始索引在tensor范围内，将tensor添加到params_in_partition列表中
                 params_in_partition.append(tensor)
 
+                # 确保first_offset只被设置一次，因为这必须是分区中的第一个tensor
                 assert (first_offset == 0
                         ), "This can happen either zero or only once as this must be the first tensor in the partition"
                 first_offset = start_index - current_index
 
             else:
+                # 否则，将tensor添加到params_not_in_partition列表中
                 params_not_in_partition.append(tensor)
 
+            # 更新当前索引
             current_index = current_index + tensor_size
 
+        # 返回在分区内的参数、不在分区内的参数以及第一个偏移值
         return params_in_partition, params_not_in_partition, first_offset
 
+    # 将所有模型参数的梯度设置为零
     def zero_grad(self, set_to_none=False):
         gd.debuginfo(prj="ds")
         """
         Zero FP16 parameter grads.
+        清零 FP16 参数的梯度。
+    
+        # FP32 的梯度永远不应该存在。
+        # 出于速度的考虑，默认情况下将模型 FP16 的梯度设置为 None
+        # 清零所有指向梯度张量的指针
         """
         # FP32 grad should never exist.
         # For speed, set model fp16 grad to None by default
         for group in self.bit16_groups:
             for p in group:
                 if set_to_none:
-                    p.grad = None  # epilogue and in step
+                    p.grad = None  # epilogue and in step  # 在尾声和步骤中
                 else:
                     if p.grad is not None:
-                        p.grad.detach_()
-                        p.grad.zero_()
+                        p.grad.detach_()  # 分离梯度
+                        p.grad.zero_()  # 清零梯度
 
+    # 执行模型并行的allreduce操作
     def _model_parallel_all_reduce(self, tensor, op):
         """ Perform all reduce within model parallel group, if any.
+        在模型并行组内执行allreduce操作，如果有的话
         """
         # gd.debuginfo(prj="ds")
+
         if self.model_parallel_group is None or self.model_parallel_world_size == 1:
-            pass
+            pass # 如果模型并行组不存在或模型并行世界大小等于1 不执行任何操作
         else:
             # gd.debuginfo(prj="ds")
+            # 否则，使用 dist.all_reduce 函数在模型并行组内对 tensor 进行allreduce操作
             dist.all_reduce(tensor=tensor, op=op, group=self.model_parallel_group)
 
+    # 直接获取梯度的范数（L2范数）
     def get_grad_norm_direct(self, gradients, params, norm_type=2):
         """Clips gradient norm of an iterable of parameters.
 
@@ -2312,18 +2403,36 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         Returns:
             Total norm of the parameters (viewed as a single vector).
+
+        计算并裁剪参数的梯度范数。
+
+        本函数是从torch.nn.utils.clip_grad.clip_grad_norm_中调整而来，
+        其中加入了处理模型并行参数的功能。注意，梯度将在原地被修改。
+
+        参数:
+            gradients (Iterable[Tensor] or Tensor): 需要进行梯度范数计算的张量的迭代器或单个张量
+            params (Iterable[Tensor] or Tensor): 需要进行梯度范数计算的参数的迭代器或单个张量
+            norm_type (float or int): 使用的p-范数类型。可以是 ``'inf'``表示无穷范数。
+
+        返回:
+            参数的总体范数（视为单个向量）。
+
         """
         norm_type = float(norm_type)
         if norm_type == inf:
+            # 找到所有梯度中绝对值最大的
             total_norm = max(g.data.abs().max() for g in gradients)
             gd.debuginfo(prj="ds", info=f"1-total_norm={total_norm}")
 
+            # 将梯度的最大值转为张量
             total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
             gd.debuginfo(prj="ds", info=f"1-total_norm_cuda={infoTensor(total_norm_cuda)}")
 
+            # 使用all_reduce进行跨设备的梯度同步，取最大值
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.MAX, group=self.dp_process_group)
 
             # Take max across all GPUs.
+            # 在所有GPUs之间取最大值。
             self._model_parallel_all_reduce(tensor=total_norm_cuda, op=dist.ReduceOp.MAX)
             total_norm = total_norm_cuda[0].item()
             gd.debuginfo(prj="ds", info=f"2-total_norm={total_norm}")
@@ -2333,26 +2442,34 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                gd.debuginfo(prj="ds", info=f"Total Norm beginning {total_norm}")
 
             for g, p in zip(gradients, params):
+                # 管道并行化可能会复制参数。避免多次计数。
                 # Pipeline parallelism may replicate parameters. Avoid multi-counting.
                 if hasattr(p, PIPE_REPLICATED) and p.ds_pipe_replicated:
                     continue
+
+                # 如果参数是模型并行的参数，或者当前设备是主设备，则计算该参数的梯度范数
                 if is_model_parallel_parameter(p) or (self.model_parallel_rank == 0):
                     param_norm = g.data.double().norm(2)
                     total_norm += param_norm.item()**2
 
             gd.debuginfo(prj="ds", info=f"2-total_norm={total_norm}")
 
+            # 将梯度的平方和转为张量
             # Sum across all model parallel GPUs.
             total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
             gd.debuginfo(prj="ds", info=f"2-total_norm_cuda={infoTensor(total_norm_cuda)}")
 
+            # 使用all_reduce进行跨设备的梯度同步，取和
             dist.all_reduce(total_norm_cuda, op=dist.ReduceOp.SUM, group=self.dp_process_group)
 
+            # 在所有模型并行的GPUs之间进行求和
             self._model_parallel_all_reduce(tensor=total_norm_cuda, op=dist.ReduceOp.SUM)
 
+            # 计算梯度的总体范数
             total_norm = total_norm_cuda[0].item()**(1. / norm_type)
             gd.debuginfo(prj="ds", info=f"5-total_norm={total_norm}")
 
+        # 如果总体范数是无穷大，负无穷大，或不是一个数，则将其设置为-1
         if total_norm == float('inf') or total_norm == -float('inf') or total_norm != total_norm:
             gd.debuginfo(prj="ds", info=f"total_norm set to -1")
             total_norm = -1
@@ -2362,29 +2479,46 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # creates a flat fused tensor from the tensor list starting at the first_offset
     # in the first tensor of the list. If there are not enough elements in the tensor
     # list then the flat tensor will be padded with zeros
+    # 获取拉平的分区
     def get_flat_partition(self, tensor_list, first_offset, partition_size, dtype, device, return_tensor_list=False):
         gd.debuginfo(prj="ds")
+        # 初始化一个空列表，用于存储处理后的tensor
         flat_tensor_list = []
+
+        # 记录当前已处理tensor的元素数量
         current_size = 0
+
+        # 遍历每个传入的tensor
         for i, tensor in enumerate(tensor_list):
             gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}')
+
+            # 如果没有梯度属性，用0填充
             if tensor.grad is None:
                 tensor.grad = torch.zeros_like(tensor)
+
+            # 将梯度属性作为处理的目标tensor
             tensor = tensor.grad
+
+            # 获取tensor的元素数量
             num_elements = tensor.numel()
             tensor_offset = 0
 
+            # 对于列表中的第一个tensor，如果有偏移量，根据偏移量调整元素数量和偏移值
             # we need to offset to get to the right element
             if i == 0 and first_offset > 0:
                 tensor_offset = first_offset
                 num_elements = num_elements - tensor_offset
 
             # we dont need all elements of the tensor
+            # 如果当前tensor的元素数量超过了分区大小，调整元素数量以适应分区
             if num_elements > (partition_size - current_size):
                 num_elements = partition_size - current_size
             gd.debuginfo(prj="ds", info=f'tensor_offset={tensor_offset}, num_elements={num_elements}')
+
             # we need a narrow view of the tensor based on the tensor offset and number of elements that
             # we need from this tensor
+
+            # 根据偏移量和元素数量，获取tensor的视图并添加到列表
             if tensor_offset > 0 or num_elements < tensor.numel():
                 tmp = tensor.contiguous().view(-1).narrow(0, int(tensor_offset), int(num_elements))
                 gd.debuginfo(prj="ds", info=f'tmp={infoTensor(tmp)}')
@@ -2392,28 +2526,36 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             else:
                 flat_tensor_list.append(tensor)
 
+            # 更新当前已处理的元素数量
             current_size = current_size + num_elements
 
         # this means its the last partition and does not align with the dp boundary. We need to pad before flattening
+        # 如果当前处理的元素数量小于分区大小，需要填充0
         if current_size < partition_size:
             tmp = torch.zeros(int(partition_size - current_size), dtype=dtype, device=device)
             gd.debuginfo(prj="ds", info=f'tmp={infoTensor(tmp)}')
             flat_tensor_list.append(tmp)
 
+        # 如果需要返回tensor列表，直接返回
         if return_tensor_list:
             gd.debuginfo(prj="ds")
             return flat_tensor_list
 
+        # 否则，返回压平后的单个tensor
         return self.flatten(flat_tensor_list)
 
+    # 释放参数列表中的梯度
     def free_grad_in_param_list(self, param_list):
         gd.debuginfo(prj="ds")
+        # 遍历参数列表中的每一个参数
         for p in param_list:
-            p.grad = None  # in step
+            p.grad = None  # in step  # 将参数的梯度设置为None，表示清除该参数的梯度
 
+    # 重置CPU缓冲区
     def reset_cpu_buffers(self):
         gd.debuginfo(prj="ds")
         self.norm_for_param_grads = {}
+        # 用于标识是否发生了本地溢出
         self.local_overflow = False
 
     def log_timers(self, timer_names):
@@ -2442,72 +2584,120 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         for name in timer_names:
             self.timers(name).stop()
 
+    # 设置学习率
     def set_lr(self, lr):
         gd.debuginfo(prj="ds")
         """Set the learning rate."""
+        # 遍历优化器中的所有参数组
         for param_group in self.optimizer.param_groups:
+            # 对每个参数组设置新的学习率
             param_group["lr"] = lr
 
+    # 获取当前的学习率
     def get_lr(self):
         gd.debuginfo(prj="ds")
         """Return the current learning rate."""
+        # 这个函数的目的是返回当前的学习率。
+        # 从优化器的参数组中获取第一个参数组的学习率
         return self.optimizer.param_groups[0]["lr"]
 
+    # 覆盖损失比例
     def override_loss_scale(self, loss_scale):
         gd.debuginfo(prj="ds")
+        # 如果给定的loss_scale不等于当前的外部loss_scale，我们需要更新它
         if loss_scale != self.external_loss_scale:
+            # 打印一条信息，说明正在从原来的外部loss_scale更新到新的loss_scale
             gd.debuginfo(prj="ds", info=f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
+
+        # 设置custom_loss_scaler为True，表示我们正在使用自定义的loss_scaler
         self.custom_loss_scaler = True
+
+        # 更新外部loss_scale为给定的loss_scale
         self.external_loss_scale = loss_scale
 
+    # 计算缩放全局范数
     def scaled_global_norm(self, norm_type=2):
         gd.debuginfo(prj="ds")
+        # 断言：仅支持L2范数
         assert norm_type == 2, "only L2 norm supported"
+
+        # 初始化范数组
         norm_groups = []
+
+        # 遍历位组
         for i, group in enumerate(self.bit16_groups):
+            # 获取分区ID
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
+
+            # 如果进行了CPU卸载
             if self.cpu_offload:
+                # 计算并添加对应的梯度范数
                 norm_groups.append(self.complete_grad_norm_calculation_for_cpu_offload(self.params_in_partition[i]))
+                # 获取单个分区的梯度
                 single_grad_partition = self.single_partition_of_fp32_groups[i].grad
             else:
+                # 直接获取并添加对应的梯度范数
                 norm_groups.append(self.get_grad_norm_direct(self.averaged_gradients[i], self.params_in_partition[i]))
 
+        # 如果存在moe层
         if self.has_moe_layers:
             gd.debuginfo(prj="ds")
+            # 平均专家梯度范数
             self._average_expert_grad_norms(norm_groups)
 
+        # 注意，get_global_norm函数仅支持l2范数
+        # 获取全局范数并返回
         # note that the get_global_norm function only supports l2 norm
         return get_global_norm(norm_list=norm_groups)
 
+    # 获取16位参数组
     def get_bit16_param_group(self, group_no):
         gd.debuginfo(prj="ds")
+        # 获取16位参数组中的某个组的分区
         bit16_partitions = self.parallel_partitioned_bit16_groups[group_no]
+
+        # 获取当前分区ID，这是根据分布式处理组中的排名来获取的
         partition_id = dist.get_rank(group=self.real_dp_process_group[group_no])
+
+        # 返回对应分区ID的参数组
         return [bit16_partitions[dist.get_rank(group=self.real_dp_process_group[group_no])]]
 
+    # 执行优化器的步骤
     def _optimizer_step(self, group_no):
         gd.debuginfo(prj="ds")
+        # 获取优化器的参数组
         original_param_groups = self.optimizer.param_groups
+
+        # 将优化器的参数组设置为特定的参数组
         self.optimizer.param_groups = [original_param_groups[group_no]]
+
+        # 这段代码被禁用，因为C++端的复制和同步功能无法正确工作
         # Disabling this as the C++ side copy & synchronize is not working correctly
         #from deepspeed.ops.adam import DeepSpeedCPUAdam
         #if type(self.optimizer) == DeepSpeedCPUAdam and self.dtype == torch.half:
         #    self.optimizer.step(fp16_param_groups=[self.get_bit16_param_group(group_no)])
         #else:
         #    self.optimizer.step()
+
+        # 执行优化器的步进
         self.optimizer.step()
+
+        # 将优化器的参数组还原为原始参数组
         self.optimizer.param_groups = original_param_groups
 
+    # 优化器的step步骤，真正执行的方法体
     def step(self, closure=None):
         gd.debuginfo(prj="ds")
         """
-        Not supporting closure.
+        Not supporting closure.  不支持闭包。
         """
         self.micro_step_id = -1
 
+        # 在检查溢出之前查看内存使用情况
         see_memory_usage(f"In step before checking overflow")
 
         # First compute norm for all group so we know if there is overflow
+        # 首先计算所有组的规范，以便我们知道是否有溢出
         self.check_overflow()
         OPTIMIZER_ALLGATHER = 'optimizer_allgather'
         OPTIMIZER_GRADIENTS = 'optimizer_gradients'
@@ -2515,17 +2705,24 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         timer_names = [OPTIMIZER_ALLGATHER, OPTIMIZER_GRADIENTS, OPTIMIZER_STEP]
 
         prev_scale = self.loss_scale
+
+        # 更新规模
         self._update_scale(self.overflow)
         if self.overflow:
+            # 溢出后，清除梯度之前，查看内存使用情况
             see_memory_usage('After overflow before clearing gradients')
+
+            # 清除梯度
             self.zero_grad(set_to_none=True)
             if self.cpu_offload:
                 gd.debuginfo(prj="ds")
+                # 重置CPU缓冲区
                 self.reset_cpu_buffers()
             else:
                 gd.debuginfo(prj="ds")
                 self.averaged_gradients = {}
 
+            # 溢出后，清除梯度之后，查看内存使用情况
             see_memory_usage('After overflow after clearing gradients')
 
             self.start_timers(timer_names)
@@ -2533,12 +2730,16 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             return
 
         # Step 1:- Calculate gradient norm using bit-16 grads
+        # 步骤 1：- 使用 bit-16 梯度计算梯度规范
         see_memory_usage('Before norm calculation')
         scaled_global_grad_norm = self.scaled_global_norm()
         self._global_grad_norm = scaled_global_grad_norm / prev_scale
+
+        # 在优化器之前，规范后查看内存使用情况
         see_memory_usage('After norm before optimizer')
 
         # Step 2:- run optimizer and upscaling simultaneously
+        # 步骤 2：- 同时运行优化器和上升规模
         for i, group in enumerate(self.bit16_groups):
             self.start_timers([OPTIMIZER_GRADIENTS])
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
@@ -2562,9 +2763,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
                 self.stop_timers([OPTIMIZER_STEP])
             else:
+                # 释放所有这个进程不更新的参数的梯度（ZeRO stage2）
                 # free gradients for all the parameters that are not updated by this process(ZeRO stage2)
                 self.free_grad_in_param_list(self.params_not_in_partition[i])
 
+                # 创建一个为这个进程更新的参数的平坦梯度
                 # create a flat gradients for parameters updated by this process
                 # If we are last partition, ensure we have same size grads and partition size, if not pad with zero tensors
                 if partition_id == dist.get_world_size(group=self.real_dp_process_group[i]) - 1:
@@ -2579,7 +2782,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                         single_grad_partition.numel(), self.partition_size[i], i, partition_id)
 
                 self.single_partition_of_fp32_groups[i].grad = single_grad_partition
+                
                 # release all the gradient since we have already created a necessary copy in dp_grad_partition(ZeRO stage2)
+                # 释放所有梯度，因为我们已经在dp_grad_partition中创建了必要的副本（ZeRO stage2）
                 self.free_grad_in_param_list(self.params_in_partition[i])
 
                 self.averaged_gradients[i] = None

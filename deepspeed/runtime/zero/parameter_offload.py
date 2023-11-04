@@ -158,7 +158,7 @@ class ZeROOrderedDict(OrderedDict):
 
 def _inject_parameters(module, cls):
     for module in module.modules():
-        gd.debuginfo(prj="ds", info=f'module={module}', cls={cls})
+        gd.debuginfo(prj="ds", info=f'module={module}, cls={cls}')
         if cls == ZeROOrderedDict:
             # gd.debuginfo(prj="ds")  目前代码只能走这里
             new_param = cls(parent_module=module)
@@ -176,7 +176,7 @@ class PreBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, module, pre_backward_function, outputs):
-        gd.debuginfo(prj="ds",info=f"After Forward: {ctx.module.__class__.__name__}")
+        gd.debuginfo(prj="ds",info=f"After Forward:")
         ctx.module = module
         ctx.pre_backward_function = pre_backward_function
         if not hasattr(module, "applied_pre_backward_ref_cnt"):
@@ -188,7 +188,7 @@ class PreBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, *args):
-        gd.debuginfo(prj="ds",info=f"Before Backward: {ctx.module.__class__.__name__}")
+        gd.debuginfo(prj="ds",info=f"Before Backward:")
         #print(f"Before Backward: {ctx.module.__class__.__name__}")
         ctx.pre_backward_function(ctx.module)
         return (None, None) + args
