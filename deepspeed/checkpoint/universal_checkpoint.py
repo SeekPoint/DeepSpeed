@@ -92,6 +92,10 @@ def load_hp_checkpoint_state(self, folder, tp_rank, tp_world_size):
 
 
 def enable_universal_checkpoint(param_list):
-    gd.debuginfo(prj="ds")
     for param in param_list:
-        param.load_hp_checkpoint_state = types.MethodType(load_hp_checkpoint_state, param)
+        tmp = types.MethodType(load_hp_checkpoint_state, param)
+        param.load_hp_checkpoint_state = tmp
+        gd.debuginfo(prj="ds", info=f'param={infoTensor(param)}')
+        # types.MethodType(load_hp_checkpoint_state, param)={tmp}
+        # types.MethodType(load_hp_checkpoint_state, param)=<bound method load_hp_checkpoint_state of Parameter containing:
+        # tensor([ 0.8960,  1.0000,  1.0000,  1.0000, -0.5000, -0.9727, -0.8770,  0.7607,

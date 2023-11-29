@@ -52,7 +52,7 @@ class PipelineEngine(DeepSpeedEngine):
     DTYPE_TO_ID = {dtype: id_ for id_, dtype in enumerate(ID_TO_DTYPE)}
 
     def __init__(self, has_bool_tensors=False, *super_args, **super_kwargs):
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN') # ppl
         super().__init__(*super_args, **super_kwargs)
         assert isinstance(self.module, PipelineModule), "model must base PipelineModule"
 
@@ -80,11 +80,13 @@ class PipelineEngine(DeepSpeedEngine):
 
         # Set Grid and Communication Groups
         self.grid = self.module._grid
-        if self.grid.get_global_rank() == 0:
-            logger.info(f'CONFIG: micro_batches={self.micro_batches} '
-                        f'micro_batch_size={self.micro_batch_size}')
+        # if self.grid.get_global_rank() == 0:
 
         self.global_rank = self.grid.get_global_rank()
+        gd.debuginfo(prj="ds", info=f'self.micro_batches={self.micro_batches}, '
+                                    f'self.micro_batch_size={self.micro_batch_size}, '
+                                    f'self.grid={self.grid}, '
+                                    f'self.global_rank={self.global_rank}')
 
         assert self.dp_world_size == self.grid.data_parallel_size
         assert self.train_batch_size() == \
@@ -95,6 +97,11 @@ class PipelineEngine(DeepSpeedEngine):
         self.stage_id = self.grid.get_stage_id()
         self.prev_stage = self.stage_id - 1
         self.next_stage = self.stage_id + 1
+
+        gd.debuginfo(prj="ds", info=f'self.num_stages={self.num_stages}, '
+                                    f'self.stage_id={self.stage_id}, '
+                                    f'self.prev_stage={self.prev_stage}, '
+                                    f'self.next_stage={self.next_stage}')
 
         self.data_iterator = None
         self.batch_fn = None
@@ -109,19 +116,31 @@ class PipelineEngine(DeepSpeedEngine):
         # PipelineEngine needs to handle data loading specially due to only the first
         # and last stages loading inputs/labels. We construct a sampler that uses
         if self.training_data:
+            gd.debuginfo(prj="ds")
             self._build_data_iter(self.training_data)
 
         self.is_pipe_parallel = self.grid.pipe_parallel_size > 1
         self.is_data_parallel = self.grid.data_parallel_size > 1
         self.is_model_parallel = self.grid.model_parallel_size > 1
 
+        gd.debuginfo(prj="ds", info=f'self.is_pipe_parallel={self.is_pipe_parallel}, '
+                                    f'self.is_data_parallel={self.is_data_parallel}, '
+                                    f'self.is_model_parallel={self.is_model_parallel}')
+
         # Partition input/output buffers
         # XXX temporarily disable while I revert some partition hacks.
         self.is_pipe_partitioned = self.is_model_parallel
         self.is_grad_partitioned = self.is_model_parallel
 
+        gd.debuginfo(prj="ds", info=f'self.is_pipe_partitioned={self.is_pipe_partitioned}, '
+                                    f'self.is_grad_partitioned={self.is_grad_partitioned}')
+
         model_parameters = filter(lambda p: p.requires_grad, self.module.parameters())
         num_params = sum([p.numel() for p in model_parameters])
+
+        gd.debuginfo(prj="ds", info=f'model_parameters={model_parameters}')
+        gd.debuginfo(prj="ds", info=f'num_params={num_params}')
+
         unique_params = num_params
         # Subtract tied parameters if we don't own them
         if self.module.tied_comms:
@@ -130,19 +149,29 @@ class PipelineEngine(DeepSpeedEngine):
                 if self.global_rank != min(d['ranks']):
                     tied_params += sum(p.numel() for p in d['module'].parameters())
             unique_params -= tied_params
+
         params_tensor = torch.LongTensor(data=[num_params, unique_params]).to(self.device)
-        dist.all_reduce(params_tensor, group=self.grid.get_model_parallel_group())
+        gd.debuginfo(prj="ds", info=f'params_tensor={infoTensor(params_tensor)}')
+
+        tmp = self.grid.get_model_parallel_group()
+        gd.debuginfo(prj="ds", info=f'tmp={tmp}')
+        dist.all_reduce(params_tensor, group=tmp)
+
         params_tensor = params_tensor.tolist()
+        gd.debuginfo(prj="ds", info=f'params_tensor={params_tensor}')
+
         total_params = params_tensor[0]
         unique_params = params_tensor[1]
-        if self.grid.data_parallel_id == 0:
-            logger.info(f'RANK={self.global_rank} '
-                        f'STAGE={self.stage_id} '
-                        f'LAYERS={self.module._local_stop - self.module._local_start} '
-                        f'[{self.module._local_start}, {self.module._local_stop}) '
-                        f'STAGE_PARAMS={num_params} ({num_params/1e6:0.3f}M) '
-                        f'TOTAL_PARAMS={total_params} ({total_params/1e6:0.3f}M) '
-                        f'UNIQUE_PARAMS={unique_params} ({unique_params/1e6:0.3f}M)')
+        gd.debuginfo(prj="ds", info=f'total_params={total_params}, unique_params={unique_params}')
+
+        # if self.grid.data_parallel_id == 0:
+        gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} '
+                    f'STAGE={self.stage_id} '
+                    f'LAYERS={self.module._local_stop - self.module._local_start} '
+                    f'[{self.module._local_start}, {self.module._local_stop}) '
+                    f'STAGE_PARAMS={num_params} ({num_params/1e6:0.3f}M) '
+                    f'TOTAL_PARAMS={total_params} ({total_params/1e6:0.3f}M) '
+                    f'UNIQUE_PARAMS={unique_params} ({unique_params/1e6:0.3f}M)')
 
         #initialize peer-2-peer communication and allreduce groups
         if self.is_pipe_parallel:
@@ -169,33 +198,48 @@ class PipelineEngine(DeepSpeedEngine):
 
         #stores the loss for the entire batch
         self.total_loss = None
+
         self.agg_loss = torch.tensor(0.0, requires_grad=False).to(self.device)
+        gd.debuginfo(prj="ds", info=f'self.agg_loss={infoTensor(self.agg_loss)}')
+
         self.dp_group_loss = torch.tensor(0.0, requires_grad=False).to(self.device)
+        gd.debuginfo(prj="ds", info=f'self.dp_group_loss={infoTensor(self.dp_group_loss)}')
+
+        gd.debuginfo(prj="ds", info=f'self._config={self._config}') # _config来自基类成员
 
         if self._config.pipeline['activation_checkpoint_interval'] > 0:
+            gd.debuginfo(prj="ds")
             self.module.activation_checkpoint_interval = self._config.pipeline['activation_checkpoint_interval']
 
         self.module.checkpoint_parallel_write_pipeline = self._config.checkpoint_parallel_write_pipeline
 
         if self.is_last_stage():
+            gd.debuginfo(prj="ds")
             self.loss_model = self.module.loss_fn
 
         self.has_attention_mask = self.module.__class__.__name__ == 'GPT2ModelPipe'
+        gd.debuginfo(prj="ds", info=f'self.has_attention_mask={self.has_attention_mask}')
+
         # Initialize pipeline communicators. Just send a 0.
         if is_even(self.stage_id):
             if not self.is_last_stage():
+                gd.debuginfo(prj="ds")
                 p2p.send(self.loss, self.next_stage)
             if not self.is_first_stage():
+                gd.debuginfo(prj="ds")
                 p2p.recv(self.loss, self.prev_stage)
         else:
             if not self.is_first_stage():
+                gd.debuginfo(prj="ds")
                 p2p.recv(self.loss, self.prev_stage)
             if not self.is_last_stage():
+                gd.debuginfo(prj="ds")
                 p2p.send(self.loss, self.next_stage)
 
         # XXX look into timer reporting timing
         # Initialize some timers because of early weirdness.
         if self.wall_clock_breakdown():
+            gd.debuginfo(prj="ds")
             self.timers('forward_microstep').start()
             self.timers('forward_microstep').stop()
             self.timers('backward_microstep').start()
@@ -209,13 +253,15 @@ class PipelineEngine(DeepSpeedEngine):
             self.timers('step_microstep').start()
             self.timers('step_microstep').stop()
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     def set_has_attention_mask(self, value):
         gd.debuginfo(prj="ds")
         assert isinstance(value, bool)
         self.has_attention_mask = value
 
     def _build_data_iter(self, dataset):
-        gd.debuginfo(prj="ds")
+
         sampler = torch.utils.data.distributed.DistributedSampler(dataset,
                                                                   num_replicas=self.dp_world_size,
                                                                   rank=self.mpu.get_data_parallel_rank(),
@@ -223,10 +269,15 @@ class PipelineEngine(DeepSpeedEngine):
         # Build a loader and make it repeating.
         pipe_dataloader = self.deepspeed_io(dataset, data_sampler=sampler)
         pipe_dataloader = RepeatingLoader(pipe_dataloader)
+
+        gd.debuginfo(prj="ds", info=f'sampler={sampler}')
+        gd.debuginfo(prj="ds", info=f'pipe_dataloader={pipe_dataloader}')
+        gd.debuginfo(prj="ds", info=f'pipe_dataloader={pipe_dataloader}')
+
         self.set_dataloader(pipe_dataloader)
 
     def _exec_reduce_tied_grads(self):
-        gd.debuginfo(prj="ds")
+
         # We need to run this first to write to self.averaged_gradients;
         # since this class turns `enable_backward_allreduce` off,
         # `self.overlapping_partition_gradients_reduce_epilogue()` defined in the DeepSpeedEngine
@@ -236,10 +287,14 @@ class PipelineEngine(DeepSpeedEngine):
         # needed to decide if it actually breaks everything.
         # (see https://github.com/EleutherAI/gpt-neox/issues/62#issuecomment-761471944)
         if self.zero_optimization_partition_gradients():
+            gd.debuginfo(prj="ds")
             self.optimizer.overlapping_partition_gradients_reduce_epilogue()
 
         weight_group_list = self.module.get_tied_weights_and_groups()
+        gd.debuginfo(prj="ds", info=f'weight_group_list={weight_group_list}')
+
         for weight, group in weight_group_list:
+            gd.debuginfo(prj="ds", info=f'weight={weight}, group={group}')
             grad = weight._hp_grad if self.bfloat16_enabled() else weight.grad
             dist.all_reduce(grad, group=group)
 
@@ -249,10 +304,12 @@ class PipelineEngine(DeepSpeedEngine):
         if self.pipeline_enable_backward_allreduce:
             if self.bfloat16_enabled():
                 if self.zero_optimization_stage() < ZeroStageEnum.gradients:
+                    gd.debuginfo(prj="ds")
                     self._bf16_reduce_grads()
                 else:
                     raise NotImplementedError("PP+BF16 only work for ZeRO Stage 1")
             else:
+                gd.debuginfo(prj="ds")
                 self.allreduce_gradients(bucket_size=MEMORY_OPT_ALLREDUCE_SIZE)
         self._force_grad_boundary = False
 
@@ -271,12 +328,15 @@ class PipelineEngine(DeepSpeedEngine):
         Args:
             num_buffers (int): The number of buffers to reserve.
         """
-        gd.debuginfo(prj="ds")
         if self.num_pipe_buffers >= num_buffers:
+            gd.debuginfo(prj="ds")
             return
 
         num_added = num_buffers - self.num_pipe_buffers
+        gd.debuginfo(prj="ds", info=f'num_added={num_added}')
+
         for key in self.pipe_buffers:
+            gd.debuginfo(prj="ds", info=f'key={key}')
             self.pipe_buffers[key].extend([None] * num_added)
         self.num_pipe_buffers = num_buffers
 
@@ -315,35 +375,59 @@ class PipelineEngine(DeepSpeedEngine):
         Returns:
             The arithmetic mean of the losses computed this batch.
         """
-        gd.debuginfo(prj="ds")
         if not torch._C.is_grad_enabled():
             raise RuntimeError(f'train_batch() requires gradients enabled. Use eval_batch() instead.')
 
         # Curriculum learning could change activation shape
         if self.curriculum_enabled_legacy():
-            new_difficulty = self.curriculum_scheduler_legacy.update_difficulty( \
-                self.global_steps + 1)
+            new_difficulty = self.curriculum_scheduler_legacy.update_difficulty(self.global_steps + 1)
+            gd.debuginfo(prj="ds", info=f'new_difficulty={new_difficulty}')
+
             if self.global_steps == 0 or self.curriculum_scheduler_legacy.first_step:
+                gd.debuginfo(prj="ds")
                 self.reset_activation_shape()
                 self.curriculum_scheduler_legacy.first_step = False
-            elif new_difficulty != self.curriculum_scheduler_legacy.get_difficulty( \
-                self.global_steps):
+            elif new_difficulty != self.curriculum_scheduler_legacy.get_difficulty(self.global_steps):
+                gd.debuginfo(prj="ds")
                 self.reset_activation_shape()
 
         if data_iter:
+            gd.debuginfo(prj="ds")
             self.set_dataiterator(data_iter)
 
+        gd.debuginfo(prj="ds", info='---------------1------------------')
         self.module.train()
         self.total_loss = None
         self._compute_loss = True
+
+        gd.debuginfo(prj="ds", info='---------------2------------------')
 
         # Do the work
         self.timers('train_batch').start()
         sched = schedule.TrainSchedule(micro_batches=self.micro_batches,
                                        stages=self.num_stages,
                                        stage_id=self.stage_id)
+        '''
+        1.2.4.1 schedule.TrainSchedule(micro_batches=self.micro_batches..) runtime schedule 将会自动调用 steps 函数
+        首先根据传入的 micro batch size 和 batch size 得到 num micro batch，既可以得到每个 stage 有多少个 micro batch
+        根据计算的 num micro batch 和 1F1B 策略得到一个 stage 的步数，在此例子中，每个stage 的步数为 6.
+        为每个 stage 的步，标一个 index，为 micro batch id，并为这些 id 计算出 cmds。
+        cmds 是计算出的每一步需要做的函数。
+        例如 stage 0 的 step 0 ，需要 load data 和 进行第一步 forward。
+        
+        接下来每个 stage 将跟据生成的 cmds，在各自的 rank 里串行的执行每一步。然后每个 stage 有事并行执行的。
+        前面的计算就是为了不同 stage 之间可以同步进行，
+        例如 stage 0 的 step 1 send activation 后，
+        stage 1 step 2 需要执行玩 step 0 的 load 和 forward，
+        并几乎没有延时地执行 receive activation。这样的话，就可以有效率的run 整个网络。
+        '''
+        gd.debuginfo(prj="ds", info=f'sched={sched}')
+
+        gd.debuginfo(prj="ds", info='---------------3------------------')
         self._exec_schedule(sched)
+        gd.debuginfo(prj="ds", info='---------------4------------------')
         self.agg_train_loss = self._aggregate_total_loss()
+        gd.debuginfo(prj="ds", info=f'self.agg_train_loss={self.agg_train_loss}')
 
         self.timers('train_batch').stop()
 
@@ -352,10 +436,10 @@ class PipelineEngine(DeepSpeedEngine):
                 elapsed = self.timers('train_batch').elapsed(reset=True) / 1000.0
                 iter_time = elapsed / self.steps_per_print()
                 tput = self.train_batch_size() / iter_time
-                print(f'steps: {self.global_steps} '
-                      f'loss: {self.agg_train_loss:0.4f} '
-                      f'iter time (s): {iter_time:0.3f} '
-                      f'samples/sec: {tput:0.3f}')
+                gd.debuginfo(prj="ds", info=f'steps: {self.global_steps}, '
+                                            f'loss: {self.agg_train_loss:0.4f} '
+                                            f'iter time (s): {iter_time:0.3f} '
+                                            f'samples/sec: {tput:0.3f}')
 
         # Monitoring
         if self.global_rank == 0 and self.monitor.enabled:
@@ -396,45 +480,60 @@ class PipelineEngine(DeepSpeedEngine):
         Returns:
             The arithmetic mean of the losses computed this batch.
         """
-        gd.debuginfo(prj="ds")
         self.eval_return_logits = return_logits
+        gd.debuginfo(prj="ds", info=f'self.eval_return_logits={self.eval_return_logits}')
         self.module.eval()
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++1++++++++++++++++++++++++++')
 
         # Curriculum learning could change activation shape
         if self.curriculum_enabled_legacy():
-            new_difficulty = self.curriculum_scheduler_legacy.update_difficulty( \
-                self.global_steps + 1)
+            new_difficulty = self.curriculum_scheduler_legacy.update_difficulty(self.global_steps + 1)
+            gd.debuginfo(prj="ds", info=f'new_difficulty={new_difficulty}')
             if self.global_steps == 0 or self.curriculum_scheduler_legacy.first_step:
+                gd.debuginfo(prj="ds")
                 self.reset_activation_shape()
                 self.curriculum_scheduler_legacy.first_step = False
-            elif new_difficulty != self.curriculum_scheduler_legacy.get_difficulty( \
-                self.global_steps):
+            elif new_difficulty != self.curriculum_scheduler_legacy.get_difficulty(self.global_steps):
+                gd.debuginfo(prj="ds")
                 self.reset_activation_shape()
 
         eval_output = None
 
         self._compute_loss = compute_loss
+        gd.debuginfo(prj="ds", info=f'self._compute_loss={compute_loss}')
 
         # Use the provided data iterator
         train_iterator = self.data_iterator
         self.set_dataiterator(data_iter)
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++2++++++++++++++++++++++++++')
 
         # Do the work
         sched = schedule.InferenceSchedule(micro_batches=self.micro_batches,
                                            stages=self.num_stages,
                                            stage_id=self.stage_id)
+        gd.debuginfo(prj="ds", info=f'sched={sched}')
 
         # prevent dead-lock with multiple evals sequence
         dist.barrier()
 
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++3++++++++++++++++++++++++++')
+
         with torch.no_grad():
             self._exec_schedule(sched)
 
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++4++++++++++++++++++++++++++')
+
         if self.is_last_stage():
             eval_output = self._reduce_outputs(self.fwd_outputs, reduce=reduce_output)
+            gd.debuginfo(prj="ds", info=f'A-eval_output={eval_output}')
+
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++5++++++++++++++++++++++++++')
 
         if compute_loss:
             eval_output = self._bcast_pipe_scalar(eval_output)
+            gd.debuginfo(prj="ds", info=f'B-eval_output={eval_output}')
+
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++6++++++++++++++++++++++++++')
 
         if self.global_rank == 0 and self.monitor.enabled:
             self.summary_events = [(f'Train/Samples/eval_loss', eval_output.mean().item(), self.global_samples)]
@@ -443,13 +542,19 @@ class PipelineEngine(DeepSpeedEngine):
         # Restore the training iterator
         self.set_dataiterator(train_iterator)
 
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++7++++++++++++++++++++++++++')
+
         # Reset any buffers that may have been populated during the forward passes.
         #ds_checkpointing.reset()
         self.eval_return_logits = False
         if return_logits:
             outputs = self.outputs
             self.outputs = None
+            gd.debuginfo(prj="ds", info=f'outputs={outputs}, eval_output={eval_output}')
             return eval_output, outputs
+
+        gd.debuginfo(prj="ds", info=f'eval_output={eval_output}')
+
         return eval_output
 
     def set_train_batch_size(self, train_batch_size):
@@ -464,93 +569,122 @@ class PipelineEngine(DeepSpeedEngine):
         """
         gd.debuginfo(prj="ds")
         super().set_train_batch_size(train_batch_size)
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++8++++++++++++++++++++++++++')
         self.micro_batches = self.gradient_accumulation_steps()
+        gd.debuginfo(prj="ds", info=f'self.micro_batches={self.micro_batches}')
 
     def is_first_stage(self):
         """True if this process is in the first stage in the pipeline."""
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'self.stage_id={self.stage_id == 0}')
         return self.stage_id == 0
 
     def is_last_stage(self):
         """True if this process is in the last stage in the pipeline."""
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'self.stage_id={self.num_stages - 1}')
         return self.stage_id == self.num_stages - 1
 
     def _reduce_outputs(self, outputs, reduce='avg', reduce_dp=True):
-        gd.debuginfo(prj="ds")
         if reduce is None:
+            gd.debuginfo(prj="ds")
             return outputs
 
         if reduce.lower() == 'avg':
             # first sum over all microbatches
             if torch.is_tensor(outputs[0]):
                 reduced = sum(outputs)
+                gd.debuginfo(prj="ds", info=f'A-reduced={reduced}')
             else:
                 assert isinstance(outputs, (list, tuple))
                 reduced = [torch.zeros_like(o) for o in outputs[0]]
+                gd.debuginfo(prj="ds", info=f'B-reduced={reduced}')
                 for idx, out in outputs:
                     reduced[idx] += out
+                    gd.debuginfo(prj="ds", info=f'out={out}, reduced[{idx}]={reduced[idx]}')
 
             # Average over the microbatches
             reduced = self._scale_loss_by_gas(reduced)
+            gd.debuginfo(prj="ds", info=f'C-reduced={reduced}')
 
             # Average over DP groups
             if reduce_dp and self.is_data_parallel:
                 if torch.is_tensor(reduced):
                     dist.all_reduce(reduced, group=self.mpu.get_data_parallel_group())
                     reduced /= self.dp_world_size
+                    gd.debuginfo(prj="ds", info=f'D-reduced={reduced}')
                 else:
                     for idx in range(len(reduced)):
                         dist.all_reduce(reduced[idx], group=self.mpu.get_data_parallel_group())
                         reduced[idx] /= self.dp_world_size
+                        gd.debuginfo(prj="ds", info=f'reduced[{idx}]={reduced[idx]}')
 
+            gd.debuginfo(prj="ds", info=f'return reduced={reduced}')
             return reduced
         else:
             raise NotImplementedError(f'reduction type {reduce} not supported.')
 
     def _bcast_pipe_scalar(self, data, src_rank=None, dtype=torch.float32):
-        gd.debuginfo(prj="ds")
         # Default to last stage (e.g., for broadcasting loss)
         if src_rank is None:
             src_rank = self.grid.stage_to_global(self.num_stages - 1)
+            gd.debuginfo(prj="ds", info=f'src_rank={src_rank}')
         assert src_rank in self.grid.pp_group
 
         if self.global_rank == src_rank:
             result = data.clone().detach().type(dtype).to(self.device)
+            gd.debuginfo(prj="ds", info=f'result={infoTensor(result)}')
         else:
             result = torch.Tensor([0.]).type(dtype).to(self.device)
+            gd.debuginfo(prj="ds", info=f'result={infoTensor(result)}')
 
         dist.broadcast(tensor=result, src=src_rank, group=self.mpu.get_pipe_parallel_group())
+        gd.debuginfo(prj="ds", info=f'++++++++++++++++++++9++++++++++++++++++++++++++')
 
         return result
 
     def _aggregate_total_loss(self):
         # Scale loss, average among DP ranks, and bcast loss to the rest of my DP group
         if self.is_last_stage():
-            gd.debuginfo(prj="ds")
             loss = self._scale_loss_by_gas(self.total_loss)
             self.dp_group_loss = loss.clone().detach()
 
             ## Average loss across all data-parallel groups
             agg_loss = self.dp_group_loss.clone().detach()
-            #print(f'RANK={self.global_rank} bcast SENDER src={self.global_rank} group={self.grid.pp_group}', flush=True)
+
+            gd.debuginfo(prj="ds", info=f'loss={loss}')
+            gd.debuginfo(prj="ds", info=f'self.dp_group_loss={self.dp_group_loss}')
+            gd.debuginfo(prj="ds", info=f'A-agg_loss={agg_loss}')
+
+            gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} bcast '
+                                        f'SENDER src={self.global_rank} ,'
+                                        f'group={self.grid.pp_group}')
             if self.is_data_parallel:
                 dist.all_reduce(agg_loss, group=self.mpu.get_data_parallel_group())
                 agg_loss /= self.dp_world_size
+                gd.debuginfo(prj="ds", info=f'B-agg_loss={agg_loss}')
 
             assert self.global_rank in self.grid.pp_group
             losses = torch.Tensor([self.dp_group_loss, agg_loss]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'losses={infoTensor(losses)}')
+
             if self.is_pipe_parallel:
+                gd.debuginfo(prj="ds", info=f'++++++++++++++++++++10++++++++++++++++++++++++++')
                 dist.broadcast(tensor=losses, src=self.global_rank, group=self.mpu.get_pipe_parallel_group())
         else:
-            gd.debuginfo(prj="ds")
             # Get loss from last stage
             src_rank = self.grid.stage_to_global(self.num_stages - 1)
+            gd.debuginfo(prj="ds", info=f'src_rank={src_rank}')
+
             assert src_rank in self.grid.pp_group
             losses = torch.Tensor([0., 0.]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'losses={infoTensor(losses)}')
+
             dist.broadcast(tensor=losses, src=src_rank, group=self.grid.get_pipe_parallel_group())
+            gd.debuginfo(prj="ds", info=f'++++++++++++++++++++11++++++++++++++++++++++++++')
+
             self.dp_group_loss = losses[0].clone().detach()
             agg_loss = losses[1].clone().detach()
+            gd.debuginfo(prj="ds", info=f'self.dp_group_loss={self.dp_group_loss}')
+            gd.debuginfo(prj="ds", info=f'agg_loss={agg_loss}')
 
         return agg_loss
 
@@ -558,6 +692,7 @@ class PipelineEngine(DeepSpeedEngine):
         """"""
         gd.debuginfo(prj="ds")
         if self.is_first_stage() or self.is_last_stage():
+            gd.debuginfo(prj="ds")
             self.training_dataloader = loader
             self.data_iterator = iter(self.training_dataloader)
 
@@ -565,6 +700,7 @@ class PipelineEngine(DeepSpeedEngine):
         """ Store an iterator to sample for training data. """
         gd.debuginfo(prj="ds")
         if self.is_first_stage() or self.is_last_stage():
+            gd.debuginfo(prj="ds")
             self.training_dataloader = None
             self.data_iterator = iterator
 
@@ -574,7 +710,7 @@ class PipelineEngine(DeepSpeedEngine):
         Args:
             fn (function): The function to run.
         """
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         self.batch_fn = fn
 
     def is_gradient_accumulation_boundary(self):
@@ -586,43 +722,40 @@ class PipelineEngine(DeepSpeedEngine):
         Returns:
             bool: whether reductions and optimizer steps should occur.
         """
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'return {self._force_grad_boundary}')
         return self._force_grad_boundary
 
     def log_for_device(self, *msg):
         gd.debuginfo(prj="ds")
         if LOG_STAGE == self.stage_id or LOG_STAGE == -1:
             if DATA_PARALLEL_ID == self.grid.data_parallel_id or DATA_PARALLEL_ID == -1:
-                print(
-                    f'RANK={dist.get_rank()} '
+                gd.debuginfo(prj="ds", info=f'RANK={dist.get_rank()} '
                     f'PIPE-ID={self.stage_id} '
                     f'DATA-ID={self.grid.data_parallel_id} '
                     f'MBATCH-ID={self.microbatch_id} '
                     f'STEP-ID={self.log_batch_step_id} '
                     '::',
-                    *msg,
-                    flush=True)
+                    *msg)
 
     def tput_log(self, *msg):
-        gd.debuginfo(prj="ds")
         if self.global_rank == 0 and self.global_steps % self.steps_per_print() == 0:
             print(*msg)
 
     def _next_batch(self):
-        gd.debuginfo(prj="ds")
         # If using 3D parallelism, only some first-stage ranks may do IO
         batch = None
         if self.data_iterator is not None:
             batch = next(self.data_iterator)
+            gd.debuginfo(prj="ds", info=f'A-len of batch={len(batch)}')
 
         # Any post-processing, like broadcasting across a slice-parallel group.
         if self.batch_fn:
             batch = self.batch_fn(batch)
+            gd.debuginfo(prj="ds", info=f'B-batch={batch}')
 
         return batch
 
     def _exec_forward_pass(self, buffer_id):
-        gd.debuginfo(prj="ds")
         self.tput_timer.start()
         self.mem_status('BEFORE FWD', reset_max=True)
 
@@ -632,89 +765,117 @@ class PipelineEngine(DeepSpeedEngine):
         else:
             gd.debuginfo(prj="ds")
             inputs = self.pipe_buffers['inputs'][buffer_id].clone()
+
         gd.debuginfo(prj='ds', info=str(input))
 
         # collect the partitioned input from the previous stage
         if self.is_pipe_partitioned and not self.is_first_stage():
-            gd.debuginfo(prj="ds")
+
             part_input = PartitionedTensor.from_meta(meta=inputs[0],
                                                      local_part=inputs[1],
                                                      group=self.grid.get_slice_parallel_group())
 
+            gd.debuginfo(prj="ds", info=f'part_input={part_input}')
+
             inputs = (part_input.full(), *inputs[2:])
+            gd.debuginfo(prj="ds", info=f'A-inputs={inputs}')
+
             inputs[0].requires_grad = True
             # skip mask
             #inputs[1].requires_grad = True
             part_input = None
             inputs = inputs[0] if len(inputs) == 1 else inputs
+            gd.debuginfo(prj="ds", info=f'B-inputs={inputs}')
+
             self.pipe_buffers['inputs'][buffer_id] = inputs
 
         # Zero out the gradients each time we use the tensor because only the data in
         # tensor changes across batches
+
+        gd.debuginfo(prj="ds", info=f'#######1###########')
         self._zero_grads(inputs)
+        gd.debuginfo(prj="ds", info=f'#######2###########')
 
         outputs = super().forward(inputs)
+        gd.debuginfo(prj="ds", info=f'#######3###########')
 
         # Reset activation checkpointing buffers.
         # Need to call this between evaluation iterations
         if not self.module.training:
+            gd.debuginfo(prj="ds")
             ds_checkpointing.reset()
 
         # Partition the outputs if we are not the last stage
         if self.is_pipe_partitioned and not self.is_last_stage():
             if isinstance(outputs, tuple):
-                gd.debuginfo(prj="ds")
                 first_output = outputs[0]
                 # TODO: Improve pipe partitioning to pass multiple tensors that require grads
                 assert all([torch.is_tensor(elt) and elt.requires_grad is False for elt in outputs[1:]])
                 outputs_tail = outputs[1:]
+                gd.debuginfo(prj="ds", info=f'A-first_output={first_output}, outputs_tail={outputs_tail}')
             elif torch.is_tensor(outputs):
-                gd.debuginfo(prj="ds")
                 first_output = outputs
                 outputs_tail = []
+                gd.debuginfo(prj="ds", info=f'B-first_output={first_output}')
             else:
                 raise ValueError("expecting a tensor or a tuple of tensors")
+
             part = PartitionedTensor(tensor=first_output, group=self.grid.get_slice_parallel_group())
+            gd.debuginfo(prj="ds", info=f'part={part}')
+
             # Clear the large output data, but save the computation graph
             first_output.data = torch.zeros(1)
+            gd.debuginfo(prj="ds", info=f'first_output.data={infoTensor(first_output.data)}')
+
             self.pipe_buffers['output_tensors'][buffer_id] = first_output
+            gd.debuginfo(prj="ds", info=f"self.pipe_buffers['output_tensors'][{buffer_id}]={infoTensor(first_output)}")
+
             # Inject the partitioned tensor into the output before sending
             outputs = (part.to_meta(), part.data(), *outputs_tail)
             part = None
+            gd.debuginfo(prj="ds", info=f'part.to_meta()={infoTensor(part.to_meta())}')
+            gd.debuginfo(prj="ds", info=f'part.data()={infoTensor(part.data())}')
+            gd.debuginfo(prj="ds", info=f'*outputs_tail={infoTensor(*outputs_tail)}')
 
         self.pipe_buffers['outputs'][buffer_id] = outputs
 
         # Optionally compute loss on the last device
         if self.is_last_stage():
             if self._compute_loss and self.module.loss_fn is not None:
-                gd.debuginfo(prj="ds")
                 labels = self.pipe_buffers['labels'][buffer_id]
                 self.loss = self.module.loss_fn(outputs, labels)
+                gd.debuginfo(prj="ds", info=f'labels={labels}, self.loss={self.loss}')
             else:
-                gd.debuginfo(prj="ds")
                 # Some models just return loss from forward()
                 self.loss = outputs
+                gd.debuginfo(prj="ds", info=f'self.loss={self.loss}')
             if self.eval_return_logits:
-                gd.debuginfo(prj="ds")
                 self.outputs = outputs
+                gd.debuginfo(prj="ds", info=f'self.outputs={self.outputs}')
             if isinstance(self.loss, torch.Tensor):
-                gd.debuginfo(prj="ds")
-                self.fwd_outputs.append(self.loss.detach())
+                tmp = self.loss.detach()
+                self.fwd_outputs.append(tmp)
+                gd.debuginfo(prj="ds", info=f'A-self.loss.detach()={infoTensor(tmp)}')
 
                 if self.total_loss is None:
                     self.total_loss = torch.zeros_like(self.loss)
+                    gd.debuginfo(prj="ds", info=f'self.total_loss={infoTensor(self.total_loss)}')
+
                 self.total_loss += self.loss.detach()
+                gd.debuginfo(prj="ds", info=f'self.total_loss={infoTensor(self.total_loss)}')
             else:
-                gd.debuginfo(prj="ds")
-                self.fwd_outputs.append([l.detach() for l in self.loss])
+                tmp = [l.detach() for l in self.loss]
+                self.fwd_outputs.append(tmp)
+                gd.debuginfo(prj="ds", info=f'tmp={infoTensor(tmp)}')
 
                 if self.total_loss is None:
                     self.total_loss = [torch.zeros_like(l) for l in self.loss]
+                    gd.debuginfo(prj="ds", info=f'self.total_loss={infoTensor(self.total_loss)}')
                 for idx, l in enumerate(self.loss):
+                    gd.debuginfo(prj="ds", info=f'idx={idx}, l={infoTensor(l)}')
                     self.total_loss[idx] += l.detach()
 
     def _exec_backward_pass(self, buffer_id):
-        gd.debuginfo(prj="ds")
         assert self.optimizer is not None, "must provide optimizer during " \
                                            "init in order to use backward"
 
@@ -729,6 +890,7 @@ class PipelineEngine(DeepSpeedEngine):
             return
 
         outputs = self.pipe_buffers['outputs'][buffer_id]
+        gd.debuginfo(prj="ds", info=f"self.pipe_buffers['outputs'][{buffer_id}]={infoTensor(outputs)}")
 
         if self.wall_clock_breakdown():
             gd.debuginfo(prj="ds")
@@ -741,28 +903,37 @@ class PipelineEngine(DeepSpeedEngine):
         # careful to also restore the computational graph of the tensors we partitioned.
         if self.is_pipe_partitioned:
             if self.is_grad_partitioned:
-                gd.debuginfo(prj="ds")
                 part_output = PartitionedTensor.from_meta(meta=outputs[0],
                                                           local_part=outputs[1],
                                                           group=self.grid.get_slice_parallel_group())
+                gd.debuginfo(prj="ds", info=f"part_output={part_output}")
                 self.pipe_buffers['output_tensors'][buffer_id].data = part_output.full()
+
                 outputs = (self.pipe_buffers['output_tensors'][buffer_id], *outputs[2:])
+                gd.debuginfo(prj="ds", info=f"self.pipe_buffers['output_tensors'][{buffer_id}]={infoTensor(outputs)}")
             else:
-                gd.debuginfo(prj="ds")
                 # Already restored from partition
                 self.pipe_buffers['output_tensors'][buffer_id].data = outputs[0]
                 outputs = (self.pipe_buffers['output_tensors'][buffer_id], *outputs[1:])
+                gd.debuginfo(prj="ds", info=f"self.pipe_buffers['output_tensors'][{buffer_id}]={infoTensor(outputs)}")
 
         grad_tensors = self.grad_layer
+        gd.debuginfo(prj="ds", info=f"grad_tensors={infoTensor(grad_tensors)}")
+
         if self.is_grad_partitioned:
-            gd.debuginfo(prj="ds")
-            print(f'RANK={self.global_rank} BEFORE-BWD restoring grad={self.grad_layer[0].size()} {self.grad_layer[1].size()}')
+            gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} BEFORE-BWD '
+                                        f'restoring grad={self.grad_layer[0].size()} {self.grad_layer[1].size()}')
             part_grad = PartitionedTensor.from_meta(meta=self.grad_layer[0],
                                                     local_part=self.grad_layer[1],
                                                     group=self.grid.get_slice_parallel_group())
+            gd.debuginfo(prj="ds", info=f"part_grad={infoTensor(part_grad)}")
+
             grad_tensors = (part_grad.full(), *grad_tensors[2:])
+            gd.debuginfo(prj="ds", info=f"grad_tensors={infoTensor(grad_tensors)}")
+
             part_grad = None
-            print(f'RANK={self.global_rank} BEFORE-BWD restored grad={self.grad_layer[0].size()} {self.grad_layer[1].size()}')
+            gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} BEFORE-BWD '
+                                        f'restored grad={self.grad_layer[0].size()} {self.grad_layer[1].size()}')
 
         if self.bfloat16_enabled() and not self.is_last_stage():
             gd.debuginfo(prj="ds")
@@ -803,6 +974,7 @@ class PipelineEngine(DeepSpeedEngine):
             self.timers('batch_input').start()
 
         batch = self._next_batch()
+        gd.debuginfo(prj="ds", info=f'len of batch={len(batch)}')
 
         if self.is_first_stage():
             loaded = None
@@ -854,41 +1026,66 @@ class PipelineEngine(DeepSpeedEngine):
                 * ndims
                 * shape
         """
+        gd.debuginfo(prj="ds", info=f'recv_stage={infoTensor(recv_stage)}')
         send_bytes = 0
         if isinstance(buffer, torch.Tensor):
-            gd.debuginfo(prj="ds")
             type_tensor = torch.LongTensor(data=[0]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'type_tensor={infoTensor(type_tensor)}')
             p2p.send(type_tensor, recv_stage)
+
             send_shape = torch.LongTensor(data=buffer.size()).to(self.device)
             send_ndims = torch.LongTensor(data=[len(buffer.size())]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'send_shape={infoTensor(send_shape)}')
+            gd.debuginfo(prj="ds", info=f'send_ndims={infoTensor(send_ndims)}')
+
             p2p.send(send_ndims, recv_stage)
             p2p.send(send_shape, recv_stage)
+
             send_bytes += _tensor_bytes(buffer)
+            gd.debuginfo(prj="ds", info=f'send_bytes={infoTensor(send_bytes)}')
         elif isinstance(buffer, list):
-            gd.debuginfo(prj="ds")
             assert (False)
             type_tensor = torch.LongTensor(data=[1]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'type_tensor={infoTensor(type_tensor)}')
             p2p.send(type_tensor, recv_stage)
+
             count_tensor = torch.LongTensor(data=[len(buffer)]).to(self.device)
             p2p.send(count_tensor, recv_stage)
-            for tensor in buffer:
+
+            for index, tensor in enumerate(buffer):
+                gd.debuginfo(prj="ds", info=f'index={index}, tensor={infoTensor(tensor)}')
+
                 assert isinstance(tensor, torch.Tensor)
+
                 send_shape = torch.LongTensor(data=tensor.size()).to(self.device)
                 send_ndims = torch.LongTensor(data=[len(tensor.size())]).to(self.device)
+                gd.debuginfo(prj="ds", info=f'send_shape={infoTensor(send_shape)}')
+                gd.debuginfo(prj="ds", info=f'send_ndims={infoTensor(send_ndims)}')
+
                 p2p.send(send_ndims, recv_stage)
                 p2p.send(send_shape, recv_stage)
+
                 send_bytes += _tensor_bytes(tensor)
+                gd.debuginfo(prj="ds", info=f'send_bytes={infoTensor(send_bytes)}')
+
         elif isinstance(buffer, tuple):
-            gd.debuginfo(prj="ds")
             type_tensor = torch.LongTensor(data=[2]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'type_tensor={infoTensor(type_tensor)}')
             p2p.send(type_tensor, recv_stage)
+
             count_tensor = torch.LongTensor(data=[len(buffer)]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'count_tensor={infoTensor(count_tensor)}')
+
             p2p.send(count_tensor, recv_stage)
             for idx, tensor in enumerate(buffer):
+                gd.debuginfo(prj="ds", idx=f'index={idx}, tensor={infoTensor(tensor)}')
                 assert isinstance(tensor, torch.Tensor)
                 send_shape = torch.LongTensor(data=tensor.size()).to(self.device)
                 send_ndims = torch.LongTensor(data=[len(tensor.size())]).to(self.device)
                 send_dtype = torch.LongTensor(data=[self.DTYPE_TO_ID[tensor.dtype]]).to(self.device)
+                gd.debuginfo(prj="ds", idx=f'index={idx}, send_shape={infoTensor(send_shape)}')
+                gd.debuginfo(prj="ds", idx=f'index={idx}, send_ndims={infoTensor(send_ndims)}')
+                gd.debuginfo(prj="ds", idx=f'index={idx}, send_dtype={infoTensor(send_dtype)}')
                 p2p.send(send_dtype, recv_stage)
                 p2p.send(send_ndims, recv_stage)
                 p2p.send(send_shape, recv_stage)
@@ -906,10 +1103,10 @@ class PipelineEngine(DeepSpeedEngine):
             raise NotImplementedError(f'Could not send meta type {type(buffer)}')
 
         # Useful for performance debugging.
-        '''
-        if self.grid.data_parallel_id == 0:
-            print(f'STAGE={self.stage_id} pipe-send-volume: {send_bytes/1024**2:0.2f}MB')
-        '''
+
+        # if self.grid.data_parallel_id == 0:
+        gd.debuginfo(prj='ds', info=f'STAGE={self.stage_id} pipe-send-volume: {send_bytes/1024**2:0.2f}MB')
+
 
     def _recv_tensor_meta(self, send_stage):
         """Receive metadata about upcoming p2p transfers and return allocated buffers.
@@ -926,41 +1123,61 @@ class PipelineEngine(DeepSpeedEngine):
         """
 
         type_tensor = torch.LongTensor(data=[0]).to(self.device)
+        gd.debuginfo(prj="ds", info=f'type_tensor={infoTensor(type_tensor)}, send_stage={send_stage}')
+
         p2p.recv(type_tensor, send_stage)
         recv_type = type_tensor.item()
+        gd.debuginfo(prj="ds", info=f'recv_type={recv_type}')
 
         # A single tensor will be sent.
         if recv_type == 0:
-            gd.debuginfo(prj="ds")
             recv_ndims = torch.LongTensor(data=[0]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'recv_ndims={infoTensor(recv_ndims)}')
+
             p2p.recv(recv_ndims, send_stage)
+
             recv_ndims = recv_ndims.item()
             recv_shape = torch.LongTensor([1] * recv_ndims).to(self.device)
+            gd.debuginfo(prj="ds", info=f'recv_ndims={infoTensor(recv_ndims)}, recv_shape={infoTensor(recv_shape)}')
+
             p2p.recv(recv_shape, send_stage)
             recv_shape = recv_shape.tolist()
             return self._allocate_buffer(recv_shape, num_buffers=1)[0]
 
         # List or tuple of tensors
         elif recv_type == 1 or recv_type == 2:
-            gd.debuginfo(prj="ds")
             count_tensor = torch.LongTensor(data=[0]).to(self.device)
+            gd.debuginfo(prj="ds", info=f'count_tensor={infoTensor(count_tensor)}')
+
             p2p.recv(count_tensor, send_stage)
             num_tensors = count_tensor.item()
+            gd.debuginfo(prj="ds", info=f'num_tensors={infoTensor(num_tensors)}')
+
             recv_shapes_and_dtypes = []
             for idx in range(num_tensors):
                 recv_dtype = torch.LongTensor(data=[0]).to(self.device)
+                gd.debuginfo(prj="ds", info=f'recv_dtype={infoTensor(recv_dtype)}')
                 p2p.recv(recv_dtype, send_stage)
+
                 recv_dtype = self.ID_TO_DTYPE[recv_dtype.item()]
                 recv_ndims = torch.LongTensor(data=[0]).to(self.device)
+                gd.debuginfo(prj="ds", info=f'recv_dtype={infoTensor(recv_dtype)}')
+                gd.debuginfo(prj="ds", info=f'recv_ndims={infoTensor(recv_ndims)}')
                 p2p.recv(recv_ndims, send_stage)
+
                 recv_ndims = recv_ndims.item()
                 recv_shape = torch.LongTensor([1] * recv_ndims).to(self.device)
+                gd.debuginfo(prj="ds", info=f'recv_ndims={infoTensor(recv_ndims)}')
+                gd.debuginfo(prj="ds", info=f'recv_shape={infoTensor(recv_shape)}')
                 p2p.recv(recv_shape, send_stage)
+
                 recv_shapes_and_dtypes.append((recv_shape.tolist(), recv_dtype))
 
+            gd.debuginfo(prj="ds", info=f'len of recv_shapes_and_dtypes={len(recv_shapes_and_dtypes)}')
             buffers = self._allocate_buffers(recv_shapes_and_dtypes, num_buffers=1)[0]
             # Convert to tuples if requested.
             if recv_type == 2:
+                gd.debuginfo(prj="ds")
                 buffers = tuple(buffers)
             return buffers
 
@@ -983,16 +1200,16 @@ class PipelineEngine(DeepSpeedEngine):
             outputs = tuple(outputs)
 
         if self.first_output_send:
-            gd.debuginfo(prj="ds")
             self.first_output_send = False
+            gd.debuginfo(prj="ds", info=f'self.next_stage={self.next_stage}, outputs={infoTensor(outputs)}')
             self._send_tensor_meta(outputs, self.next_stage)
 
         if isinstance(outputs, torch.Tensor):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'self.next_stage={self.next_stage}, outputs={infoTensor(outputs)}')
             p2p.send(outputs, self.next_stage)
         elif isinstance(outputs, tuple):
-            gd.debuginfo(prj="ds")
             for idx, buffer in enumerate(outputs):
+                gd.debuginfo(prj="ds", info=f'idx={idx}, buffer={infoTensor(buffer)}')
                 p2p.send(buffer, self.next_stage)
         else:
             raise NotImplementedError('Could not send output of type '
@@ -1015,24 +1232,33 @@ class PipelineEngine(DeepSpeedEngine):
             self.timers('pipe_send_grad').start()
 
         inputs = self.pipe_buffers['inputs'][buffer_id]
+        gd.debuginfo(prj="ds", info=f"self.pipe_buffers['inputs'][{buffer_id}]={infoTensor(inputs)}")
 
         # Partition the gradient
         if self.is_grad_partitioned:
             if isinstance(inputs, tuple):
-                gd.debuginfo(prj="ds")
                 first_input = inputs[0]
+                gd.debuginfo(prj="ds", info=f'first_input={infoTensor(first_input)}')
+
                 assert all([torch.is_tensor(elt) for elt in inputs[1:]])
                 inputs_grad_tail = [elt.grad for elt in inputs[1:] if elt.grad is not None]
+                gd.debuginfo(prj="ds", info=f'len of inputs_grad_tail={len(inputs_grad_tail)}')
+
             elif torch.is_tensor(inputs):
-                gd.debuginfo(prj="ds")
                 first_input = inputs
                 inputs_grad_tail = []
+                gd.debuginfo(prj="ds", info=f'first_input={infoTensor(first_input)}')
             else:
                 raise ValueError("expecting a tensor or a tuple of tensors")
+
             assert torch.is_tensor(first_input)
             part = PartitionedTensor(tensor=first_input.grad, group=self.grid.get_slice_parallel_group())
+            gd.debuginfo(prj="ds", info=f'part={part}')
 
             inputs = (part.to_meta(), part.data(), *inputs_grad_tail)
+            gd.debuginfo(prj="ds", info=f'part.to_meta()={infoTensor(part.to_meta())}')
+            gd.debuginfo(prj="ds", info=f'part.data()={infoTensor(part.data())}')
+            gd.debuginfo(prj="ds", info=f'*inputs_grad_tail={inputs_grad_tail}')
 
         # XXX Terrible hack
         # Drop the attention mask from the input buffer here. It does not have
@@ -1040,24 +1266,33 @@ class PipelineEngine(DeepSpeedEngine):
         # after, so no need to restore it. The receiver also has a hack that skips
         # the recv. This is because NCCL does not let us send torch.BoolTensor :-(.
         if self.has_attention_mask or self.has_bool_tensors:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'inputs={inputs}')
             inputs = list(inputs)
             inputs.pop()
             inputs = tuple(inputs)
+            gd.debuginfo(prj="ds", info=f'inputs={inputs}')
 
         if isinstance(inputs, torch.Tensor):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'inputs.grad={infoTensor(inputs.grad)}, '
+                                        f'self.prev_stage={self.prev_stage}')
             assert inputs.grad is not None
             p2p.send(inputs.grad, self.prev_stage)
         else:
-            gd.debuginfo(prj="ds")
+
             # XXX terrible hacky branch
             if self.is_grad_partitioned:
+                gd.debuginfo(prj="ds", info=f'inputs[0]={infoTensor(inputs[0])}, '
+                                            f'inputs[1]={infoTensor(inputs[1])}, '
+                                            f'self.prev_stage={self.prev_stage}')
                 # First two sends are partitioned gradient
                 p2p.send(inputs[0], self.prev_stage)
                 p2p.send(inputs[1], self.prev_stage)
             else:
+                gd.debuginfo(prj="ds")
                 for idx, buffer in enumerate(inputs):
+                    gd.debuginfo(prj="ds", info=f"{idx}, "
+                                                f"buffer={infoTensor(buffer)}, "
+                                                f"self.prev_stage={self.prev_stage}")
                     # Skip tensors that will not produce a grad
                     if not buffer.is_floating_point():
                         assert buffer.grad is None
@@ -1072,7 +1307,7 @@ class PipelineEngine(DeepSpeedEngine):
             self.timers('pipe_send_grad').stop()
 
     def _exec_recv_activations(self, buffer_id):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'buffer_id={buffer_id}')
         if self.wall_clock_breakdown():
             self.timers('pipe_recv_input').start()
 
@@ -1081,24 +1316,31 @@ class PipelineEngine(DeepSpeedEngine):
         # Allocate the buffer if necessary
         if self.pipe_recv_buf is None:
             self.pipe_recv_buf = self._recv_tensor_meta(self.prev_stage)
+            gd.debuginfo(prj="ds", info=f'self.pipe_recv_buf={self.pipe_recv_buf}')
 
         if isinstance(self.pipe_recv_buf, torch.Tensor):
             p2p.recv(self.pipe_recv_buf, self.prev_stage)
             recvd = self.pipe_recv_buf.clone().detach()
             recvd.requires_grad = recvd.is_floating_point()
+            gd.debuginfo(prj="ds", info=f'recvd={infoTensor(recvd)}')
         else:
             assert isinstance(self.pipe_recv_buf, tuple)
             recvd = [None] * len(self.pipe_recv_buf)
+            gd.debuginfo(prj="ds", info=f"self.pipe_recv_buf={self.pipe_recv_buf}")
             for idx, buffer in enumerate(self.pipe_recv_buf):
+                gd.debuginfo(prj="ds", info=f"idx={idx}, buffer={infoTensor(buffer)}")
                 assert torch.is_tensor(buffer)
+
                 # XXX hardcode meta type
                 if self.is_pipe_partitioned and idx == 0 and buffer.dtype != torch.long:
                     if self.meta_buffer is None:
                         self.meta_buffer = torch.zeros(buffer.size(), dtype=torch.long, device=self.device)
+                        gd.debuginfo(prj="ds", info=f"self.meta_buffer={infoTensor(self.meta_buffer)}")
                     buffer = self.meta_buffer
 
                 p2p.recv(buffer, self.prev_stage)
                 recvd[idx] = buffer.clone().detach()
+                gd.debuginfo(prj="ds", info=f"recvd[{idx}]={infoTensor(recvd[idx])}")
 
             # NCCL does not like to send torch.BoolTensor types, so un-cast the
             # attention mask
@@ -1107,10 +1349,13 @@ class PipelineEngine(DeepSpeedEngine):
 
             recvd = tuple(recvd)
 
-            for buffer in recvd:
+            for index, buffer in enumerate(recvd):
+                gd.debuginfo(prj="ds", info=f"recvd[{index}]={infoTensor(buffer)}")
                 buffer.requires_grad = buffer.is_floating_point()
 
         self.pipe_buffers['inputs'][buffer_id] = recvd
+
+        gd.debuginfo(prj="ds", info=f"self.pipe_buffers['inputs'][{buffer_id}]={infoTensor(recvd)}")
 
         if self.wall_clock_breakdown():
             self.timers('pipe_recv_input').stop()
@@ -1127,19 +1372,22 @@ class PipelineEngine(DeepSpeedEngine):
             part_output = PartitionedTensor.from_meta(meta=outputs[0],
                                                       local_part=outputs[1],
                                                       group=self.grid.get_slice_parallel_group())
+            gd.debuginfo(prj="ds", info=f"part_output={infoTensor(part_output)}")
+
             outputs[0].data = part_output.full()
             outputs = (outputs[0], *outputs[2:])
             # save for backward
             self.pipe_buffers['outputs'][buffer_id] = outputs
 
+            gd.debuginfo(prj="ds", info=f"self.pipe_buffers['outputs'][{buffer_id}]={infoTensor(outputs)}")
+
         # Allocate gradient if necessary
         if self.grad_layer is None:
             if isinstance(outputs, torch.Tensor):
-                gd.debuginfo(prj="ds")
                 s = list(outputs.size())
                 self.grad_layer = self._allocate_buffer(s, dtype=outputs.dtype, num_buffers=1)[0]
+                gd.debuginfo(prj="ds", info=f'self.grad_layer={infoTensor(self.grad_layer)}')
             else:
-                gd.debuginfo(prj="ds")
                 # XXX This is a HACK
                 # When we exchange activations/gradients, the two pipe stages
                 # need to issue the send/recv with the same buffer sizes or
@@ -1158,18 +1406,26 @@ class PipelineEngine(DeepSpeedEngine):
                     sizes_and_dtypes = [(list(t.size()), t.dtype)
                                         for t in outputs[:2]] + [(list(t.size()), t.dtype)
                                                                  for t in outputs[2:] if t.is_floating_point()]
+                    gd.debuginfo(prj="ds", info=f'sizes_and_dtypes={sizes_and_dtypes}')
                 else:
                     sizes_and_dtypes = [(list(t.size()), t.dtype) for t in outputs if t.is_floating_point()]
+                    gd.debuginfo(prj="ds", info=f'sizes_and_dtypes={sizes_and_dtypes}')
+
                 self.grad_layer = self._allocate_buffers(sizes_and_dtypes, num_buffers=1)[0]
+                gd.debuginfo(prj="ds", info=f'self.grad_layer={infoTensor(self.grad_layer)}')
 
         if isinstance(self.grad_layer, torch.Tensor):
+            gd.debuginfo(prj="ds")
             p2p.recv(self.grad_layer, self.next_stage)
         else:
+            gd.debuginfo(prj="ds")
             assert isinstance(outputs, tuple)
             for idx, buffer in enumerate(self.grad_layer):
+                gd.debuginfo(prj="ds", info=f'idx={idx}, buffer={buffer}')
                 # XXX GPT-2 hack
                 if self.is_grad_partitioned and idx == 0 and buffer.dtype != torch.long:
                     buffer.data = torch.zeros(buffer.size(), dtype=torch.long, device=self.device)
+                    gd.debuginfo(prj="ds", info=f'buffer.data={infoTensor(buffer.data)}')
                 p2p.recv(buffer, self.next_stage)
 
         if self.wall_clock_breakdown():
@@ -1210,11 +1466,14 @@ class PipelineEngine(DeepSpeedEngine):
         if isinstance(inputs, torch.Tensor):
             gd.debuginfo(prj="ds")
             if inputs.grad is not None:
+                gd.debuginfo(prj="ds")
                 inputs.grad.data.zero_()
         else:
             gd.debuginfo(prj="ds")
             for t in inputs:
+                gd.debuginfo(prj="ds")
                 if t.grad is not None:
+                    gd.debuginfo(prj="ds")
                     t.grad.data.zero_()
 
     def _allocate_zeros(self, shape, **kwargs):
@@ -1237,24 +1496,35 @@ class PipelineEngine(DeepSpeedEngine):
         return torch.zeros(shape, device=self.device, **kwargs)
 
     def _allocate_buffer(self, shape, num_buffers=-1, **kwargs):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'shape={shape}, kwargs={kwargs}')
         buffers = []
         if num_buffers == -1:
+            gd.debuginfo(prj="ds")
             num_buffers = self.num_pipe_buffers
-        for count in range(num_buffers):
+
+        for i, count in enumerate(range(num_buffers)):
             buffers.append(self._allocate_zeros(shape, **kwargs))
+            gd.debuginfo(prj="ds", info=f'{i}, count={count}')
+
+        gd.debuginfo(prj="ds", info=f'len(buffers)={len(buffers)}')
         return buffers
 
     def _allocate_buffers(self, shapes_and_dtypes, requires_grad=False, num_buffers=-1):
-        gd.debuginfo(prj="ds")
         buffers = []
         if num_buffers == -1:
+            gd.debuginfo(prj="ds")
             num_buffers = self.num_pipe_buffers
-        for count in range(num_buffers):
+
+        for i, count in enumerate(range(num_buffers)):
             buffer = []
             for shape, dtype in shapes_and_dtypes:
+                gd.debuginfo(prj="ds", info=f'count={count}, dtype={dtype}')
                 buffer.append(self._allocate_zeros(shape, dtype=dtype, requires_grad=requires_grad))
+
+            gd.debuginfo(prj="ds", info=f'{i}, count={count}, len(buffer)={len(buffer)}')
             buffers.append(buffer)
+
+        gd.debuginfo(prj="ds", info=f'len(buffers)={len(buffers)}')
         return buffers
 
     def forward(self, *args, **kwargs):
@@ -1311,10 +1581,9 @@ class PipelineEngine(DeepSpeedEngine):
         max_alloced /= 1024**3
         max_cached /= 1024**3
 
-        print(
-            f'RANK={rank} STAGE={self.stage_id} STEP={self.global_steps} MEMSTATS', msg,
-            f'current alloc={new_alloced:0.4f}GB (delta={delta_alloced:0.4f}GB max={max_alloced:0.4f}GB) '
-            f'current cache={new_cached:0.4f}GB (delta={delta_cached:0.4f}GB max={max_cached:0.4f}GB)')
+        gd.debuginfo(prj='ds', info=f'RANK={rank} STAGE={self.stage_id} STEP={self.global_steps} MEMSTATS {msg} '
+                                    f'current alloc={new_alloced:0.4f}GB (delta={delta_alloced:0.4f}GB max={max_alloced:0.4f}GB) '
+                                    f'current cache={new_cached:0.4f}GB (delta={delta_cached:0.4f}GB max={max_cached:0.4f}GB)')
 
     def module_state_dict(self):
         gd.debuginfo(prj='ds', info='save the dict!')
@@ -1372,18 +1641,25 @@ class PipelineEngine(DeepSpeedEngine):
     }
 
     def _exec_schedule(self, pipe_schedule):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'pipe_schedule={pipe_schedule}')
         # Reserve and reset buffers.
         self._reserve_pipe_buffers(pipe_schedule.num_pipe_buffers())
         self.fwd_outputs = []
 
         # For each step in the schedule
         for step_cmds in pipe_schedule:
+            gd.debuginfo(prj="ds", info=f'step_cmds={step_cmds}')
             # For each instruction in the step
             for cmd in step_cmds:
+                gd.debuginfo(prj="ds", info=f'cmd={cmd}')
                 if type(cmd) not in self._INSTRUCTION_MAP:
                     raise RuntimeError(f'{self.__class__.__name__} does not understand instruction {repr(cmd)}')
 
                 # Equivalent to: self._exec_forward_pass(buffer_id=0)
+                # https://blog.csdn.net/shuibuzhaodeshiren/article/details/87115118
+                # 2.1 MethodType 把方法绑定到类的实例中,此时方法在类实例间不共享
                 self._exec_instr = MethodType(self._INSTRUCTION_MAP[type(cmd)], self)
+
+                gd.debuginfo(prj="ds", info=f'=====## {self._exec_instr}/{self._INSTRUCTION_MAP[type(cmd)]} START======')
                 self._exec_instr(**cmd.kwargs)
+                gd.debuginfo(prj="ds", info=f'=====## {self._exec_instr}/{self._INSTRUCTION_MAP[type(cmd)]} END======')

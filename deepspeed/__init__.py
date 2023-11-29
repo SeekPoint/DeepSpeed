@@ -144,16 +144,26 @@ def initialize(args=None,
         * ``lr_scheduler``: Wrapped lr scheduler if user ``lr_scheduler`` is passed, or
           if ``lr_scheduler`` specified in JSON configuration. Otherwise ``None``.
     """
-    log_dist("DeepSpeed info: version={}, git-hash={}, git-branch={}".format(__version__, __git_hash__,
-                                                                             __git_branch__),
-             ranks=[0])
+    # if args.zero_stage is not None:  #===还是会出错！！！
+    if hasattr(args, 'zero_stage'):
+        z_stage = 'Z' + str(args.zero_stage)
+    else:
+        z_stage = 'pipeline'
+    if args.local_rank == 0:
+        logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
+        gd.enable_times(prj="ds", info=logf)
+
     # deepspeed.initialize入口处
-    gd.debuginfo(prj="ds")
+    gd.debuginfo(prj="ds", info=f'FUNC_IN, config_params={config_params}')
+    gd.debuginfo(prj="ds",
+                 info=f"DeepSpeed info: version={__version__, }, git-hash={__git_hash__}, git-branch={__git_branch__}")
 
     # Disable zero.Init context if it's currently enabled 禁止上下文
     zero.partition_parameters.shutdown_init_context()
 
     assert model is not None, "deepspeed.initialize requires a model"
+
+    gd.debuginfo(prj="ds", info=f'===initialize sep0===============================================================')
 
     global dist
     from deepspeed import comm as dist
@@ -161,39 +171,57 @@ def initialize(args=None,
     # 当然大部分情况我们都选择 cuda
     # 可以通过环境变量 DS_ACCELERATOR 指定
     dist_backend = get_accelerator().communication_backend_name()
-    gd.debuginfo(prj="ds", info=f"dist_backend is {dist_backend}")
+    gd.debuginfo(prj="ds", info=f"dist_backend={dist_backend}")
 
     dist.init_distributed(dist_backend=dist_backend,
                           dist_init_required=dist_init_required)
 
+    gd.debuginfo(prj="ds", info=f'===initialize sep1===============================================================')
+
     # Set config using config_params for backwards compat
     if config is None and config_params is not None:
         config = config_params
+        gd.debuginfo(prj="ds", info=f'A-config={config}')
 
     # Check for deepscale_config for backwards compat
     if hasattr(args, "deepscale_config") and args.deepscale_config is not None:
-        logger.warning("************ --deepscale_config is deprecated, please use --deepspeed_config ************")
+        gd.debuginfo(prj="ds", info="************ --deepscale_config is deprecated, please use --deepspeed_config ************")
+
         if hasattr(args, "deepspeed_config"):
-            assert (args.deepspeed_config is
-                    None), "Not sure how to proceed, we were given both a deepscale_config and deepspeed_config"
+            gd.debuginfo(prj="ds")
+            assert (args.deepspeed_config is None), "Not sure how to proceed, we were given both a deepscale_config and deepspeed_config"
+
         args.deepspeed_config = args.deepscale_config
         args.deepscale_config = None
+        gd.debuginfo(prj="ds", info=f'args.deepspeed_config={args.deepspeed_config}')
+        gd.debuginfo(prj="ds", info=f'args.deepscale_config={args.deepscale_config}')
 
     # Check that we have only one config passed
     if hasattr(args, "deepspeed_config") and args.deepspeed_config is not None:
         assert config is None, "Not sure how to proceed, " \
                                "we were given deepspeed configs in the deepspeed arguments and deepspeed.initialize() function call"
         config = args.deepspeed_config
+        gd.debuginfo(prj="ds", info=f'B-config={config}')
+
     assert config is not None, "DeepSpeed requires --deepspeed_config to specify configuration file"
 
+    gd.debuginfo(prj="ds", info=f'===initialize sep2===========================================================')
     if not isinstance(model, PipelineModule):
+        gd.debuginfo(prj="ds")
         # 首先，不是流水线模块
         config_class = DeepSpeedConfig(config, mpu)
+        gd.debuginfo(prj="ds", info=f'A-config_class={config_class}')
+        gd.debuginfo(prj="ds", info=f'===initialize sep00======================================================')
+
+        if args.local_rank == 0:
+            logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
+            gd.disable_times(prj="ds", info=logf)
+
         if config_class.hybrid_engine.enabled:
             # 混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式，
             # 同时轻松应用DeepSpeed推理引擎进行生成/评估模式，
             # 为第三阶段的RLHF训练提供了一个明显更快的训练系统
-            gd.debuginfo(prj="ds")  #only ph3
+            gd.debuginfo(prj="ds", info=f'===initialize sep11===================================================') #only ph3
             engine = DeepSpeedHybridEngine(args=args,
                                            model=model,
                                            optimizer=optimizer,
@@ -205,9 +233,10 @@ def initialize(args=None,
                                            collate_fn=collate_fn,
                                            config=config,
                                            config_class=config_class)
+            gd.debuginfo(prj="ds", info=f'===initialize sep12===============================================================')
         else:
-            # 非混合引擎，也是我们重点要梳理的
-            gd.debuginfo(prj="ds")
+            # 非混合引擎，也是我们重点要梳理的  ph1 z2
+            gd.debuginfo(prj="ds", info=f'===initialize sep21===============================================================')
             engine = DeepSpeedEngine(args=args,
                                      model=model,
                                      optimizer=optimizer,
@@ -219,13 +248,21 @@ def initialize(args=None,
                                      collate_fn=collate_fn,
                                      config=config,
                                      config_class=config_class)
+            gd.debuginfo(prj="ds", info=f'===initialize sep22===============================================================')
     else:
-        gd.debuginfo(prj="ds")
         assert mpu is None, "mpu must be None with pipeline parallelism"
         mpu = model.mpu()
         config_class = DeepSpeedConfig(config, mpu)
+        gd.debuginfo(prj="ds", info=f'mpu={mpu}, config_class={config_class}')
+
+        gd.debuginfo(prj="ds", info=f'===initialize sep31===============================================================')
+
+        if args.local_rank == 0:
+            logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
+            gd.disable_times(prj="ds", info=logf)
+
         # 如果是流水线模式，就用 PipelineEngine
-        engine = PipelineEngine(args=args,
+        engine = PipelineEngine(args=args,     # ppl
                                 model=model,
                                 optimizer=optimizer,
                                 model_parameters=model_parameters,
@@ -237,10 +274,22 @@ def initialize(args=None,
                                 config=config,
                                 config_class=config_class)
 
+        gd.debuginfo(prj="ds", info=f'===initialize sep32===============================================================')
+
+    if args.local_rank == 0:
+        logf = f'_{z_stage}_deepspeed.initialize_init.py_B_'
+        gd.enable_times(prj="ds", info=logf)
+
     # Restore zero.Init context if necessary
     zero.partition_parameters.restore_init_context()
-
     return_items = [engine, engine.optimizer, engine.training_dataloader, engine.lr_scheduler]
+
+    gd.debuginfo(prj="ds", info=f'FUNC_OUT, return_items={return_items}')
+
+    if args.local_rank == 0:
+        logf = f'_{z_stage}_deepspeed.initialize_init.py_B_'
+        gd.disable_times(prj="ds", info=logf)
+
     return tuple(return_items)
 
 

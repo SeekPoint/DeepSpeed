@@ -444,17 +444,23 @@ def _create_zero_param_parallel_group(group_size):
 
     world_size = dist.get_world_size()
     rank = dist.get_rank()
-
     zero_param_parallel_size_ = min(group_size, world_size)
+    gd.debuginfo(prj="ds", info=f"world_size={world_size}, "
+                                f"rank={rank}, "
+                                f"zero_param_parallel_size_={zero_param_parallel_size_}")
+
     _ensure_divisibility(world_size, zero_param_parallel_size_)
 
     # Build the ZeRO param intra parallel groups.
     for i in range(world_size // zero_param_parallel_size_):
         ranks = range(i * zero_param_parallel_size_, (i + 1) * zero_param_parallel_size_)
         group = dist.new_group(ranks)
+        gd.debuginfo(prj="ds", info=f"i={i}, "
+                                    f"ranks={ranks}, "
+                                    f"group={group}")
         if i == (rank // zero_param_parallel_size_):
             _ZERO_PARAM_INTRA_PARALLEL_GROUP = group
-
+            gd.debuginfo(prj="ds", info=f"_ZERO_PARAM_INTRA_PARALLEL_GROUP={_ZERO_PARAM_INTRA_PARALLEL_GROUP}")
 
 def _get_zero_param_intra_parallel_group():
     """Get the ZeRO parameter partitioning intra parallel group the caller rank belongs to."""

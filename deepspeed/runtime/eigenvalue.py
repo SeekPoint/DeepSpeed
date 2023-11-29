@@ -21,7 +21,6 @@ class Eigenvalue(object):
                  layer_name='',
                  layer_num=0):
         super().__init__()
-        gd.debuginfo(prj="ds")
 
         self.verbose = verbose
         self.max_iter = max_iter
@@ -33,9 +32,7 @@ class Eigenvalue(object):
 
         assert len(self.layer_name) > 0 and layer_num > 0
 
-        log_dist(
-            f'enabled eigenvalue with verbose={verbose}, max_iter={max_iter}, tol={tol}, stability={stability}, gas_boundary_resolution={gas_boundary_resolution}, layer_name={layer_name}, layer_num={layer_num}',
-            ranks=[0])
+        gd.debuginfo(prj="ds", info=f'enabled eigenvalue with verbose={verbose}, max_iter={max_iter}, tol={tol}, stability={stability}, gas_boundary_resolution={gas_boundary_resolution}, layer_name={layer_name}, layer_num={layer_num}')
 
     # Replace all nan/pos-inf/neg-inf to zero
     # TODO: Pytorch new version may add this function, replace this one by then.

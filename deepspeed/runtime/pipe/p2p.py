@@ -37,8 +37,8 @@ def init_process_groups(grid):
     assert _grid.pipe_parallel_size > 1, "There is no pipeline parallelism"
 
     if not can_send_recv():
-        gd.debuginfo(prj="ds")
         _groups = [dist.new_group(ranks=group) for group in _grid.p2p_groups]
+        gd.debuginfo(prj="ds", info=f'_groups={_groups}')
 
 
 def _is_valid_send_recv(src_stage, dest_stage):

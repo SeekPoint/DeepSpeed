@@ -1,0 +1,122 @@
+# DeepSpeeD ZeRO stage 1和2的内存优化
+
+https://strint.notion.site/DeepSpeeD-ZeRO-stage-1-2-820766a561f84c27b14ade6bfdbf9ef3
+
+By strint, [Depeng Liang](https://github.com/Ldpe2G) and [Luyang Zhao](https://github.com/Flowingsun007)
+
+## 本文中的标识符约定
+
+S  :  总参数个数，等于 ZeRO文章中的符号 ψ，当下文描述通信量的时候，只统计总的通信参数个数与 Zero 文章对应。
+g :  fp32梯度，4S字节
+p  :  fp32参数，4S 字节
+m :  adam momentum, 4S 字节
+v  :  adam variance, 4S 字节
+n  :  数据并行设备数也就是进程数
+
+## **普通混合精度数据并行**
+
+对于普通的混合精度的数据并行，假设模型总参数个数是 S，则显存占用量是 （K + 2 + 2）* S 字节。
+其中 K=12 (fp32类型的 adam states m 和 v 和 p，每个都是4个字节，加起来等于12)，接下来两个2 分别表示是 ，fp16 的参数和梯度。
+
+普通混合精度数据并行的通信量， 反向之后做一次 all-reduce（reduce-scatter + allgather），同步fp16 梯度 。总通信量 2S。
+
+概括下：
+
+g_fp16[2S Bytes]
+→ Communication(all_reduce, 2S)
+→ g_fp16[2S Bytes，**inplace**]
+→ g[4S Bytes]
+→ m[4S Bytes] + v[4S Bytes]
+→ p[4S Bytes, 释放g]
+→ p_fp16[2S Bytes]
+
+K = 4 * 3 = 12
+total_mem_size = 2S + K*S + 2S= 16S Bytes
+total_comm_volume = 2S
+
+### Deepspeed stage1 与 stage2 优化，代码实现上的细节
+
+### stage1优化:
+
+首先把一个group的 fp16 的所有参数 flatten 成一维的向量，然后按顺序拼接在一起，变成一个完整的一维向量，
+对应 [代码](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage1.py#L248)。
+之后对这个一维度向量做切分，形成子分片为计算和通信做准备。
+stage1 的切分的方式是先按通信次数切成多次通信的通信分片，再对通信分片切分出进程分片。
+切分通信分片的依据是构建了一个最大单次总通信数据量 max_elems_per_comm，则每个进程单次通信量是
+sub_partition_size = max_elems_per_comm / n。
+
+不同设备所负责更新的参数部分配方式如下图，
+对应[代码](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage1.py#L279)：
+
+首先把拼成一维的 fp16 参数 按照 sub_partition_size 分段，接着按顺序给不同的进程分配其负责更新的参数分段：
+015.png
+
+!https://cdn.nlark.com/yuque/0/2021/png/874694/1615439759352-ae710901-ed15-4a6b-806b-6689a0638a72.png#align=left&display=inline&height=801&margin=%5Bobject%20Object%5D&name=zero_stage_1.png&originHeight=801&originWidth=1664&size=106195&status=done&style=none&width=1664
+
+接着每个 rank 将自己负责的 fp16 参数分段拷贝一份转换成 fp32 ，这样子就得到了本地需要负责更新的 fp32 参数分片。
+
+接着把本地的 fp32 参数分片替换掉 optimizer 中的参数 ，对应[代码](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage1.py#L320)。然后初始化 optimizer states，Adam 的 m和 v，由于optimizer 中的参数已经是本地分片大小，所以创建的m和v就是分片大小。到这里就完成了 fp32 的 参数， m 和 v 的按设备数均分。而fp16的参数和梯度还是每张卡都有一份完整的。
+
+这时候显存开销降为 (2 + 2 + K / n ) * S Bytes。
+
+每个进程在反向完成得到所有 fp16 梯度之后，再进行 reduce-scatter 同步并分发梯度，每个 rank 拿到本地负责的梯度，转为 fp32 在参数更新之后就释放掉，而 fp16 的梯度也会释放掉但是因为是后向完成之后才释放的，所以峰值显存占用还是需要考虑 fp16 的梯度。接着做一次 all-gather 收集更新之后的 fp16 参数，所以总通信量与普通混合精度数据并行一致 2S 。
+
+概括下：
+g_fp16[2S Bytes]
+→  Communication(reduce_scatter, S)
+→ part_g_fp16[2S Bytes, inplace]
+→ part_g[4S/n Bytes，**释放无关的和有关的part_g_fp16，这里是整个后向完成后才释放**]
+→ part_m[4S/n Bytes] + part_v[4S/n Bytes]
+→ part_p[4S/n Bytes，释放part_g]
+→ part_p_fp16[2S/n Bytes]→  Communication(all_gather, S)
+→ p_fp16[2S Bytes]
+
+tatal_mem_size(os) = 2S + 12S/n + 2S = 4S + 12S/n Bytes
+total_comm_volume = 2S
+
+### stage2优化：
+
+在参数切分上比 stage1 的方式要简单，首先还是把 fp16 的所有参数 flatten 成一维的向量，然后按顺序拼接在一起，变成一个完整的一维向量。
+
+每个进程分配所负责更新参数的方式，直接把 flatten 成一维参数直接按进程数分段，按顺序给每个进程分配所负责更新的参数分段，如下图所示：
+016.png
+
+!https://cdn.nlark.com/yuque/0/2021/png/874694/1615444637521-f7e7f3ae-ed40-44c9-93bb-10af50badd7a.png#align=left&display=inline&height=460&margin=%5Bobject%20Object%5D&name=zero_stage_2.png&originHeight=460&originWidth=1627&size=33970&status=done&style=none&width=1627
+
+接着和 stage1 一样，每个进程把所负责分段的 fp16 参数拷贝一份转成 fp32，就得到了本进程所负责维护的参数分片。
+
+而 stage 2 能把 fp16 梯度显存占用下降为原来的 1/n 是因为，其做梯度进程之间梯度同步是通过往参数的 acc_grad 上注册 hook 函数的方式实现的，具体[代码](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage2.py#L629)[链接](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage2.py#L651)。
+
+在一个参数的fp16梯度计算完成且 acc_grad 操作完成后，就会触发 fp16 的梯度 reduce，在 reduce 完成后，就会立即释放其当前已经完成了reduce 并且和本进程要更新的分片无关的 fp16 梯度。
+
+具体实现简单来说就是在反向过程中，就是当某层参数的梯度计算完成之后，就会调用注册的 backward hook 函数。
+在注册的 hook 函数中首先看已经计算好的梯度累计大小，如果小于一个预设的 bucket_size，那么就把已经计算好的梯度放到一个预设的 buff 中，而当累计梯度超过bucket_size，就会触发 reduce 操作。reduce 时候每个rank 会知道该把这部分梯度往哪个 rank 上去 reduce，对应[代码](https://github.com/strint/DeepSpeed/blob/e6fdc85d455ad9c6e29eb82b674402b05d909121/deepspeed/runtime/zero/stage2.py#L809)。最后 reduce 完成之后，每个 rank 就会就释放掉不属于本进程所负责的参数分片对应的 fp16 梯度。
+
+所以显存大致可以降为 (2 + (2 + K) / n) * S Bytes。
+
+**总的来说，stage 2 的梯度显存释放是在反向过程中，边计算边释放的。这是与 stage 1 不同的地方。而这也可以一定程度上解释，为什么stage2能比stage1省显存的同时，性能也有提升，stage2是在 backward hook 中做的通信，所以能一定程度 overlap grad  reduce 的通信和 grad 的反向计算。**
+
+**触发 reduce 和无关 grad 的释放，需要注意的是并非每个参数的 grad 生成后就立即触发，而是等参数量达到一定的 bucket size 才触发。** 这里存在通信和计算 overlap 的 trade-off，backward 和 reduce 任务可以并行提交给stream，但是 reduce 任务提交到 stream 上后，会设置 wait()，使得之后 stream 上的任务都要等待 reduce kernel 的完成。按说这个同步点对 backward 任务有拖累，所以并不是每个参数都会触发 reduce，而是以bucket 为单位，批量触发。bucket 越小，显存占用越小，但是速度会慢【这里可以实验调参】。另外这块有个优化实现，采用双 bucket buff 和独立的 reduce stream，使得这块并行度提高，开关是 overlap_comm【这里luyang做了对比试验，吞吐相比不打开会提升2%+，显存占用增加约7%】。
+
+**使用 reduce 而不是 reduce-scatter 看代码应该主要是为了实现方便** ，累积一个参数的多个分片然后做一次reduce-scatter 和 累积一个参数多个分片后循环以分片为单位调用多次reduce，通信量一样，按说是相当的。使用reduce主要是不需要考虑多个进程的分片汇总后重建参数再一起reduce-scatter，而是一个分片就直接 reduce 到对应的 rank。
+
+**释放grad时，stage 2不是最优实现。** 考虑一个大参数的情况，n张卡，如果一个参数P占比总参数超过1/n，那么就会跨多个进程；假设P跨两个进程a和b，a进程负责P.grad的一部分P.grad_part_a，b进程负责P.grad的一部分P.grag_part_b；按说reduce后，a进程可以释放P.grad_part_b，b进程可以释放P.grad_part_a（分片粒度），但是实际上reduce后，a和b都会保留完整的P.grad（参数粒度），直到所有backward完成后的参数更新阶段的P.grad_fp32生成后。考虑全网络就一个parameter的极端例子，它就相当于没有做grad的分片在backward释放，从stage 2退化到了stage 1。所以stage 2这里是近似好的实现，不是最好的实现。不过因为参数的划分不是平均划分到每张卡，而是按参数顺序从前往后分布到各张卡上，所以只有一个参数跨多张卡时，才带来了冗余的grad保存，大部分情况下没有这个问题。
+
+而反向的 reduce 是直接只同步分片，参数更新完成之后，再做一次 all-gather，总通信量还是和普通数据并行一致 2S。
+
+概括下：
+g_fp16[2S Bytes]
+→  Communication(reduce, S，**释放无关的g_fp16，这个是边做 backward 边完成的**)
+→ part_g_fp16[2S/n Bytes]
+→ part_g[4S/n Bytes，释放有关的part_g_fp16]
+→ part_m[4S/n Bytes] + part_v[4S/n Bytes]
+→  part_p[4S/n Bytes，释放part_g] → part_p_fp16[2S/n Bytes]
+→  Communication(all_gather, S)
+→ p_fp16[2S Bytes]
+
+tatal_mem_size(os + g) = 2S/n + 12S/n + 2S = 2S + 14S/n Bytes
+total_comm_volume = 2S
+
+## 参考资料
+
+- https://github.com/strint/DeepSpeed

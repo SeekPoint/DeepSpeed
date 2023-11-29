@@ -51,8 +51,8 @@ def read_zero_config_deprecated(param_dict):
     zero_config_dict = {}
     zero_config_dict["stage"] = 1 if param_dict[ZERO_OPTIMIZATION] else 0
     if zero_config_dict["stage"] > 0:
-        gd.debuginfo(prj="ds")
         zero_config_dict["allgather_bucket_size"] = get_scalar_param(param_dict, "allgather_size", 5e8)
+        gd.debuginfo(prj="ds", info=f'zero_config_dict["allgather_bucket_size"]={zero_config_dict["allgather_bucket_size"]}')
     logger.warning(
         "DeepSpeedConfig: this format of ZeRO optimization setup is deprecated. Please use the following format: {}".
         format(ZERO_FORMAT))

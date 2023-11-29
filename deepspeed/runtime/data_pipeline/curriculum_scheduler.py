@@ -11,7 +11,6 @@ from pydebug import gd, infoTensor
 class CurriculumScheduler(object):
 
     def __init__(self, config):
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         super().__init__()
         self.state = {}
         assert CURRICULUM_LEARNING_MIN_DIFFICULTY in config, \
@@ -25,6 +24,7 @@ class CurriculumScheduler(object):
         self.state[CURRICULUM_LEARNING_CURRENT_DIFFICULTY] = config[CURRICULUM_LEARNING_MIN_DIFFICULTY]
         self.state[CURRICULUM_LEARNING_SCHEDULE_TYPE] = config[CURRICULUM_LEARNING_SCHEDULE_TYPE]
         self.first_step = True
+
         if config[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_FIXED_DISCRETE:
             """
             The schedule_config is a list of difficulty and a list of max
@@ -38,7 +38,7 @@ class CurriculumScheduler(object):
             The self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG] is a dictionary of
             difficulty : [max step for this difficulty, next difficulty].
             """
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_discrete schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY}'"
             assert CURRICULUM_LEARNING_SCHEDULE_MAX_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
@@ -67,7 +67,7 @@ class CurriculumScheduler(object):
               "root_degree": 2
             }
             """
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             assert CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_root schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP}'"
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
@@ -75,9 +75,7 @@ class CurriculumScheduler(object):
             assert CURRICULUM_LEARNING_SCHEDULE_ROOT_DEGREE in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_root schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_ROOT_DEGREE}'"
             if config[CURRICULUM_LEARNING_SCHEDULE_CONFIG][CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP] % 8 != 0:
-                logger.warning(
-                    f'When using seqlen metric, the difficulty_step for curriculum learning has to be multiple of 8 (for FP16 data) or 16 (for INT8 data) to enable NVIDIA Tensor Core acceleration. Disregard this warning if this is unrelated to your metric/hardware.'
-                )
+                gd.debuginfo(prj='ds', info=f'When using seqlen metric, the difficulty_step for curriculum learning has to be multiple of 8 (for FP16 data) or 16 (for INT8 data) to enable NVIDIA Tensor Core acceleration. Disregard this warning if this is unrelated to your metric/hardware.')
             self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG] = config[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         elif config[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_FIXED_LINEAR:
             """
@@ -88,18 +86,15 @@ class CurriculumScheduler(object):
               "difficulty_step": 8
             }
             """
-            gd.debuginfo(prj="ds")
             assert CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_linear schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_TOTAL_STEP}'"
             assert CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP in config[CURRICULUM_LEARNING_SCHEDULE_CONFIG], \
                 f"Curriculum learning with fixed_linear schedule requires the schedule_config '{CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP}'"
             if config[CURRICULUM_LEARNING_SCHEDULE_CONFIG][CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP] % 8 != 0:
-                logger.warning(
-                    f'When using seqlen metric, the difficulty_step for curriculum learning has to be multiple of 8 (for FP16 data) or 16 (for INT8 data) to enable NVIDIA Tensor Core acceleration. Disregard this warning if this is unrelated to your metric/hardware.'
-                )
+                gd.debuginfo(prj='ds', info=f'When using seqlen metric, the difficulty_step for curriculum learning has to be multiple of 8 (for FP16 data) or 16 (for INT8 data) to enable NVIDIA Tensor Core acceleration. Disregard this warning if this is unrelated to your metric/hardware.')
             self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG] = config[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         elif config[CURRICULUM_LEARNING_SCHEDULE_TYPE] == CURRICULUM_LEARNING_SCHEDULE_CUSTOM:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
             """
             Fully customized schedule. User need to provide a custom schedule
             function by using the set_custom_curriculum_learning_schedule API
@@ -128,8 +123,8 @@ class CurriculumScheduler(object):
         self.state = state
 
     def __fixed_discrete_get_difficulty(self, global_steps):
-        gd.debuginfo(prj="ds")
         s_state = self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
+        gd.debuginfo(prj="ds", info=f's_state={s_state}')
         if global_steps > s_state[CURRICULUM_LEARNING_SCHEDULE_MAX_STEP][-1]:
             return s_state[CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY][-1]
         for i in range(len(s_state[CURRICULUM_LEARNING_SCHEDULE_MAX_STEP])):
@@ -137,7 +132,6 @@ class CurriculumScheduler(object):
                 return s_state[CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY][i]
 
     def __fixed_root_get_difficulty(self, global_steps, root_degree=None):
-        gd.debuginfo(prj="ds")
         s_state = self.state[CURRICULUM_LEARNING_SCHEDULE_CONFIG]
         if root_degree is None:
             gd.debuginfo(prj="ds")
@@ -149,6 +143,7 @@ class CurriculumScheduler(object):
             self.state[CURRICULUM_LEARNING_MIN_DIFFICULTY])
         next_difficulty -= (next_difficulty % s_state[CURRICULUM_LEARNING_SCHEDULE_DIFFICULTY_STEP])
         next_difficulty = min(next_difficulty, self.state[CURRICULUM_LEARNING_MAX_DIFFICULTY])
+        gd.debuginfo(prj="ds", info=f'next_difficulty={next_difficulty}')
         return next_difficulty
 
     def get_difficulty(self, global_steps):

@@ -34,7 +34,7 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
     inference_mp_group = None
 
     def __init__(self, args, model, **kwargs):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
 
         super().__init__(args, model, **kwargs) #调用基类的DeepSpeedEngine
 
@@ -69,6 +69,8 @@ class DeepSpeedHybridEngine(DeepSpeedEngine):
             gd.debuginfo(prj="ds", info=f'builder={builder}+++inference_cuda_module={inference_cuda_module}')
 
         self.is_lora_fused = False
+
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
 
     def convert_to_linear_transposed(self, model):
         def _replace_linear_layer(r_module, parent_type=None, prev_type=None):

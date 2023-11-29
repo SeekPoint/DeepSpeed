@@ -601,18 +601,24 @@ def prefix_sum_inc(weights):
 
 
 def partition_uniform(num_items, num_parts):
-    gd.debuginfo(prj="ds")
+    gd.debuginfo(prj="ds", info=f'num_items={num_items}, num_parts={num_parts}')
     parts = [0] * (num_parts + 1)
     # First check for the trivial edge case
     if num_items <= num_parts:
         for p in range(num_parts + 1):
             parts[p] = min(p, num_items)
+            gd.debuginfo(prj="ds", info=f'parts[{p}]={min(p, num_items)}')
         return parts
 
     chunksize = floor(num_items / num_parts)
+
     for p in range(num_parts):
         parts[p] = min(chunksize * p, num_items)
+        gd.debuginfo(prj="ds", info=f'parts[{p}]={min(chunksize * p, num_items)}')
+
     parts[num_parts] = num_items
+
+    gd.debuginfo(prj="ds", info=f'parts={parts}, chunksize={chunksize}')
     return parts
 
 
@@ -664,22 +670,25 @@ def _rb_partition_balanced(weights, num_parts, eps):
             lower = mid + eps
     return upper
 
-
+# 进行简单的 stage 划分，平衡每张卡的计算量
 def partition_balanced(weights, num_parts, eps=1e-3):
-    gd.debuginfo(prj="ds")
     num_items = len(weights)
+    gd.debuginfo(prj="ds", info=f'num_items={num_items}, num_parts={num_parts}')
+
     # First check for the trivial edge case
     if num_items <= num_parts:
-        gd.debuginfo(prj="ds")
         return partition_uniform(num_items, num_parts)
 
     weights_ = prefix_sum_inc(weights)
+    gd.debuginfo(prj="ds", info=f'weights_={weights_}')
 
     # Find the smallest bottleneck (weight of heaviest partition)
     bottleneck = _rb_partition_balanced(weights_, num_parts, eps=eps)
+    gd.debuginfo(prj="ds", info=f'bottleneck={bottleneck}')
 
     # Now compute that partitioning
     parts, success = _lprobe(weights_, num_parts, bottleneck)
+    gd.debuginfo(prj="ds", info=f'parts={parts}, success={success}')
     assert success
 
     return parts
@@ -859,19 +868,19 @@ def see_memory_usage(message, force=False):
 
     # Print message except when distributed but not rank 0
     gd.debuginfo(prj="ds", info=f'{message}')
-    logger.info(message)
+    # logger.info(message)
 
     tmp = f"MA {round(get_accelerator().memory_allocated() / (1024 * 1024 * 1024),2 )} GB \
         Max_MA {round(get_accelerator().max_memory_allocated() / (1024 * 1024 * 1024),2)} GB \
         CA {round(torch_memory_reserved() / (1024 * 1024 * 1024),2)} GB \
         Max_CA {round(torch_max_memory_reserved() / (1024 * 1024 * 1024))} GB "
-    logger.info(tmp)
+    # logger.info(tmp)
     gd.debuginfo(prj="ds", info=tmp)
 
     vm_stats = psutil.virtual_memory()
     used_GB = round(((vm_stats.total - vm_stats.available) / (1024**3)), 2)
     tmp = f'CPU Virtual Memory:  used = {used_GB} GB, percent = {vm_stats.percent}%'
-    logger.info(tmp)
+    # logger.info(tmp)
     gd.debuginfo(prj="ds", info=tmp)
 
     # get the peak memory to report correct data, so reset the counter for the next call
@@ -1001,18 +1010,18 @@ def clip_tensors_by_global_norm(input_tensors, max_norm=1.0, global_norm=None, m
 
     return global_norm
 
-
+# 不是把list每个tensor对齐，仅仅是list最后可能会加上一个padding tensor!!
 def align_dense_tensors(tensor_list, alignment):
     num_elements = sum(t.numel() for t in tensor_list)
     remaining = num_elements % alignment
-
+    gd.debuginfo(prj="ds", info=f'num_elements={num_elements}, remaining={remaining}')
     if remaining:
-        # gd.debuginfo(prj="ds")
-        elements_to_add = alignment - remaining #需要填充的个数
+        elements_to_add = alignment - remaining # 需要填充的个数
         pad_tensor = torch.zeros(elements_to_add, device=tensor_list[0].device, dtype=tensor_list[0].dtype)
+        gd.debuginfo(prj="ds", info=f'pad_tensor={infoTensor(pad_tensor)}, elements_to_add={elements_to_add}')
         padded_tensor_list = tensor_list + [pad_tensor]
     else:
-        # gd.debuginfo(prj="ds")  取模为0， 刚好对齐，不需要填充
+        gd.debuginfo(prj="ds", info=f'No padding.')  # 取模为0， 刚好对齐，不需要填充
         padded_tensor_list = tensor_list
 
     return padded_tensor_list

@@ -20,11 +20,11 @@ def debug_extract_module_and_param_names(model):
     module_names = {module: name for name, module in model.named_modules()}
     param_names = {param: name for name, param in model.named_parameters()}
 
-    gd.debuginfo(prj="ds", info=f"---------------module_names-----------------------")
+    gd.debuginfo(prj="ds", info=f"-----------len of module_names.items() ={len(module_names.items())}------")
     for k, v in module_names.items():
-        gd.debuginfo(prj="ds", info=f"{k} is: {infoTensor(v)}")
+        gd.debuginfo(prj="ds", info=f"{k} is: {v}")
 
-    gd.debuginfo(prj="ds", info=f"---------------param_names-----------------------")
+    gd.debuginfo(prj="ds", info=f"-----------len of param_names.items()() ={len(param_names.items())}------")
     for k, v in param_names.items():
         gd.debuginfo(prj="ds", info=f"{infoTensor(k)} is: {v}")
 

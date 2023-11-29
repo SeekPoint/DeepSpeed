@@ -72,7 +72,7 @@ def get_alignment_padding(tensor_list, alignment):
     remainder = num_elements % alignment
     return (alignment - remainder) if remainder else remainder
 
-
+# 就是把list中所有tensor放到cpu上去
 def move_to_cpu(tensor_list):
     for tensor in tensor_list:
         tensor.data = tensor.data.cpu()
@@ -149,21 +149,37 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                  fp16_master_weights_and_gradients = False,  # 是否使用fp16存储主权重和梯度，可以节省内存
                  elastic_checkpoint = False):  # 是否使用弹性检查点，当为True时，可以在训练过程中动态保存和加载模型，提高训练的容错性
 
+        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_IN')
+        # gd.debuginfo(prj='ds', info=f'init_optimizer={init_optimizer.param_groups}')
+        for gi, g in enumerate(init_optimizer.param_groups):
+            for k, v in g.items():
+                if isinstance(v, list):
+                    gd.debuginfo(prj='ds', info=f'init_optimizer[{gi}][{k}]= len of items={len(v)}')
+                    for index, val in enumerate(v):
+                        gd.debuginfo(prj='ds', info=f'init_optimizer[{gi}][{k}][{index}]={infoTensor(val)}')
+                else:
+                    gd.debuginfo(prj='ds', info=f'init_optimizer[{gi}][{k}]={str(v)}')
+        # 2卡3卡都一样， TBD 记录到文件
+
         # 如果当前是主节点，打印一些设置的日志信息
         if dist.get_rank() == 0:
-            gd.debuginfo(prj='ds', info=f"Reduce bucket size {reduce_bucket_size}")
-            gd.debuginfo(prj='ds', info=f"Allgather bucket size {allgather_bucket_size}")
-            gd.debuginfo(prj='ds', info=f"CPU Offload: {cpu_offload}")
-            gd.debuginfo(prj='ds', info=f'Round robin gradient partitioning: {round_robin_gradients}')
+            gd.debuginfo(prj='ds', info=f"Reduce bucket size {reduce_bucket_size}") # 500,000,000
+            gd.debuginfo(prj='ds', info=f"Allgather bucket size {allgather_bucket_size}") # 500,000,000
+            gd.debuginfo(prj='ds', info=f"CPU Offload: {cpu_offload}") # False
+            gd.debuginfo(prj='ds', info=f'Round robin gradient partitioning: {round_robin_gradients}') # False
 
         # The fused optimizer does all the work. We need this layer for two reason:
         # 1. maintain same user API from apex.fp16_utils
         # 2. keep common stuff here in case we need to add ne552w fused optimizer later
-
         # 设置一些属性
         self.elastic_checkpoint = elastic_checkpoint
         self.param_names = param_names
-        self.mpu = mpu
+        self.mpu = mpu  # 模型并行单元，用于处理模型并行的相关操作
+        gd.debuginfo(prj='ds', info=f"self.elastic_checkpoint={self.elastic_checkpoint}") # False
+        gd.debuginfo(prj='ds', info=f"len of self.param_names={len(self.param_names)}")
+        for k, v in self.param_names.items():   # k 是tensor， v是字符串，张量的名称
+            gd.debuginfo(prj='ds', info=f"self.param_names[{infoTensor(k)}]={v}")
+        gd.debuginfo(prj='ds', info=f"self.mpu={self.mpu}")  # None
 
         # differences from apex.fp16_utils:
         # - assume all model params in fp16
@@ -185,47 +201,57 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # ZeRO stage 1 (False) or 2 (True)
         #  是否启用梯度分割
         self.partition_gradients = partition_grads  # type: bool
+        gd.debuginfo(prj='ds', info=f"self.partition_gradients={self.partition_gradients}") # True
 
         # stage 阶段
         self.zero_stage_string = "ZeRO-2" if partition_grads else "ZeRO-1"
+        gd.debuginfo(prj='ds', info=f"self.zero_stage_string={self.zero_stage_string}")  # "ZeRO-2"
 
         self.timers = timers
 
         self.reduce_scatter = reduce_scatter
+        gd.debuginfo(prj='ds', info=f"self.reduce_scatter={self.reduce_scatter}") # True
 
         # 配置项 默认为 False
         # 尝试将梯度缩减与逆向计算相重叠
         self.overlap_comm = overlap_comm  # type: bool
+        gd.debuginfo(prj='ds', info=f"self.overlap_comm={self.overlap_comm}")  # False TBD-True
 
-        self.cpu_offload = cpu_offload
-
+        self.cpu_offload = cpu_offload  # False
         self.deepspeed_adam_offload = cpu_offload
+        gd.debuginfo(prj='ds', info=f"self.cpu_offload={self.cpu_offload}") # False
 
         # 获取当前设备，如果开启了CPU offload，那么设备为cpu，否则为当前设备
         self.device = get_accelerator().current_device_name() if not self.cpu_offload else 'cpu'
+        gd.debuginfo(prj='ds', info=f"self.device={self.device}")  # cuda:0
 
         # 所属的并行进程组
         self.dp_process_group = dp_process_group
-
-        #  专家并行所属的组  expert parallel group
+        # gd.debuginfo(prj='ds', info=f"self.dp_process_group={self.dp_process_group}")
+        # self.dp_process_group=<torch.distributed.distributed_c10d.ProcessGroup object at 0x7f2500342eb0>
+        #  专家并行所属的组  expert parallel group  ，这是MoE的概念，ph1-z2没有用到
         self.ep_process_group = expert_parallel_group
+        gd.debuginfo(prj='ds', info=f"self.ep_process_group={self.ep_process_group}") # None
 
         #data parallel group for experts
-        # 专家数据并行组  data parallel group for experts
+        # 专家数据并行组  data parallel group for experts  ，这是MoE的概念，ph1-z2没有用到
         self.expert_dp_process_group = expert_data_parallel_group
+        gd.debuginfo(prj='ds', info=f"self.expert_dp_process_group={self.expert_dp_process_group}") # None
 
         #data parallel size for non-experts # 数据并行的大小
         dp_size = dist.get_world_size(group=self.dp_process_group)
+        gd.debuginfo(prj='ds', info=f"dp_size={dp_size}") # 2，就是机器上显卡个数， 由pytorch返回， 可以CUDA_VISIBILE_DEVICE控制
 
         #For MoE models this maybe different for different param group
         #It will be modified during MoE setup later in the init
         # 对于MoE模型，这可能对于不同的参数组是不同的
         # 它将在init中的MoE设置过程中被修改
-        self.real_dp_process_group = [dp_process_group for i in range(len(self.optimizer.param_groups))]
-        self.partition_count = [dp_size for i in range(len(self.optimizer.param_groups))]
-        gd.debuginfo(prj='ds', info=f"partition_count={self.partition_count}")
-        gd.debuginfo(prj='ds', info=f"real_dp_process_group={self.real_dp_process_group}")
-
+        self.real_dp_process_group = [dp_process_group for i in range(len(self.optimizer.param_groups))] # 也就是说每个参数组的进程组对象是一样的
+        self.partition_count = [dp_size for i in range(len(self.optimizer.param_groups))] # 也就是说每个参数组的分区大小是一样的
+        gd.debuginfo(prj='ds', info=f"partition_count={self.partition_count}")  #2张卡 [2, 2]没有lora, [2,2,2]有lora；3张卡[3,3]
+        gd.debuginfo(prj='ds', info=f"number of real_dp_process_group={len(self.real_dp_process_group)}") # 2
+        # real_dp_process_group=[<torch.distributed.distributed_c10d.ProcessGroup object at 0x7f75c439f2f0>, <torch
+        
         self.is_gradient_accumulation_boundary = True
 
         # CPU-Offload requires contiguous gradients
@@ -240,7 +266,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self._global_grad_norm = 0.
 
         if mpu is None:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds")  # ph1-z2 没有使用模型并行！
             self.model_parallel_group = None
             self.model_parallel_world_size = 1
             self.model_parallel_rank = 0
@@ -249,6 +275,12 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             self.model_parallel_group = mpu.get_model_parallel_group()
             self.model_parallel_world_size = mpu.get_model_parallel_world_size()
             self.model_parallel_rank = bwc_tensor_model_parallel_rank(mpu)
+
+        gd.debuginfo(prj='ds', info=f'self.model_parallel_group={self.model_parallel_group}')
+        gd.debuginfo(prj='ds', info=f'self.model_parallel_world_size={self.model_parallel_world_size}')
+        gd.debuginfo(prj='ds', info=f'self.model_parallel_rank={self.model_parallel_rank}')
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 0+++++++++++++++')
 
         # 初始化一些参数
         self.overflow = False  # 是否溢出
@@ -280,9 +312,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # param flattened by groups
         self.bit16_groups = []  # 按组划分的参数
-        self.bit16_groups_flat = []  # 扁平化的参数组
+        self.bit16_groups_flat = []  # 扁平化按组划分的参数
 
-        # param partitioned by data parallel degree， 并行划分的参数组
+        # param partitioned by data parallel degree， 数据并行划分的参数组
         # this will contain a list of equal sized tensors ， 它包含等尺寸的张量的列表
         # each of which will be updated by a different process， 每一个由不同进程更新
         self.parallel_partitioned_bit16_groups = []
@@ -305,7 +337,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # Offset from the first parameter in the the self.params_in_partition
         # the parameter boundaries may not align with partition boundaries
         # so we need to keep track of the offset
-        # 第一个参数的偏移量
+        # self.params_in_partition中第一个参数的偏移量， 参数的边界可能和分区的边界不一致，需要跟踪offset
         self.first_offset = []
 
         # number of elements per partition in each group
@@ -322,14 +354,16 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         self.all_reduce_print = False   # 是否打印all_reduce的输出
         self.dtype = self.optimizer.param_groups[0]['params'][0].dtype  # 参数数据类型
-
+        gd.debuginfo(prj="ds", info=f'self.dtype={self.dtype}')
         self.round_robin_bit16_groups = []  # 初始化空的round_robin_bit16_groups
         self.round_robin_bit16_indices = []  # 初始化空的round_robin_bit16_indices
 
         # Use different parallel to do all_to_all_reduce related things
-        # padding on each partition for alignment purposes
-        # 用于对齐分区的填充
+        # padding on each partition for alignment purposes all_to_all_reduce
+        # 用于对齐每个分区的填充， 和使用不同的并行来做相关 ???, index是每个partition_ID, val是padding个数
         self.groups_padding = []
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 1+++++++++++++++')
 
         '''
         3.2. 参数分割
@@ -346,31 +380,23 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         ‘lr’, ‘betas’, ‘eps’, ‘weight_decay’, ‘amsgrad’ ： 本组参数学习率相关的配置项，可以不用管。
         '''
         # loop to deal with groups
-        # 在创建 optimizer 时，可以对模型参数进行分组，每组使用不同的 学习率和更新参数
-        # 这个 self.optimizer.param_groups 是存储这个组的
-        # 其本身是一个 list，每个元素是一个 dict
-        # self.optimizer.param_groups : List[Dict]
-        # 每个 dict 的key 是 dict_keys(['params', 'lr', 'betas', 'eps', 'weight_decay', 'amsgrad'])
-        # 'params' ：需要梯度更新的模型参数
-        # 'lr', 'betas', 'eps', 'weight_decay', 'amsgrad' ： 本组参数学习率相关的配置项
-
         # 遍历优化器的参数组
         for i, param_group in enumerate(self.optimizer.param_groups):
             # 每组参数分开处理， 获取当前分区的id
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
 
-            gd.debuginfo(prj="ds", info=f'{i}th partition_id={partition_id}')
+            gd.debuginfo(prj="ds", info=f'-----The {i}th param_group with partition_id={partition_id} start----------------')
 
             # push this group to list before modify
             # TODO: Explore simplification that avoids the extra book-keeping by pushing the reordered group
             # 存储需要训练的参数
             trainable_parameters = [param for param in param_group['params'] if param.requires_grad]
-
+            gd.debuginfo(prj="ds", info=f'len of trainable_parameters={len(trainable_parameters)}')
             for index, param in enumerate(trainable_parameters):
-                gd.debuginfo(prj="ds", info=f'{index}th param={infoTensor(param)} ')
-
+                gd.debuginfo(prj="ds", info=f'{index}th param={infoTensor(param)} ')  # 99个
+            # 上面2卡3卡都一样，TBD 记录到文件
             # 当前 param_group 中需要梯度更新，也就是需要训练的参数列表
-            # 后续的分割都是针对他们的
+            # 后续的分割都是针对他们的，这是针对每个参数group的
             self.bit16_groups.append(trainable_parameters)
 
             # not sure why apex was cloning the weights before flattening
@@ -381,6 +407,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # move all the parameters to cpu to free up GPU space for creating flat buffer
             # 先转移到 cpu 内存，在 cpu 内存中进行处理 移动所有参数到cpu，以释放GPU空间，用于创建平坦缓冲区
             move_to_cpu(self.bit16_groups[i])
+            # 调用 pytorch/accelerator api
             empty_cache()
 
             see_memory_usage(f"After moving param group {i} to CPU", force=False)
@@ -394,60 +421,69 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 对组参数进行重排序，以实现梯度分区在backward过程中的负载平衡
             # 通过这种方式，可以确保梯度的减少方式使所有权在等级之间轮流进行
             if self.round_robin_gradients:
+                gd.debuginfo(prj="ds")
                 # 为了能尽量的均匀分配，这里采用循环分配（round_robin 方法）
                 round_robin_tensors, round_robin_indices = self._round_robin_reorder(
                     self.bit16_groups[i], dist.get_world_size(group=self.real_dp_process_group[i]))
                 # gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
                 #             round_robin_tensors={infoTensor(round_robin_tensors)}') ==不是tensor，而是tensor list
             else:
+                gd.debuginfo(prj="ds")  # ph1-z2
                 round_robin_tensors = self.bit16_groups[i]
-                round_robin_indices = list(range(len(self.bit16_groups[i])))
+                round_robin_indices = list(range(len(self.bit16_groups[i])))  # [0,1,2...len-1]
                 # gd.debuginfo(prj="ds", info=f'round_robin_indices={round_robin_indices}, \
                 #             round_robin_tensors={infoTensor(round_robin_tensors)}')
 
-            self.round_robin_bit16_groups.append(round_robin_tensors)
+            # group级别的记录
+            self.round_robin_bit16_groups.append(round_robin_tensors) #放到cpu后
             self.round_robin_bit16_indices.append(round_robin_indices)
 
             # create flat buffer in CPU and move to GPU
             # 将参数列表打平放到一个一维连续空间中 在CPU中创建平坦缓冲区并移动到GPU
             self.bit16_groups_flat.append(
                 self.flatten_dense_tensors_aligned(
-                    self.round_robin_bit16_groups[i],
+                    self.round_robin_bit16_groups[i],   # 下面是alignment，-单机上2卡是4,3卡是6
                     self.nccl_start_alignment_factor * dist.get_world_size(group=self.real_dp_process_group[i])).to(
                         get_accelerator().current_device_name()))
+
             see_memory_usage(f"After flattening and moving param group {i} to GPU", force=True)
 
             # Record padding required for alignment
             # 上面在打平的时候，可能在尾部添加了padding，这里要记录一下padding的个数
             if partition_id == dist.get_world_size(group=self.real_dp_process_group[i]) - 1:
-                # 如果是最后一个分区，计算填充值
+                # 如果是最后一个分区，计算填充值 ???没什么一个都没有
                 padding = self.bit16_groups_flat[i].numel() - sum(
                     [t.numel() for t in self.round_robin_bit16_groups[i]])
-                gd.debuginfo(prj="ds", info=f'padding={padding}')
+                gd.debuginfo(prj="ds", info=f'padding={padding} on partition_id={partition_id}')
             else:
                 # 否则，填充为0,就是不用填充
-                padding = 0
+                gd.debuginfo(prj="ds", info=f'padding is 0 on partition_id={partition_id}')
+                padding = 0   # ph1-z2全在这里
+
             self.groups_padding.append(padding)
 
             if dist.get_rank(group=self.real_dp_process_group[i]) == 0:
                 see_memory_usage(f"After Flattening and after emptying param group {i} cache", force=True)
+            gd.debuginfo(prj="ds", info=f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
             # set model bit16 weight to slices of flattened buffer
-            # 更新模型的bit16权重
+            # 更新模型各个param组的bit16权重  ---init阶段时候有必要????
             self._update_model_bit16_weights(i)
-
+            gd.debuginfo(prj="ds", info=f'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             # divide the flat weights into near equal partition equal to the data parallel degree
             # each process will compute on a different part of the partition
             # data_parallel_partitions 是分割好的结果
             # data_parallel_partitions 是一个字典类型,key 是 rank ，value 是分号的参数
-            # 将平坦权重划分为近等的分区，等于数据并行度
-            # 每个进程将在分区的不同部分进行计算
-            data_parallel_partitions = self.get_data_parallel_partitions(self.bit16_groups_flat[i], i)
-            gd.debuginfo(prj="ds", info=f'data_parallel_partitions={data_parallel_partitions}')
-            self.parallel_partitioned_bit16_groups.append(data_parallel_partitions)
+            # 将平坦权重划分为近等的分区，等于数据并行度，每个进程将在分区的不同部分进行计算
+            # 具体内容在里面打印
+            data_parallel_partitions = self.get_data_parallel_partitions(self.bit16_groups_flat[i], i) #data_parallel_partitions=[tensor([ 0.1150, -0.1438,  0.0555,  ...,  0.0183,  0.0088,  0.0258],device='cuda:0', dtype=torch.float16, grad_fn=<SliceBackward0>), tensor([0.0698, 0.0299, 0.0293,  ..., 0.3955, 0.3677, 0.5161], device='cuda:0', dtype=torch.float16, grad_fn=<SliceBackward0>)]
+            gd.debuginfo(prj="ds", info=f'len of data_parallel_partitions={len(data_parallel_partitions)}')
 
+            self.parallel_partitioned_bit16_groups.append(data_parallel_partitions)
             # verify that data partition start locations are 4-byte aligned
             # 验证数据分区起始位置是否为4字节对齐
+            # torch.Tensor.data_ptr = Returns the address of the first element of self tensor
+            # 返回tensor首元素的内存地址， 常用来判断两个Tensor是不是共享内存
             for partitioned_data in data_parallel_partitions:
                 assert (partitioned_data.data_ptr() % (2 * self.nccl_start_alignment_factor) == 0)
 
@@ -456,17 +492,19 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # from the origin params of the model.
             # 把属于当前进程（rank）的参数移动到指定设备，然后创建一个副本
             # 这个副本用于累积梯度进行参数更新，根据配置，可以是 单精度（float32）也可以是半精度（float16）
-            # 注意这个副本 detach 操作
+            # 注意这个副本 detach 操作，
             # 返回一个新的tensor，从当前计算图中分离下来的，但是仍指向原变量的存放位置, 不同之处只是requires_grad为false，
             # 得到的这个tensor永远不需要计算其梯度，不具有grad
             # 创建一个fp32主权重的分区，这个分区会被这个进程更新。
             # 注意，single_partition_of_fp32_groups中的参数是从模型的原始参数中克隆和分离出来的。
             if not fp16_master_weights_and_gradients:
-                self.single_partition_of_fp32_groups.append(self.parallel_partitioned_bit16_groups[i][partition_id].to(
-                    self.device).clone().float().detach())
+                tmp = self.parallel_partitioned_bit16_groups[i][partition_id].to(self.device).clone().float().detach()
+                gd.debuginfo(prj="ds", info=f'self.parallel_partitioned_bit16_groups[{i}][{partition_id}]={tmp}')  # ph1-z2
+                self.single_partition_of_fp32_groups.append(tmp)
             else:
-                self.single_partition_of_fp32_groups.append(self.parallel_partitioned_bit16_groups[i][partition_id].to(
-                    self.device).clone().half().detach())
+                tmp = self.parallel_partitioned_bit16_groups[i][partition_id].to(self.device).clone().half().detach()
+                gd.debuginfo(prj="ds", info=f'self.parallel_partitioned_bit16_groups[{i}][{partition_id}]={tmp}')
+                self.single_partition_of_fp32_groups.append(tmp)
             # self.single_partition_of_fp32_groups 中只包含属于当前进程（rank）的参数
             for index, pati in enumerate(self.single_partition_of_fp32_groups):
                 gd.debuginfo(prj="ds", info=f'{index}th pati={infoTensor(pati)} ')
@@ -483,24 +521,42 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
             # 重置了优化器的 param_group，仅包含分给当前进程（rank）的参数
             param_group['params'] = [self.single_partition_of_fp32_groups[i]]
+            for index, val in enumerate(param_group['params']):
+                gd.debuginfo(prj="ds", info=f"param_group['params'][{index}]={infoTensor(val)}")
 
             # 计算分区大小和分区内的参数信息
             partition_size = len(self.bit16_groups_flat[i]) / dist.get_world_size(group=self.real_dp_process_group[i])
             params_in_partition, params_not_in_partition, first_offset = self.get_partition_info(
                 self.round_robin_bit16_groups[i], partition_size, partition_id)
 
-            # 存储分区大小和参数信息
+            gd.debuginfo(prj="ds", info=f"partition_size={partition_size}") # partition_size=62568576.0
+            for index, val in enumerate(params_in_partition):
+                gd.debuginfo(prj="ds", info=f"params_in_partition[{index}]={infoTensor(val)}")
+            gd.debuginfo(prj="ds", info=f"-----------------------------------------------------")
+            for index, val in enumerate(params_not_in_partition):
+                gd.debuginfo(prj="ds", info=f"params_not_in_partition[{index}]={infoTensor(val)}")
+            gd.debuginfo(prj="ds", info=f"first_offset={first_offset}")
+
+            # 存储分区大小和参数信息， index就是param_group ID
             self.partition_size.append(partition_size)
             self.params_in_partition.append(params_in_partition)
             self.params_not_in_partition.append(params_not_in_partition)
             self.first_offset.append(first_offset)
 
+            gd.debuginfo(prj="ds", info=f'-----------{i}th partition_id={partition_id} end----------------')
+
+        gd.debuginfo(prj="ds", info=f"lens of self.partition_size={len(self.partition_size)}")
+        gd.debuginfo(prj="ds", info=f"lens of self.params_in_partition={len(self.params_in_partition)}")
+        gd.debuginfo(prj="ds", info=f"lens of self.params_not_in_partition={len(self.params_not_in_partition)}")
+        gd.debuginfo(prj="ds", info=f"lens of self.first_offset={len(self.first_offset)}")
+
         for rank in range(dist.get_world_size()):
             if dist.get_rank() == rank:
-                gd.debuginfo(prj="ds", info=
-                    f"Rank: {rank} partition count {self.partition_count} and sizes{[(p.numel(), self.is_moe_param_group[i] if hasattr(self, 'is_moe_param_group') else False) for i,p in enumerate(self.single_partition_of_fp32_groups)]} "
-                )
+                gd.debuginfo(prj="ds", info=f"Rank: {rank} partition count {self.partition_count} and "
+                                            f"sizes{[(p.numel(), self.is_moe_param_group[i] if hasattr(self, 'is_moe_param_group') else False) for i,p in enumerate(self.single_partition_of_fp32_groups)]} ")
                 dist.barrier()
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 2+++++++++++++++')
 
         # 设置一些基本参数和流
         self.reduce_bucket_size = int(reduce_bucket_size)
@@ -510,49 +566,78 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self.cpu_computation_stream = get_accelerator().Stream()
         self.copy_grad_stream = get_accelerator().Stream()
 
+        gd.debuginfo(prj='ds', info=f'self.reduce_bucket_size={self.reduce_bucket_size}') # 500000000 五亿
+        gd.debuginfo(prj='ds', info=f'self.allgather_bucket_size={self.allgather_bucket_size}') # 500000000
+        # gd.debuginfo(prj='ds', info=f'self.reduction_event={self.reduction_event}')
+        # gd.debuginfo(prj='ds', info=f'self.reduction_stream={self.reduction_stream}')
+        # gd.debuginfo(prj='ds', info=f'self.cpu_computation_stream={self.cpu_computation_stream}')
+        # gd.debuginfo(prj='ds', info=f'self.copy_grad_stream={self.copy_grad_stream}')
+        # self.reduction_event=<torch.cuda.Event uninitialized>
+        # self.reduction_stream=<torch.cuda.Stream device=cuda:0 cuda_stream=0xab91a80>
+        # self.cpu_computation_stream=<torch.cuda.Stream device=cuda:0 cuda_stream=0xab9d710>
+        # self.copy_grad_stream=<torch.cuda.Stream device=cuda:0 cuda_stream=0xab9d990>
+
         # 初始化一些参数和缓存列表
         self.callback_queued = False
 
+        # 从后面代码中看出key是参数ID(从零开始连续的值), 值是参数
         self.param_dict = {}
 
         # map between param_id and bool to specify if a param is in this partition
+        # 用来确定一个param是否在分区中，key是param_id,值是bool
         self.is_param_in_current_partition = {}
 
+        # TBD
         self.grads_in_ipg_bucket = []
         self.params_in_ipg_bucket = []
         self.elements_in_ipg_bucket = 0
+
+        # 以param_id为下标，记录该param是否已经reduce，
         self.params_already_reduced = []
+
         self._release_ipg_buffers()
+
         self.previous_reduced_grads = None
         self.ipg_bucket_has_moe_params = False
 
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 3+++++++++++++++')
+
         # simplified param id  # 简化参数id
+        # key是 用id函数得到的唯一标识号，val是连续的整数值，目的是简化
         self.param_id = {}
 
         #interesting code: unique ids being assigned to individual parameters
         # 对每个参数进行唯一标识
-        largest_param_numel = 0
-        count = 0
+        largest_param_numel = 0 #所有param中tensor个数最大值
+        count = 0 # 简化的param_id从0开始的连续整数
         for i, params_group in enumerate(self.bit16_groups):
             for param in params_group:
                 unique_id = id(param)
+                gd.debuginfo(prj='ds', info=f'params_group={i}, count={count}, unique_id={unique_id}, param={infoTensor(param)}')
+
                 self.param_id[unique_id] = count
                 self.param_dict[count] = param
                 self.params_already_reduced.append(False)
+                gd.debuginfo(prj='ds', info=f'param.numel()={param.numel()}, largest_param_numel={largest_param_numel}')
+
                 if param.numel() > largest_param_numel:
                     largest_param_numel = param.numel()
                 count = count + 1
 
-        # 如果开启了CPU offload的功能
-        # 标记参数是否在当前分区
-        for param_group in self.params_in_partition:
-            for param in param_group:
-                self.is_param_in_current_partition[self.get_param_id(param)] = True
+            gd.debuginfo(prj='ds', info=f'------------------i={i}, count={count}-------------------')
 
-        for param_group in self.params_not_in_partition:
+        # 标记参数是否在当前分区, index是param ID--简化的，从0开始的整数
+        for index, param_group in enumerate(self.params_in_partition):
             for param in param_group:
+                gd.debuginfo(prj='ds', info=f'index={index}, param={infoTensor(param)}, self.get_param_id(param)={self.get_param_id(param)}')
+                self.is_param_in_current_partition[self.get_param_id(param)] = True
+        gd.debuginfo(prj='ds', info=f'********************************************************************************')
+        for index, param_group in enumerate(self.params_not_in_partition):
+            for param in param_group:
+                gd.debuginfo(prj='ds', info=f'index={index}, param={infoTensor(param)}, self.get_param_id(param)={self.get_param_id(param)}')
                 self.is_param_in_current_partition[self.get_param_id(param)] = False
 
+        # 如果开启了CPU offload的功能
         if self.cpu_offload:
             # 初始化一些参数，用来在CPU和GPU之间进行梯度转移
             self.accumulated_grads_in_cpu = {}  # 在CPU中累积的梯度
@@ -564,28 +649,33 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 如果启用了内存锁页，就将数据固定在内存中，防止被交换到硬盘，加快数据传输速度
             self.temp_grad_buffer_for_cpu_offload = get_accelerator().pin_memory(
                 torch.zeros(largest_param_numel, device=self.device, dtype=self.dtype))
+            gd.debuginfo(prj='ds', info=f'self.temp_grad_buffer_for_cpu_offload={infoTensor(self.temp_grad_buffer_for_cpu_offload)}')
 
             # 在设备上创造一个全零的tensor，用于GPU offload
             self.temp_grad_buffer_for_gpu_offload = torch.zeros(largest_param_numel,
                                                                 device=get_accelerator().current_device_name(),
                                                                 dtype=self.dtype)
+            gd.debuginfo(prj='ds', info=f'self.temp_grad_buffer_for_gpu_offload={infoTensor(self.temp_grad_buffer_for_gpu_offload)}')
+
             for i, params_group in enumerate(self.bit16_groups):
                 self.get_grad_position(i, self.params_in_partition[i], self.first_offset[i], self.partition_size[i])
 
+        # 初始化一些用于梯度分区的参数 === z2
+
         # mapping from parameter to partition that it belongs to
-        # 参数到它所在分区的映射
+        # 参数到它所在分区的映射 是二维的[group_id][param_id]
         self.param_to_partition_ids = {}
 
         # stores if a partition has been reduced in this step
-        # 存储分区是否已经进行了reduce操作
+        # 存储分区是否已经进行了reduce操作 是二维的[group_id][param_id]
         self.is_partition_reduced = {}
 
         # number of grads in partition that still need to be computed
-        # 分区内还需要计算的梯度数量
+        # 分区内还需要计算的梯度数量 是二维的[group_id][param_id]
         self.remaining_grads_in_partition = {}
 
         # total number of grads in partition
-        # 分区内总共的梯度数量
+        # 分区内总共的梯度数量  是二维的[group_id][param_id]
         self.total_grads_in_partition = {}
 
         # stores if a grad in a partition has been computed or not
@@ -614,19 +704,26 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # initializes all data structures for implementing gradient partitioning
         # 初始化实现梯度分区的所有数据结构
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 4+++++++++++++++')
         self.initialize_gradient_partitioning_data_structures()
 
         # resets the data structure value for the next backward propagation
         # 重置数据结构的值以便下一次反向传播
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 5+++++++++++++++')
         self.reset_partition_gradient_structures()
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 6+++++++++++++++')
 
         # creates backward hooks for gradient partitioning
         # 如果启用了梯度分区或者通信重叠，创建后向钩子
         if self.partition_gradients or self.overlap_comm: # z1 false, z2 true
+            gd.debuginfo(prj="ds") # ph1-z2
             self.create_reduce_and_remove_grad_hooks()
 
         self.custom_loss_scaler = False
         self.external_loss_scale = None
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 7+++++++++++++++')
 
         # we may have a way of fusing dynamic scale. Do not support for now
         # 创建损失缩放器，可能是静态或者动态的
@@ -635,19 +732,23 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                                             dynamic_scaling=dynamic_loss_scale,
                                             dynamic_loss_args=dynamic_loss_args)
         self.dynamic_loss_scale = self.loss_scaler.dynamic
-        gd.debuginfo(prj="ds", info=f"self.loss_scaler={self.loss_scaler}")
-        gd.debuginfo(prj="ds", info=f"self.dynamic_loss_scale={self.dynamic_loss_scale}")
+        gd.debuginfo(prj="ds", info=f"self.loss_scaler={self.loss_scaler}") # self.loss_scaler=<deepspeed.runtime.fp16.loss_scaler.DynamicLossScaler object at 0x7f25109e7310>
+        gd.debuginfo(prj="ds", info=f"self.dynamic_loss_scale={self.dynamic_loss_scale}")  # True
 
         # 只有当数据类型为float16时，才会使用动态损失缩放
         if self.dtype != torch.float16:
+            gd.debuginfo(prj='ds')
             # Only fp16 should use dynamic loss scaling
             assert self.loss_scaler.cur_scale == 1.0
             assert not self.dynamic_loss_scale
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 8+++++++++++++++')
 
         see_memory_usage("Before initializing optimizer states", force=True)
         self.initialize_optimizer_states()
+        gd.debuginfo(prj='ds', info=f'self.optimizer.param_groups={self.optimizer.param_groups}')
         see_memory_usage("After initializing optimizer states", force=True)
 
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep 9+++++++++++++++')
         # 如果是主节点，则打印优化器状态初始化成功的信息
         if dist.get_rank() == 0:
             gd.debuginfo(prj="ds", info=f"optimizer state initialized")
@@ -656,23 +757,30 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         if dist.get_rank(group=self.dp_process_group) == 0:
             see_memory_usage(f"After initializing ZeRO optimizer", force=True)
 
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep A+++++++++++++++')
         # 链接所有超参数
         self._link_all_hp_params()
+
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep B+++++++++++++++')
 
         # 启用通用检查点
         self._enable_universal_checkpoint()
 
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep C+++++++++++++++')
+
         # 创建参数映射
         self._param_slice_mappings = self._create_param_mapping()
+        gd.debuginfo(prj='ds', info=f'++++++++++++++sep D+++++++++++++++')
 
 
         gd.printall(prj='ds', cname=self)
+        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
 
     # 检查点启用  用于开启通用的模型检查点。
     def _enable_universal_checkpoint(self):
         # 遍历bit16_groups中的所有参数组
-        for lp_param_group in self.bit16_groups:
-            # gd.debuginfo(prj="ds", info=f'lp_param_group={lp_param_group}') #tensor的list
+        for index, lp_param_group in enumerate(self.bit16_groups):
+            gd.debuginfo(prj="ds", info=f'index={index}') #tensor的list
             # 对每个参数组启用通用检查点
             enable_universal_checkpoint(param_list=lp_param_group)
 
@@ -680,21 +788,29 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     def _create_param_mapping(self):
         # 初始化一个空列表，用于保存参数映射
         param_mapping = []
+
         # 使用枚举函数遍历优化器的参数组，i是索引，_是参数组的内容（这里我们不需要使用内容，因此使用_作为占位符）
         for i, _ in enumerate(self.optimizer.param_groups):
             # 对于每一个参数组，我们使用一个有序字典来保存该组的参数映射
             param_mapping_per_group = OrderedDict()
+
             # 遍历bit16_groups中的每一个元素，这里的lp代表一个模型的层或参数
-            for lp in self.bit16_groups[i]:
+            for index, lp in enumerate(self.bit16_groups[i]):
                 # 检查lp是否有_hp_mapping属性，如果有，说明它有一些需要映射的超参数
                 if lp._hp_mapping is not None:
                     # 获取该层或参数的名称
                     lp_name = self.param_names[lp]
+
                     # 在有序字典中添加一个新的键值对，键是层或参数的名称，值是超参数的映射地址
                     param_mapping_per_group[lp_name] = lp._hp_mapping.get_hp_fragment_address()
-                    gd.debuginfo(prj='ds', info=f'param_mapping_per_group[{lp_name}]={param_mapping_per_group[lp_name]}')
+
+                    gd.debuginfo(prj='ds', info=f'On bit16_groups[{i}][{index}]:, '
+                                                f'param_mapping_per_group[{lp_name}]={param_mapping_per_group[lp_name]}')
+                else:
+                    gd.debuginfo(prj='ds', info=f'On bit16_groups[{i}][{index}] no action!')
             # 将该参数组的映射添加到整体的参数映射列表中
             param_mapping.append(param_mapping_per_group)
+            gd.debuginfo(prj='ds', info=f'===============================================')
 
         gd.debuginfo(prj='ds', info=f'len of param_mapping={len(param_mapping)}')
         # 返回参数映射列表
@@ -702,24 +818,17 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 用于链接所有的超参数。这个函数的目标看起来是链接所有的半精度（16位）参数和单精度（32位）参数。
     # 它主要用于分布式训练，特别是在使用CPU offload和数据并行性（Data Parallelism）时
+    # call in _load_legacy_checkpoint and init
     def _link_all_hp_params(self):
         # 获取分布式处理过程中的世界大小
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
+        gd.debuginfo(prj='ds', info=f'FUNC_IN, dp_world_size={dp_world_size}')
 
         # 如果启用了CPU卸载，获取卸载梯度字典
         if self.cpu_offload:
             # gd.debuginfo(prj="ds")
             self._get_offload_gradient_dict()
 
-        # gd.debuginfo(prj="ds", info=f'self.optimizer.param_groups={self.optimizer.param_groups}')
-        '''
-        =[
-        {'params': [tensor([ 0.1150, -0.1438,  0.0555,  ...,  0.0183,  0.0088,  0.0258],
-        device='cuda:0', requires_grad=True)], 'weight_decay': 0.0, 'lr': 0.0, 'bias_correction': True, 'betas': (0.9, 0.95), 'eps': 1e-08, 'initial_lr': 9.65e-06, 'step': 0}, 
-、       ...
-        device='cuda:0', requires_grad=True)], 'weight_decay': 0.0, 'lr': 0.0, 'bias_correction': True, 'betas': (0.9, 0.95), 'eps': 1e-08, 'initial_lr': 9.65e-06, 'step': 0}
-        ]
-        '''
         # 遍历优化器的参数组
         for i, _ in enumerate(self.optimizer.param_groups):
             # Link bit16 and fp32 params in partition
@@ -734,15 +843,21 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
             # lp_param_list={self.bit16_groups[i]  tensor 的列表
 
-            gd.debuginfo(prj='ds', info=f'flat_hp_partition={infoTensor(flat_hp_partition)}=='
-                           f'gradient_dict={self.averaged_gradients}=='
-                           f'offload_gradient_dict={self.offload_gradient_dict}=='
-                           f'use_offload={self.cpu_offload}=='
-                           f'param_group_index={i}=='
-                           f'partition_start={partition_id * partition_size}=='
-                           f'partition_size={partition_size}=='
-                           f'partition_optimizer_state={self.optimizer.state[flat_hp_partition]}=='
+            gd.debuginfo(prj='ds', info=f'{i} param_groups, flat_hp_partition={infoTensor(flat_hp_partition)},'
+                           f'gradient_dict={self.averaged_gradients},'
+                           f'use_offload={self.cpu_offload},'
+                           f'param_group_index={i},'
+                           f'partition_start={partition_id * partition_size},'
+                           f'partition_size={partition_size},'
+                           f'partition_optimizer_state={self.optimizer.state[flat_hp_partition]},'
                            f'dp_group={self.real_dp_process_group[i]}')
+
+            if self.cpu_offload:
+                for k,v in self.offload_gradient_dict.items():
+                    gd.debuginfo(prj='ds', info=f'self.offload_gradient_dict[{k}] has {len(v)} tensors')
+                    for index, val in enumerate(v):
+                        gd.debuginfo(prj='ds', info=f'self.offload_gradient_dict[{k}][index]={infoTensor(val)}')
+
 
             # 链接超参数(params)
             link_hp_params(lp_param_list=self.bit16_groups[i],      # bit16参数列表
@@ -756,6 +871,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                            partition_optimizer_state=self.optimizer.state[flat_hp_partition],   # 分区优化器状态，由优化器的状态和fp32参数的单个分区确定
                            dp_group=self.real_dp_process_group[i])  # 分布式处理过程组
 
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+
     # 检查是否为MOE（Mixture of Experts）组
     def is_moe_group(self, group):
         # gd.debuginfo(prj="ds")
@@ -763,7 +880,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 用于配置MOE设置检查
     def _configure_moe_settings(self):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj='ds', info=f'FUNC_IN')
         # if we're using ZeRO stage 2, ensure contiguous gradients are used
         # 如果我们使用的是ZeRO阶段2，确保使用连续梯度
         if self.partition_gradients:
@@ -808,28 +925,66 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 专家并行组应当在MoE中配置
         assert self.ep_process_group is not None, "Expert parallel group should be configured with MoE"
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
 
     #更新16位浮点数权重的模型。
     def _update_model_bit16_weights(self, group_index):
-        # 解压缩16位小组的数据
+        gd.debuginfo(prj="ds", info=f'group_index={group_index}  FUNC_IN')
+        # 解压缩16位小组的数据 是pytorch函数
         updated_params = self.unflatten(self.bit16_groups_flat[group_index],
                                         self.round_robin_bit16_groups[group_index])
-        # gd.debuginfo(prj="ds", info=f'T: updated_params={infoTensor(updated_params)}') tensor list
+
+        #打印出来 gd.debuginfo(prj="ds", info=f'T: updated_params={infoTensor(updated_params)}') tensor list
+        # 可能不相等 assert len(self.bit16_groups_flat[group_index]) == len(self.round_robin_bit16_groups[group_index])
+
+        gd.debuginfo(prj="ds", info=f'len of self.bit16_groups_flat[{group_index}]={len(self.bit16_groups_flat[group_index])}')
+
+        gd.debuginfo(prj="ds", info=f'len of self.round_robin_bit16_groups[{group_index}]={len(self.round_robin_bit16_groups[group_index])}')
+        gd.debuginfo(prj="ds", info=f'len of updated_params={len(updated_params)}')
+        assert len(updated_params) == len(self.round_robin_bit16_groups[group_index])
+        gd.debuginfo(prj='ds', info=f'+++++++++++打印出来对比异同+++++++++++++++++++++++++++++++++++++++++')
+        # 2卡3卡内容一样
+        for index, (pu,pi) in enumerate(zip(updated_params, self.round_robin_bit16_groups[group_index])): # 99个
+            gd.debuginfo(prj="ds", info=f'T: updated_params[{index}]={infoTensor(pu)}, '
+                                        f'self.round_robin_bit16_groups[{group_index}][{index}]={infoTensor(pi)}')
+        # 两个张量维度一样 updated_params[77]=_Size([768, 768])_float16_cuda:0_,
+        # self.round_robin_bit16_groups[0][77]=_Size([768, 768])_float16_cpu_
+        # 区别是 device！！  TBD 记录到文件
+        gd.debuginfo(prj='ds', info=f'+++++++++++打印出来对比异同+++++++++++++++++++++++++++++++++++++++++')
+        # for index, p in enumerate(updated_params): # 99个
+        #     gd.debuginfo(prj="ds", info=f'T: updated_params[{index}]={infoTensor(updated_params[index])}')
 
         # 遍历原始小组和更新的参数，用更新的参数来更新原始参数
-        for p, q in zip(self.round_robin_bit16_groups[group_index], updated_params):
-            p.data = q.data
+        for index, (p, q) in enumerate(zip(self.round_robin_bit16_groups[group_index], updated_params)):
+            p.data = q.data  #下面2卡3卡都一样
+            gd.debuginfo(prj="ds", info=f'T: index={index},'
+                                        f'p={infoTensor(p)}, '
+                                        f'q={infoTensor(q)}, '
+                                        f'p.data={infoTensor(p.data)},'
+                                        f'p.equal(q)={p.equal(q)}') # init中都是相等！
+            # gd.debuginfo(prj="ds", info=f'T: p.grad={infoTensor(p.grad)}')  # None
+
+        gd.debuginfo(prj='ds', info=f'+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
         # set model fp16 weight to slices of reordered flattened buffer
         # 将模型的16位权重设置为重新排序的扁平缓冲区的切片
         for param_index, param in enumerate(self.bit16_groups[group_index]):
             # 获取新的索引
-            new_index = self.round_robin_bit16_indices[group_index][param_index]
+            new_index = self.round_robin_bit16_indices[group_index][param_index] # init时候param_index和new_index应该是一样的
+
             # 使用新的索引更新参数数据
-            param.data = self.round_robin_bit16_groups[group_index][new_index].data
+            tmp = self.round_robin_bit16_groups[group_index][new_index]
+            param.data = tmp.data  #2卡3卡都一样
+            gd.debuginfo(prj="ds", info=f'T: new_index={new_index}, '
+                                        f'param_index={param_index}, '
+                                        f'param.data={infoTensor(param.data)}'
+                                        f'param.equal(tmp)={param.equal(tmp)}')  # init中都是相等
+
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
 
     # 用于在多个设备间重新排序数据。
     def _round_robin_reorder(self, tensor_list, num_partitions):
+        gd.debuginfo(prj='ds', info=f'FUNC_IN', num_partitions={num_partitions})
         # disable round robin if need to debug something
         # 如果需要调试某个问题，可以禁用round robin
         # return tensor_list, list(range(len(tensor_list)))
@@ -871,6 +1026,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 reordered_tensors.append(tensor)
 
         # 返回重排序后的张量列表和索引字典
+
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
         return reordered_tensors, reordered_indices
 
     # 释放一些用于异步梯度累积的缓冲区
@@ -887,7 +1044,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 初始化优化器状态
     def initialize_optimizer_states(self):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj='ds', info=f'FUNC_IN')
         # 遍历 bit16_groups，i 是索引，group 是组
         for i, group in enumerate(self.bit16_groups):
             # 创建一个全零的张量，大小等于 partition_size[i]，数据类型和 device 都与 single_partition_of_fp32_groups[i]
@@ -905,7 +1062,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 如果优化器是 Adagrad，那么就用 single_partition_of_fp32_groups 来初始化它
         # 这是因为 Adagrad 在创建时就会初始化状态，而其他优化器则在第一次调用 step 方法时才会初始化状态
         if isinstance(self.optimizer, torch.optim.Adagrad):
-            # gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds")
             self.optimizer = torch.optim.Adagrad(self.single_partition_of_fp32_groups, **self.optimizer.defaults)
         else:
             # gd.debuginfo(prj="ds")
@@ -917,6 +1074,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             for group in self.single_partition_of_fp32_groups:
                 group.grad = None  #class init  # 初始化类
 
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
         return
 
     #########################################################################
@@ -924,7 +1082,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     #########################################################################
     # reduce - 梯度。
     def reduce_gradients(self, pipeline_parallel=False):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 获取集群中的计算节点总数
         world_size = dist.get_world_size(self.dp_process_group)
         # 获取当前计算节点的编号
@@ -966,6 +1124,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 在hook或non-hook情况下，reduce任何待处理的梯度
         self.overlapping_partition_gradients_reduce_epilogue()
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     #########################################################################
     #########################ZeRO Partition Gradients########################
     #########################################################################
@@ -976,23 +1136,26 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         for index, param in enumerate(param_group):
             # 获取参数的ID
             param_id = self.get_param_id(param)
-            gd.debuginfo(prj="ds", info=f'index={index}, param_id={param_id}, T: param={infoTensor(param)}')
 
             # 检查当前的参数ID是否在指定的分区ID内
             # 如果在，就返回当前的索引
             if partition_id in self.param_to_partition_ids[group_id][param_id]:
+                gd.debuginfo(prj="ds", info=f'index={index}, param_id={param_id}, T: param={infoTensor(param)}, return {index}')
                 return index
+
+        gd.debuginfo(prj="ds", info=f'index={index}, param_id={param_id}, T: param={infoTensor(param)}, return {None}')
 
         # 如果没有找到满足条件的参数，就返回None
         return None
 
     # 初始化梯度分区的数据结构
     def initialize_gradient_partitioning_data_structures(self):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj='ds', info=f'FUNC_IN')
         # 遍历所有的参数组
         for i, param_group in enumerate(self.round_robin_bit16_groups):
             # 获取分区的总数，也就是分布式处理组的大小
             total_partitions = dist.get_world_size(group=self.real_dp_process_group[i])
+            gd.debuginfo(prj='ds', info=f'i={i} th param_group total_partitions={total_partitions}')
 
             # 为每个参数组初始化相关的数据结构
             self.param_to_partition_ids[i] = {}
@@ -1009,20 +1172,35 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 self.is_grad_computed[i][partition_id] = {}
                 self.grad_partition_insertion_offset[i][partition_id] = {}
                 self.grad_start_offset[i][partition_id] = {}
+
                 # 初始时每个分区中的梯度总数为0
                 self.total_grads_in_partition[i][partition_id] = 0
+
                 # 初始化每个分区的梯度值
+                gd.debuginfo(prj='ds', info=f'--sep--groupID={i}--partition_id={partition_id}--initialize_gradient_partition--start')
                 self.initialize_gradient_partition(i, param_group, partition_id)
+                gd.debuginfo(prj='ds', info=f'--sep--groupID={i}--partition_id={partition_id}--initialize_gradient_partition--end')
+
                 # 初始化每个分区的缩减状态为False
                 self.is_partition_reduced[i][partition_id] = False
+
                 # 获取并存储每个分区的第一个参数的索引
-                self.first_param_index_in_partition[i][partition_id] = self.get_first_param_index(
-                    i, param_group, partition_id)
-                gd.debuginfo(prj='ds',
-                             info=f'first_param_index_in_partition[{i}][{partition_id}]={self.first_param_index_in_partition[i][partition_id]}')
+                self.first_param_index_in_partition[i][partition_id] = self.get_first_param_index(i, param_group, partition_id)
+                gd.debuginfo(prj='ds',info=f'self.first_param_index_in_partition[{i}][{partition_id}]={self.first_param_index_in_partition[i][partition_id]}')
+
+            gd.debuginfo(prj='ds', info=f'self.param_to_partition_ids[{i}]={self.param_to_partition_ids[i]}')
+            gd.debuginfo(prj='ds', info=f'self.is_partition_reduced[{i}]={self.is_partition_reduced[i]}')
+            gd.debuginfo(prj='ds', info=f'self.total_grads_in_partition[{i}]={self.total_grads_in_partition[i]}')
+            gd.debuginfo(prj='ds', info=f'self.remaining_grads_in_partition[{i}]={self.remaining_grads_in_partition[i]}')
+            gd.debuginfo(prj='ds', info=f'self.is_grad_computed[{i}]={self.is_grad_computed[i]}')
+            gd.debuginfo(prj='ds', info=f'self.grad_partition_insertion_offset[{i}]={self.grad_partition_insertion_offset[i]}')
+            gd.debuginfo(prj='ds', info=f'self.grad_start_offset[{i}]={self.grad_start_offset[i]}')
+            gd.debuginfo(prj='ds', info=f'self.first_param_index_in_partition[{i}]={self.first_param_index_in_partition[i]}')
+
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
 
     def independent_gradient_partition_epilogue(self):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj='ds', info=f'FUNC_IN')
         # 报告在执行梯度reduce之前的内存使用情况
         self.report_ipg_memory_usage(f"In ipg_epilogue before reduce_ipg_grads", 0)
 
@@ -1086,12 +1264,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 报告在执行完independent_gradient_partition_epilogue函数后的内存使用情况
         see_memory_usage(f"End ipg_epilogue")
 
+        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+
     # resets all partition to no reduced
     # sets remaining grads to the total number of grads in each partition
     # set is grad computed to false for all grads in partition
     # 重置与每个分区相关的梯度结构
     def reset_partition_gradient_structures(self): #也就是init执行了一次
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds")
         # 遍历所有的参数组
         for i, _ in enumerate(self.bit16_groups):
             # 获取分区的总数，这是通过获取分布式处理组的大小来决定的
@@ -1099,26 +1279,26 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
             # 遍历所有的分区
             for partition_id in range(total_partitions):
-                gd.debuginfo(prj="ds", info=f'i={i}, partition_id={partition_id}')
-
                 # 将每个分区的缩减状态设为False
                 self.is_partition_reduced[i][partition_id] = False
 
-                # 将每个分区剩余的梯度数量设置为每个分区的梯度总数
+                # 将每个分区剩余的梯度数量设置为每个分区的梯度总数i
                 self.remaining_grads_in_partition[i][partition_id] = self.total_grads_in_partition[i][partition_id]
+                gd.debuginfo(prj="ds", info=f'remaining_grads_in_partition[{i}][{partition_id}]={self.remaining_grads_in_partition[i][partition_id]}')
 
                 # 遍历分区中每个参数的梯度计算状态
+                gd.debuginfo(prj="ds", info=f'len of self.is_grad_computed[{i}][{partition_id}]={len(self.is_grad_computed[i][partition_id])}')
                 for param_id in self.is_grad_computed[i][partition_id]:
-                    gd.debuginfo(prj="ds", info=f'i={i}, partition_id={partition_id}, param_id={param_id}')
+                    # gd.debuginfo(prj="ds", info=f'i={i}, partition_id={partition_id}, param_id={param_id}')
                     # 将每个参数的梯度计算状态设为False
                     self.is_grad_computed[i][partition_id][param_id] = False
 
     # 初始化reduce分区
     def initialize_gradient_partition(self, i, param_group, partition_id):
 
-        gd.debuginfo(prj="ds", info=f'i={i}+++partition_id={partition_id}')
+        gd.debuginfo(prj="ds", info=f'i={i}+++partition_id={partition_id} FUNC_IN')
         # param_group={infoTensor(param_group)} 是一个tensor的列表，太大
-        print(f"len of param_group={len(param_group)}")  # 防止消失，直接打印
+        gd.debuginfo(prj='ds', info=f"len of param_group={len(param_group)}")  # 防止消失，直接打印
         for index, v in enumerate(param_group):
             gd.debuginfo(prj='ds', info=f"param_group[{index}]={infoTensor(param_group[index])}")
 
@@ -1159,7 +1339,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 获取参数的大小和ID
             param_size = param.numel()
             param_id = self.get_param_id(param)
-            gd.debuginfo(prj="ds", info=f'param={infoTensor(param)}+++param_size={param_size}+++param_id={param_id}')
+            gd.debuginfo(prj="ds", info=f'{i}_param_group, param_id={param_id}, param={infoTensor(param)}, param_size={param_size}')
 
             if start_index <= current_index < end_index:
                 gd.debuginfo(prj="ds", info=f'当前索引在分区范围内:'
@@ -1197,33 +1377,37 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 更新当前索引
             current_index = current_index + param_size
 
+        gd.debuginfo(prj="ds", info=f'{i}_param_group, partition_id={partition_id}, FUNC_OUT')
+
     # 调用IGP的梯度reduce操作
     def overlapping_partition_gradients_reduce_epilogue(self):
         # gd.debuginfo(prj="ds")
         self.independent_gradient_partition_epilogue()
 
-    # 创建并删除梯度钩子
+    # 创建并删除梯度钩子  本身只是init执行，
+    # 注册的函数reduce_ready_partitions_and_remove_grads会在train的backward执行
     def create_reduce_and_remove_grad_hooks(self):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 初始化一个用于存储梯度累积函数的列表
         self.grad_accs = []
 
         # 遍历所有的16位分组
         for i, param_group in enumerate(self.bit16_groups):
+            gd.debuginfo(prj="ds", info=f'---START HOOK--------------------------')
             # 在每个分组中遍历所有的参数
             for param in param_group:
-                gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)}')
                 # 如果参数需要计算梯度
                 if param.requires_grad:
                     # 定义一个闭包函数，用于注册梯度钩子
                     def wrapper(param, i):
                         # 创建一个与参数形状相同的临时参数
                         param_tmp = param.expand_as(param)
-                        gd.debuginfo(prj="ds", info=f'param_tmp={infoTensor(param_tmp)}')
+                        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)} requires_grad')
+                        # gd.debuginfo(prj="ds", info=f'param_tmp={infoTensor(param_tmp)}') 和上面完全一样
 
                         # 获取梯度函数的下一个函数
                         grad_acc = param_tmp.grad_fn.next_functions[0][0]
-                        gd.debuginfo(prj="ds", info=f'grad_acc={infoTensor(grad_acc)}')
+                        # gd.debuginfo(prj="ds", info=f'grad_acc={grad_acc}') #<AccumulateGrad object at 0x7f94d41260d0>
 
                         # 定义一个函数，用于在需要的时候减少分区并移除梯度
                         def reduce_partition_and_remove_grads(*notneeded):
@@ -1237,6 +1421,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
                     # 调用闭包函数，注册梯度钩子
                     wrapper(param, i)
+                else:
+                    gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)} NOT requires_grad')
+            gd.debuginfo(prj="ds", info=f'---END HOOK--------------------------')
+
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
 
     # 获取参数ID。
     def get_param_id(self, param):
@@ -1267,28 +1456,45 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # create a flat tensor aligned at the alignment boundary
     # 按照指定的对齐方式首先进行对齐，然后再将对齐后的张量扁平化
     def flatten_dense_tensors_aligned(self, tensor_list, alignment):
-        # 这个函数接受两个参数，一个是 tensor_list，是一个包含多个张量（tensor）的列表，另一个是 alignment，表示对齐方式
-        # 这个函数的目标是将 tensor_list 中的所有张量首先进行对齐，然后再进行扁平化处理
+        # for index, p in enumerate(tensor_list):
+        #     gd.debuginfo(prj="ds", info=f'tensor_list[{index}]={infoTensor(p)}')
+        gd.debuginfo(prj="ds", info=f'len of tensor_list= {len(tensor_list)}, alignment={alignment}')
 
-        # 调用 align_dense_tensors 函数，对 tensor_list 中的每一个张量进行对齐，
-        # align_dense_tensors 函数的返回值是一个新的张量列表，其中的每个张量都已经根据 alignment 对齐
+        # 这个函数接受两个参数，一个是 tensor_list，是一个包含多个张量（tensor）的列表，另一个是 alignment，表示对齐方式
+        # 这个函数的目标是将 tensor_list 中的所有张量的总长度计算出来后进行对齐，然后再进行扁平化处理
+        # 不是把list每个tensor对齐，仅仅是list最后可能会加上一个padding tensor!!
+        # 某些blog有严重错误理解！！！！
+        # align_dense_tensors 函数的返回值是一个新的张量列表，
         aligned_tensors = align_dense_tensors(tensor_list, alignment)
+
+        gd.debuginfo(prj="ds", info=f'len of aligned_tensors= {len(aligned_tensors)}')
 
         # 调用 flatten 函数，对经过对齐处理的张量列表进行扁平化处理
         # flatten 函数的返回值是一个新的扁平化后的张量
-        flattened_tensor = self.flatten(aligned_tensors)
-
+        flattened_tensor = self.flatten(aligned_tensors) # 直接使用了pytorch的函数
         # gd.debuginfo(prj="ds", info=f'T: aligned_tensors={infoTensor(aligned_tensors)}, flattened_tensor={infoTensor(flattened_tensor)}') tensor list
+
+        # 数量过于巨大，百万级别, 所以只能计数器大概看看前100个
+        # 如果不用rank保护，每个进程都会产生巨大内存消耗，三块卡就OOM
+        if dist.get_rank() == 0:
+            from collections import Counter
+            tmpcnt = Counter()
+            for _, p in enumerate(flattened_tensor):
+                tmpcnt[infoTensor(p)] += 1
+            gd.debuginfo(prj="ds", info=f'flattened_tensor most 100 freq:{tmpcnt.most_common(100)}')
+
+            gd.debuginfo(prj="ds", info=f'len of flattened_tensor= {len(flattened_tensor)}')
 
         # 返回扁平化处理后的张量
         return flattened_tensor
 
-
     ############### Independent Partition Gradient ########################
     # reduce ipg的梯度桶并删除梯度
     def reduce_independent_p_g_buckets_and_remove_grads(self, param, i):
-        gd.debuginfo(prj="ds")
-
+        gd.debuginfo(prj="ds",
+                     info=f'self.elements_in_ipg_bucket={self.elements_in_ipg_bucket}, \
+                     param.numel()={param.numel()}, \
+                     self.reduce_bucket_size={self.reduce_bucket_size} FUNC_IN')
         # 如果当前bucket中的元素数量加上参数的元素数量超过了bucket的大小
         if self.elements_in_ipg_bucket + param.numel() > self.reduce_bucket_size:
             gd.debuginfo(prj="ds")
@@ -1318,18 +1524,32 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 如果开启了连续的梯度
         if self.contiguous_gradients:
-            gd.debuginfo(prj="ds")
             if param.numel() > self.reduce_bucket_size:
                 # 如果参数的元素数量大于bucket的大小，那么将该参数设置为待减少的参数
-                gd.debuginfo(prj="ds")
+                gd.debuginfo(prj="ds", info=f'param={param}')
                 self.extra_large_param_to_reduce = param
             else:
                 # 保持梯度连续，以防止内存碎片化，并且避免展平
-                gd.debuginfo(prj="ds")
+                # 都是有效输出
+                # gd.debuginfo(prj="ds", info=f'1-param={infoTensor(param)}')
+                # gd.debuginfo(prj="ds", info=f'1-param.data={infoTensor(param.data)}')
+                # gd.debuginfo(prj="ds", info=f'1-param.grad={infoTensor(param.grad)}')
+                # gd.debuginfo(prj="ds", info=f'1-param.grad.data={infoTensor(param.grad.data)}')
                 # keeping the gradients contiguous to prevent memory fragmentation, and avoid flattening
+
                 new_grad_tensor = self.ipg_buffer[self.ipg_index].narrow(0, self.elements_in_ipg_bucket, param.numel())
+                #gd.debuginfo(prj="ds", info=f'1-new_grad_tensor={infoTensor(new_grad_tensor)}')
+
                 new_grad_tensor.copy_(param.grad.view(-1))
+                gd.debuginfo(prj="ds", info=f'2-new_grad_tensor={infoTensor(new_grad_tensor)}')
+
                 param.grad.data = new_grad_tensor.data.view_as(param.grad)
+                # gd.debuginfo(prj="ds", info=f'2-param={infoTensor(param)}')
+                # gd.debuginfo(prj="ds", info=f'2-param.data={infoTensor(param.data)}')
+                # gd.debuginfo(prj="ds", info=f'2-param.grad={infoTensor(param.grad)}')
+                # gd.debuginfo(prj="ds", info=f'2-param.grad.data={infoTensor(param.grad.data)}')
+
+        gd.debuginfo(prj="ds", info=f'param_id={param_id}, self.elements_in_ipg_bucket={self.elements_in_ipg_bucket}, param.numel()={param.numel()}')
 
         # 更新bucket中的元素数量
         self.elements_in_ipg_bucket += param.numel()
@@ -1352,6 +1572,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 报告当前的内存使用情况
         self.report_ipg_memory_usage("End ipg_remove_grads", 0)
 
+        gd.debuginfo(prj="ds",
+                     info=f'self.elements_in_ipg_bucket={self.elements_in_ipg_bucket}, \
+                     param.numel()={param.numel()}, \
+                     self.reduce_bucket_size={self.reduce_bucket_size} FUNC_OUT')
+
     # def print_rank_0(self, message):
     # `dist.get_rank()`是获取当前进程的标识
     # 当标识为0时，代表这是主进程
@@ -1364,6 +1589,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 实现了分布式训练中的梯度同步，确保每个进程的模型参数更新是一致的
     def gradient_reduction_w_predivide(self, tensor):
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_IN')
         # 获取当前分布式处理组的大小
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
 
@@ -1399,10 +1625,12 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             tensor.copy_(tensor_to_allreduce)
             gd.debuginfo(prj="ds", info=f'T: tensor={infoTensor(tensor)}')
 
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_OUT')
         return tensor
 
     # 计算张量的平均值 , only call by reduce_ipg_grads
     def average_tensor(self, tensor):
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_IN')
         # 如果允许重叠通信
         if self.overlap_comm:
             gd.debuginfo(prj="ds")
@@ -1540,11 +1768,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             if self.communication_data_type != tensor.dtype:
                 tensor.copy_(tensor_to_reduce)
 
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_OUT')
+
     ##############################################################################
     ############################# CPU Offload Methods#############################
     ##############################################################################
     # 获取梯度位置, only call in init
     def get_grad_position(self, group_id, tensor_list, first_offset, partition_size):
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 当前已处理的元素偏移量
         current_offset = 0
 
@@ -1595,6 +1826,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 更新当前已处理的元素偏移量
             current_offset += num_elements
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     # 更新参数梯度的溢出跟踪器, only call in copy_grads_in_partition
     def update_overflow_tracker_for_param_grad(self, param):
         # gd.debuginfo(prj="ds")
@@ -1605,6 +1838,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # only call in _link_all_hp_params  获取卸载梯度的字典
     def _get_offload_gradient_dict(self):
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 遍历优化器的所有参数组
         for param_group_index, _ in enumerate(self.optimizer.param_groups):
             # 初始化当前参数组的梯度字典
@@ -1627,9 +1861,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 将梯度张量添加到当前参数组的梯度字典中
                 self.offload_gradient_dict[param_group_index].append(dest_tensor)
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     # 通过GPU在CPU上异步累积梯度， only call in copy_grads_in_partition
     def async_accumulate_grad_in_cpu_via_gpu(self, param):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 获取参数的ID
         param_id = self.get_param_id(param)
 
@@ -1707,9 +1943,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 在边界处，我们将直接发送32位
             copy_gradients_to_cpu()
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     # 为参数梯度设置范数  没有被触发？？？？
     def set_norm_for_param_grad(self, param):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         # 获取参数的ID
         param_id = self.get_param_id(param)
 
@@ -1729,6 +1967,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 计算调整后的累积梯度的2范数（即欧几里得范数，或者叫做欧氏距离），并将其设置为对应参数梯度的范数
         self.norm_for_param_grads[param_id] = accumulated_grad.data.double().norm(2)
+
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
 
     # 在GPU中为参数梯度设置范数
     def set_norm_for_param_grad_in_gpu(self, param):
@@ -1778,7 +2018,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 完成CPU卸载的梯度范数计算  only call by scaled_global_norm
     def complete_grad_norm_calculation_for_cpu_offload(self, params):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
         total_norm = 0.0  # 初始化总梯度范数为0
         norm_type = 2.0  # 设置范数类型为2，即L2范数
 
@@ -1835,13 +2075,15 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 将总范数设置为-1
             total_norm = -1
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
         # 返回总范数
         return total_norm
 
     ############################################################################################
-    # 在分区中复制梯度， only call reduce_ipg_grads
+    # 在分区中复制梯度， only call in reduce_ipg_grads
     def copy_grads_in_partition(self, param):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
 
         # 检查是否启用了CPU offload
         if self.cpu_offload:
@@ -1869,7 +2111,6 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 如果分区中没有梯度
         if self.grads_in_partition is None:
-            gd.debuginfo(prj="ds")
             self.grads_in_partition_offset = 0
             total_size = 0
 
@@ -1882,6 +2123,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             self.grads_in_partition = torch.empty(int(total_size),
                                                   dtype=self.dtype,
                                                   device=get_accelerator().current_device_name())
+            gd.debuginfo(prj="ds", info=f'self.grads_in_partition={self.grads_in_partition}')
 
             # 打印复制梯度后的内存使用情况 see_memory_usage(f"复制{total_size}个梯度到分区后的内存使用情况")
             see_memory_usage(f"after copying {total_size} gradients into partition")
@@ -1889,7 +2131,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # The allreduce buffer will be rewritten. Copy the gradients in partition to a new buffer
         # allreduce缓冲区将被重写，将分区中的梯度复制到新的缓冲区
         new_grad_tensor = self.grads_in_partition.view(-1).narrow(0, self.grads_in_partition_offset, param.numel())
-
+        gd.debuginfo(prj="ds", info=f'new_grad_tensor={infoTensor(new_grad_tensor)}')
         # 使用原始的梯度更新新的梯度tensor
         new_grad_tensor.copy_(param.grad.view(-1))
 
@@ -1900,23 +2142,27 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         #print(f"Grad norm after copy to contiguous_buffer {param.grad.data.norm()}")
         self.grads_in_partition_offset += param.numel()
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     # reduce-IPG梯度
     def reduce_ipg_grads(self):
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+
         # 如果梯度是连续的
         if self.contiguous_gradients:
             gd.debuginfo(prj="ds")
             # 如果存在超大参数需要进行梯度汇总
             if self.extra_large_param_to_reduce is not None:
-                gd.debuginfo(prj="ds")
                 # 确保只有一个参数在 ipg bucket 中，否则会出现问题
                 assert len(self.params_in_ipg_bucket) == 1, "more than 1 param in ipg bucket, this shouldn't happen"
 
                 # 获取该参数的id
-                _, _, param_id = self.params_in_ipg_bucket[0]
+                a, b, param_id = self.params_in_ipg_bucket[0]
 
                 # 确保 ipg bucket 中的参数和 extra-large 参数匹配
                 assert self.get_param_id(self.extra_large_param_to_reduce
                                          ) == param_id, "param in ipg bucket does not match extra-large param"
+                gd.debuginfo(prj="ds", info=f'param_id={param_id}, a={a}, b={b}')
 
                 # 对梯度进行平均处理
                 self.average_tensor(self.extra_large_param_to_reduce.grad.view(-1))
@@ -1936,22 +2182,23 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 根据是否开启 overlap_comm 和 cpu_offload 选择合适的 stream
         if self.overlap_comm:
-            gd.debuginfo(prj="ds")
             stream = self.reduction_stream
+            gd.debuginfo(prj="ds", info=f'stream={stream}')
         elif self.cpu_offload:
-            gd.debuginfo(prj="ds")
             #  注意：copy_grad_stream 被禁用了，因为它会和 reduce 产生冲突，这会影响性能，应该修复这个问题
             #  TODO: copy_grad_stream is disabled because of race with reduce. This hurts perf and should be fixed.
             #            get_accelerator().synchronize()
             #            stream = self.copy_grad_stream
             stream = get_accelerator().current_stream()
+            gd.debuginfo(prj="ds", info=f'stream={stream}')
         else:
-            gd.debuginfo(prj="ds")
             stream = get_accelerator().current_stream()
+            gd.debuginfo(prj="ds", info=f'stream={stream}')
 
         # 在选定的 stream 中执行以下操作
         with get_accelerator().stream(stream):
-            for _, param, param_id in self.params_in_ipg_bucket:
+            for tmp, param, param_id in self.params_in_ipg_bucket:
+                gd.debuginfo(prj="ds", info=f'param_id={param_id}, param={infoTensor(param)}, tmp={tmp}')
                 # 确保该参数没有被汇总过，因为当前不支持多次梯度汇总
                 assert self.params_already_reduced[param_id] == False, \
                     f"The parameter {param_id} has already been reduced. \
@@ -1962,19 +2209,25 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
                 # 如果需要对梯度进行分区
                 if self.partition_gradients:
+                    gd.debuginfo(prj="ds")
                     if not self.is_param_in_current_partition[param_id]:
+                        gd.debuginfo(prj="ds")
                         if self.overlap_comm and self.contiguous_gradients is False:
+                            gd.debuginfo(prj="ds")
                             # 在下一次梯度汇总过程中清空其他分区的梯度
                             # 这样可以避免在汇总完成之前就清空他们
                             # Clear grads of other partitions during the next reduction
                             # to avoid clearing them before the reduction is complete.
                             if self.previous_reduced_grads is None:
+                                gd.debuginfo(prj="ds")
                                 self.previous_reduced_grads = []
                             self.previous_reduced_grads.append(param)
                         else:
+                            gd.debuginfo(prj="ds")
                             # 清空该参数的梯度属性
                             param.grad = None  #only if self.partition_gradients
                     elif self.contiguous_gradients:
+                        gd.debuginfo(prj="ds")
                         # 如果梯度是连续的，复制当前分区的梯度
                         self.copy_grads_in_partition(param)
                 else:
@@ -1982,6 +2235,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     # zero stage 1 - partition only optimizer state
                     if self.contiguous_gradients and self.is_param_in_current_partition[param_id]:
                         # 如果梯度是连续的，复制当前分区的梯度
+                        gd.debuginfo(prj="ds")
                         self.copy_grads_in_partition(param)
 
         # 清空 ipg_bucket 和相关信息
@@ -1989,11 +2243,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self.params_in_ipg_bucket = []
         self.ipg_bucket_has_moe_params = False
         self.elements_in_ipg_bucket = 0
+
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
         #####################################################################
 
-    # 减少已准备好的分区并删除梯度
+    # 减少已准备好的分区并删除梯度  #这是hook，由backward触发！
     def reduce_ready_partitions_and_remove_grads(self, param, i):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)},  FUNC_IN')
         # 如果满足以下两个条件之一，执行操作：
         # 1. 需要对梯度进行分区处理
         # 2. 当前处于梯度累积的边界
@@ -2003,9 +2259,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             gd.debuginfo(prj="ds")
             self.reduce_independent_p_g_buckets_and_remove_grads(param, i)
 
+        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)},  FUNC_OUT')
+
     # 将减少的梯度设置为零
     def zero_reduced_gradients(self, partition_id, i):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
 
         # 定义一个函数，用于检查与当前参数相关的所有分区是否已经完成了梯度的计算
         def are_all_related_partitions_reduced(params_id):
@@ -2024,6 +2282,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 将当前参数的梯度设为None，这样可以节省存储空间
                 self.param_dict[params_id].grad = None  # dead code
 
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+
     # 压平并打印, 没有被使用
     def flatten_and_print(self, message, tensors, start=0, n=5):
         # 首先，我们将输入的多维张量（tensors）压缩为一维
@@ -2041,7 +2301,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 获取要reduce的梯度
     def get_grads_to_reduce(self, i, partition_id):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'FUNC_IN')
 
         # 定义一个函数，用于获取可以reduce的梯度部分
         def get_reducible_portion(key):
@@ -2088,6 +2348,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             grad = get_reducible_portion(key)
             # 将梯度添加到列表中
             grads_to_reduce.append(grad)
+
+        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
 
         # 返回reduce的梯度列表
         return grads_to_reduce
@@ -2268,13 +2530,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # views the tensor as multiple partitions and returns
     # those partitions  获取数据并行分区
     def get_data_parallel_partitions(self, tensor, group_id):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds",info=f'group_id={group_id}, FUNC_IN')
         # 初始化一个空列表，用于存储每个分区的数据
         partitions = []
 
-        # 获取分布式处理（dp）的大小，即有多少个处理单元参与分布式计算
-        dp = dist.get_world_size(group=self.real_dp_process_group[group_id])
-        # dp_id = dist.get_rank(group=self.real_dp_process_group[group_id])
+        # 获取分布式处理（dp）的大小，即有多少个处理单元参与分布式计算,也就是显卡数量
+        dp = dist.get_world_size(group=self.real_dp_process_group[group_id])  # 单机就是GPU数量
+        dp_id = dist.get_rank(group=self.real_dp_process_group[group_id])     # 没有到，打出来看看
 
         # 计算张量（tensor）中的总元素数量
         total_num_elements = tensor.numel()
@@ -2284,10 +2546,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 计算不能被均匀分配的剩余元素数量
         remaining = total_num_elements % dp
-
         # 初始化起始索引为0，这个索引表示当前处理的张量部分的起始位置
         start = 0
-
+        gd.debuginfo(prj="ds", info=f'dp={dp}, dp_id={dp_id}, '
+                                    f'total_num_elements={total_num_elements}, '
+                                    f'base_size={base_size}, '
+                                    f'remaining={remaining}')
+        # dp=2, dp_id=0, total_num_elements=125137152, base_size=62568576, remaining=0
+        # dp=3, dp_id=0, total_num_elements=125137152, base_size=41712384, remaining=0
         # 遍历每个处理单元
         for id in range(dp):
             # 默认每个处理单元分配的元素数量为base_size
@@ -2297,13 +2563,21 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 如果当前处理单元的id小于剩余元素数量remaining，那么就给这个处理单元多分配一个元素
                 partition_size = partition_size + 1
 
-            # 使用narrow函数从张量中抽出一部分数据，0表示要操作的维度（这里是第一维），start表示开始的索引，partition_size表示长度
+            # 使用narrow函数从张量中抽出一部分数据，0表示要操作的维度（这里是第一维），
+            # start表示开始的索引，partition_size表示长度
             # 抽出的部分数据作为一个分区，添加到partitions列表中
-            partitions.append(tensor.narrow(0, start, partition_size))
+            tmp=tensor.narrow(0, start, partition_size) # https://pytorch.org/docs/stable/generated/torch.narrow.html
+            partitions.append(tmp)
+            gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)},'
+                                        f'tmp={infoTensor(tmp)}')
 
             # 更新开始索引，准备处理下一个分区
             start = start + partition_size
-
+            gd.debuginfo(prj="ds", info=f'id={id}, '
+                                        f'base_size={base_size}, '
+                                        f'partition_size={partition_size}, '
+                                        f'start={start}')
+        gd.debuginfo(prj="ds", info=f'group_id={group_id}, FUNC_OUT')
         # 返回分区列表，列表中的每个元素都是一个张量，表示一个分区的数据
         return partitions
 
@@ -2731,7 +3005,10 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # Step 1:- Calculate gradient norm using bit-16 grads
         # 步骤 1：- 使用 bit-16 梯度计算梯度规范
+
+        # 在计算规范之前查看内存使用情况
         see_memory_usage('Before norm calculation')
+
         scaled_global_grad_norm = self.scaled_global_norm()
         self._global_grad_norm = scaled_global_grad_norm / prev_scale
 
@@ -2782,7 +3059,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                         single_grad_partition.numel(), self.partition_size[i], i, partition_id)
 
                 self.single_partition_of_fp32_groups[i].grad = single_grad_partition
-                
+
                 # release all the gradient since we have already created a necessary copy in dp_grad_partition(ZeRO stage2)
                 # 释放所有梯度，因为我们已经在dp_grad_partition中创建了必要的副本（ZeRO stage2）
                 self.free_grad_in_param_list(self.params_in_partition[i])
@@ -2794,67 +3071,103 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 self.stop_timers([OPTIMIZER_GRADIENTS])
 
                 # Step 3:- run the optimizer if no offloading
+                # 步骤 3：- 运行优化器（如果没有卸载）
                 self.start_timers([OPTIMIZER_STEP])
                 self._optimizer_step(i)
+
                 # Step 4:- get rid of the fp32 gradients. Not needed anymore
+                # 第四步：去掉 fp32 梯度，不再需要它们
                 self.single_partition_of_fp32_groups[i].grad = None
                 del single_grad_partition
                 bit16_partitions = self.parallel_partitioned_bit16_groups[i]
                 fp32_partition = self.single_partition_of_fp32_groups[i]
+
+                # 将fp32分区的数据拷贝到bit16分区
                 bit16_partitions[partition_id].data.copy_(fp32_partition.data)
+
+                # 停止定时器
                 self.stop_timers([OPTIMIZER_STEP])
 
+        # 查看内存使用情况
         see_memory_usage('After optimizer before all-gather')
+
+        # 如果开启了CPU offload，重置CPU buffer
         if self.cpu_offload:
             gd.debuginfo(prj="ds")
             self.reset_cpu_buffers()
 
+        # 启动定时器
         self.start_timers([OPTIMIZER_ALLGATHER])
+
         # Gather the updated weights from everyone.
         # Then all partitions of the model parameters are updated and ready for next round forward.
+        # 从每个节点收集更新后的权重。
+        # 然后，所有分区的模型参数都更新完成，准备好进行下一轮的前向传播。
         all_gather_dp_groups(partitioned_param_groups=self.parallel_partitioned_bit16_groups,
                              dp_process_group=self.real_dp_process_group,
                              start_alignment_factor=self.nccl_start_alignment_factor,
                              allgather_bucket_size=self.allgather_bucket_size)
 
+        # 停止定时器
         self.stop_timers([OPTIMIZER_ALLGATHER])
 
         # TODO: we probably don't need this? just to be safe
+        # 循环更新模型的bit16权重（虽然可能并不需要，但为了保险起见）
         for i in range(len(self.bit16_groups)):
             self._update_model_bit16_weights(i)
 
+        # 日志记录优化器的定时信息
         self.log_timers(timer_names)
+
         see_memory_usage('After zero_optimizer step')
 
         return
 
+    # 更新LP参数
     @torch.no_grad()
     def update_lp_params(self):
         gd.debuginfo(prj="ds")
+        # 遍历bit16和fp32的分区组
         for i, (bit16_partitions, fp32_partition) in enumerate(
                 zip(self.parallel_partitioned_bit16_groups, self.single_partition_of_fp32_groups)):
+            # 获取当前分区的ID
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
+
+            # 将fp32分区的数据复制到相应的bit16分区中
             bit16_partitions[partition_id].data.copy_(fp32_partition.data)
+
             # print_rank_0(f'update_lp_params {i=} {partition_id=}', force=True)
             # if i == 0:
             #     print_rank_0(f'{fp32_partition[:10]=}', force=True)
 
+        # 将所有分区的数据集合在一起，以便在分布式处理过程中使用
         all_gather_dp_groups(partitioned_param_groups=self.parallel_partitioned_bit16_groups,
                              dp_process_group=self.real_dp_process_group,
                              start_alignment_factor=self.nccl_start_alignment_factor,
                              allgather_bucket_size=self.allgather_bucket_size)
 
+    # 平均专家梯度范数
     def _average_expert_grad_norms(self, norm_groups):
         gd.debuginfo(prj="ds")
+        # 遍历norm_groups中的每个元素，并获取其索引和值
         for i, norm in enumerate(norm_groups):
+            # 如果当前索引对应的参数组是moe参数组
             if self.is_moe_param_group[i]:
+                # 计算规模化的梯度norm，这是通过对原始norm除以分布式进程组的大小来实现的
                 scaled_norm = norm * 1.0 / float(dist.get_world_size(group=self.real_dp_process_group[i]))
+
+                # 将规模化的norm转换为tensor格式，并确保其在正确的设备上，并且具有正确的数据类型
                 scaled_norm_tensor = torch.tensor(scaled_norm,
                                                   device=get_accelerator().device_name(),
                                                   dtype=torch.float)
+
+                # 使用all_reduce进行跨所有设备的归约操作，所有设备上的scaled_norm_tensor将会被加起来
                 dist.all_reduce(scaled_norm_tensor, group=self.real_dp_process_group[i])
+
+                # 将归约后的结果（一个tensor）转换为Python数值，并存回norm_groups中对应的位置
                 norm_groups[i] = scaled_norm_tensor.item()
 
+    # 取消缩放并裁剪梯度
     def unscale_and_clip_grads(self, grad_groups_flat, total_norm):
         gd.debuginfo(prj="ds")
         # compute combined scale factor for this group
@@ -2875,62 +3188,111 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             else:
                 grad.data.mul_(1. / combined_scale)
 
+    # 检查是否有溢出
     def _check_overflow(self, partition_gradients=True):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # 这个方法用于检查是否有溢出
+        # partition_gradients 参数决定是否在不同的设备上分割梯度，默认为True
+        # has_overflow 是一个方法，检查是否有任何梯度超出了表示范围，如果有，返回 True
         self.overflow = self.has_overflow(partition_gradients)
 
     # `params` is a list / generator of torch.Variable
+    # 检查是否串行溢出
     def has_overflow_serial(self, params, is_grad_list=False):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # 遍历传入的参数
         for p in params:
+            # 如果参数的梯度不为None，且该梯度的数据包含无穷大或者NaN值
             if p.grad is not None and self._has_inf_or_nan(p.grad.data):
+                # 返回True，表示有溢出
                 return True
 
+        # 如果遍历所有参数都没有发现溢出，返回False
         return False
 
+    # 检查分区的梯度是否串行溢出
     def has_overflow_partitioned_grads_serial(self):
         gd.debuginfo(prj="ds")
+        # 遍历每一个16位组
         for i in range(len(self.bit16_groups)):
+            # 在每个组内遍历每一个平均梯度
             for j, grad in enumerate(self.averaged_gradients[i]):
+                # 如果当前梯度不为空，并且梯度数据中存在无穷大或者NaN（不是一个数字）
+                # 则返回True，表示存在溢出的分区梯度
                 if grad is not None and self._has_inf_or_nan(grad.data, j):
                     return True
+
+        # 如果所有的梯度都被检查过，并且没有发现溢出的情况，那么返回False
         return False
 
+    # 检查是否溢出
     def has_overflow(self, partition_gradients=True):
+        # 如果分区梯度为真
         if partition_gradients:
             gd.debuginfo(prj="ds")
+            # 如果执行CPU offload，则获取本地溢出，否则获取分区梯度的溢出
             overflow = self.local_overflow if self.cpu_offload else self.has_overflow_partitioned_grads_serial()
+
+            # 将溢出值转换为GPU可处理的字节张量
             overflow_gpu = get_accelerator().ByteTensor([overflow])
-            '''This will capture overflow across all data parallel and expert parallel process
-            Since expert parallel process are a subset of data parallel process'''
+
+            '''
+            This will capture overflow across all data parallel and expert parallel process
+            Since expert parallel process are a subset of data parallel process
+            这将捕获所有数据并行和专家并行过程中的溢出
+            由于专家并行过程是数据并行过程的子集
+            '''
+            # 将溢出值在数据并行过程组中进行归约处理，获取最大值
             dist.all_reduce(overflow_gpu, op=dist.ReduceOp.MAX, group=self.dp_process_group)
 
         else:
             gd.debuginfo(prj="ds")
+            # 初始化参数列表
             params = []
+
+            # 对于每一个16位组
             for group in self.bit16_groups:
+                # 对于组中的每一个参数
                 for param in group:
+                    # 将参数添加到参数列表中
                     params.append(param)
 
+            # 获取参数列表中的溢出值
             overflow = self.has_overflow_serial(params, is_grad_list=partition_gradients)
+
+            # 将溢出值转换为GPU可处理的字节张量
             overflow_gpu = get_accelerator().ByteTensor([overflow])
+
 
         # Since each model parallel GPU carries only part of the model,
         # make sure overflow flag is synced across all the model parallel GPUs
+        # 由于每个模型并行的GPU只携带模型的一部分
+        # 确保溢出标志在所有的模型并行GPU中同步
         self._model_parallel_all_reduce(tensor=overflow_gpu, op=dist.ReduceOp.MAX)
 
+        # 获取字节张量中的溢出值
         overflow = overflow_gpu[0].item()
+
+        # 返回溢出值的布尔值，如果溢出则返回True，否则返回False
         return bool(overflow)
 
-    # `x` is a torch.Tensor
+    # `x` is a torch.Tensor  #检查是否有无穷大或NaN
     @staticmethod
     def _has_inf_or_nan(x, j=None):
         try:
             gd.debuginfo(prj="ds")
+            # 如果 x 是半精度浮点数(half)，.float()会引发额外的深拷贝，但是如果
+            # Pytorch的 .sum() 创建一个与x类型相同的单元素张量
+            # （对于一些最近版本的pytorch是这样的），那么这个操作就是必要的。
+
             # if x is half, the .float() incurs an additional deep copy, but it's necessary if
             # Pytorch's .sum() creates a one-element tensor of the same type as x
             # (which is true for some recent version of pytorch).
+
+            # 如果 .sum() 返回一个Python标量，可以使用更高效的版本
+            # cpu_sum = float(x.sum())
             cpu_sum = float(x.float().sum())
+
             # More efficient version that can be used if .sum() returns a Python scalar
             # cpu_sum = float(x.sum())
         except RuntimeError as instance:
@@ -2938,93 +3300,151 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # We want to check if inst is actually an overflow exception.
             # RuntimeError could come from a different error.
             # If so, we still want the exception to propagate.
+
+            # 我们想要检查这个异常是否真的是溢出异常。
+            # RuntimeError 可能来自不同的错误。
+            # 如果是这样，我们仍然希望异常能够传播。
+
             if "value cannot be converted" not in instance.args[0]:
                 raise
             return True
         else:
+            # 如果 cpu_sum 是正无穷、负无穷或者不是一个数字（NaN），
+            # 那么我们就返回True，意味着x中含有无穷或者NaN
             gd.debuginfo(prj="ds")
             if cpu_sum == float('inf') or cpu_sum == -float('inf') or cpu_sum != cpu_sum:
                 gd.debuginfo(prj="ds")
                 return True
+
+            # 否则我们返回False，意味着x中没有无穷或者NaN
             return False
 
+    # 执行反向传播      ph1-z2 train1batch 入口  只有backward调用z2优化器
     def backward(self, loss, retain_graph=False):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_IN, loss={infoTensor(loss)}')
         """
+        :attr:`backward` 执行以下步骤:
+
+        1. fp32_loss = loss.float()  # 将损失转换为浮点类型
+        2. scaled_loss = fp32_loss*loss_scale  # 对损失进行缩放
+        3. scaled_loss.backward()  # 对缩放后的损失进行反向传播，这会将缩放的梯度累积到模型的 fp16 叶子节点的 ``.grad`` 属性中
+
         :attr:`backward` performs the following steps:
 
         1. fp32_loss = loss.float()
         2. scaled_loss = fp32_loss*loss_scale
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
+        # 微步进ID增加1
         self.micro_step_id += 1
 
+        # 如果启用连续梯度
         if self.contiguous_gradients:
+            # 初始化 ipg 缓冲区
             self.ipg_buffer = []
+
+            # 创建一个大小为 reduce_bucket_size 的空tensor，数据类型为 self.dtype，设备为当前设备
             buf_0 = torch.empty(int(self.reduce_bucket_size),
                                 dtype=self.dtype,
                                 device=get_accelerator().current_device_name())
+            gd.debuginfo(prj="ds", info=f'buf_0={infoTensor(buf_0)}')
+
+            # 将 buf_0 添加到 ipg 缓冲区中
             self.ipg_buffer.append(buf_0)
 
             # Use double buffers to avoid data access conflict when overlap_comm is enabled.
+            # 如果启用了 overlap_comm，使用双缓冲区以避免在启用 overlap_comm 时出现数据访问冲突
             if self.overlap_comm:
                 buf_1 = torch.empty(int(self.reduce_bucket_size),
                                     dtype=self.dtype,
                                     device=get_accelerator().current_device_name())
+                gd.debuginfo(prj="ds", info=f'buf_1={infoTensor(buf_1)}')
+                # 将 buf_1 添加到 ipg 缓冲区中
                 self.ipg_buffer.append(buf_1)
+
+            # 初始化 ipg 索引
             self.ipg_index = 0
 
+        # 如果使用自定义损失缩放器
         if self.custom_loss_scaler:
-            gd.debuginfo(prj="ds")
+            # 将损失按照外部损失缩放因子进行缩放
             scaled_loss = self.external_loss_scale * loss
+            gd.debuginfo(prj="ds", info=f'scaled_loss={infoTensor(scaled_loss)}')
+
+            # 对缩放后的损失进行反向传播
             scaled_loss.backward()
         else:
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds") #ph1-z2 train1batch
+            # 如果没有使用自定义损失缩放器，使用 loss_scaler 对损失进行反向传播
             self.loss_scaler.backward(loss.float(), retain_graph=retain_graph)
 
+        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
+
+    # 检查是否溢出
     def check_overflow(self, partition_gradients=True):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # 调用内部的 `_check_overflow` 方法
+        # 该方法旨在检查计算过程中是否出现了溢出
+        # `partition_gradients` 参数决定是否在不同设备上分割梯度计算
         self._check_overflow(partition_gradients)
 
+    # 更新比例
     def _update_scale(self, has_overflow=False):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # has_overflow 是一个布尔值，如果为True，表示在前向或者反向传播中发生了梯度溢出
+
+        # self.loss_scaler 是一个梯度缩放器，它是用来防止在反向传播过程中梯度小到无法表示的情况
+        # update_scale 是 loss_scaler 的一个方法，通过传入 has_overflow 参数，来更新当前的缩放因子
+
+        # 如果发生了梯度溢出，就会减小缩放因子，否则就会增大缩放因子
+        # 这样可以保证在训练过程中，梯度既不会太大导致溢出，也不会太小到无法表示
         self.loss_scaler.update_scale(has_overflow)
 
     # Promote state so it can be retrieved or set via "fp16_optimizer_instance.state"
+    # 获得状态
     def _get_state(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return self.optimizer.state
 
+    # 获得状态
     def _set_state(self, value):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         self.optimizer.state = value
 
-    state = property(_get_state, _set_state)
+    state = property(_get_state, _set_state)  #????
 
     # Promote param_groups so it can be retrieved or set via "fp16_optimizer_instance.param_groups"
     # (for example, to adjust the learning rate)
+    # 获取参数组
     def _get_param_groups(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return self.optimizer.param_groups
 
+    # 设置参数组
     def _set_param_groups(self, value):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         self.optimizer.param_groups = value
 
     param_groups = property(_get_param_groups, _set_param_groups)
 
     # Promote loss scale so it can be retrieved or set via "fp16_optimizer_instance.loss_scale"
     def _get_loss_scale(self):
-        gd.debuginfo(prj="ds")
+        """
+        本函数的目标是获取损失缩放值。如果存在自定义的损失缩放器，
+        则返回外部的损失缩放值。否则，返回当前的损失缩放值。
+        """
         if self.custom_loss_scaler:
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds")
+            # 存在自定义的损失缩放器时，返回外部的损失缩放值
             return self.external_loss_scale
         else:
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds")
+            # 不存在自定义的损失缩放器时，返回当前的损失缩放值
             return self.loss_scaler.cur_scale
 
+    # 设置损失比例
     def _set_loss_scale(self, value):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         self.loss_scaler.cur_scale = value
 
     loss_scale = property(_get_loss_scale, _set_loss_scale)
@@ -3032,42 +3452,79 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # Return group tensor after removing paddings that are added for alignment to DP world size.
     # This method works on the assumption that each group contains a single flattened tensor.
+    # 获取去除填充的组， 这个方法工作在假设每个组包含一个平坦的tensor之上
     def _get_groups_without_padding(self, groups_with_padding):
         gd.debuginfo(prj="ds")
+        # 创建一个空列表，用于存储去除填充后的组
         groups_without_padding = []
+
+        # 使用枚举函数对带填充的组进行迭代，获取每个组的索引和内容
         for i, group in enumerate(groups_with_padding):
+            # 计算每个组真实的长度，即组的元素总数减去该组的填充数量
             lean_length = group.numel() - self.groups_padding[i]
+
+            # 从每个组中提取出真实的元素（去除填充），并添加到新的列表中
             groups_without_padding.append(group[:lean_length])
 
+        # 返回去除填充后的组列表
         return groups_without_padding
 
     # Return optimizer state after removing paddings that are added for alignment.
+    # 获取没有填充的状态
     def _get_state_without_padding(self, state_with_padding, padding):
         gd.debuginfo(prj="ds")
+        # 初始化一个空字典，用于存放没有padding的状态
         lean_state = {}
+        # 遍历传入的状态字典
         for key, value in state_with_padding.items():
+            # 如果状态的值是一个张量
             if torch.is_tensor(value):
+                # 计算不包含padding的长度
                 lean_length = value.numel() - padding
+
+                # 截取原张量的前lean_length长度的部分，赋值给新的状态字典
                 lean_state[key] = value[:lean_length]
             else:
+                # 如果状态的值不是张量，直接赋值给新的状态字典
                 lean_state[key] = value
 
+        # 返回没有padding的状态字典
         return lean_state
 
     # Return base optimizer states.
     # This method assumes that each param group contains a single flattened tensor.
+    # 获取基础优化器状态， 这个方法工作在假设每个组包含一个平坦的tensor之上 . only call in state_dict
     def _get_base_optimizer_state(self):
-        gd.debuginfo(prj="ds")
+        # 初始化一个空列表用于存储优化器的状态
         optimizer_groups_state = []
+
+        # 遍历优化器的参数组
         for i, group in enumerate(self.optimizer.param_groups):
+            # 获取参数组中的第一个参数
             p = group['params'][0]
+
+            # 调用函数_get_state_without_padding去掉参数的填充，并获取优化器状态
+            # self.groups_padding[i]是获取当前参数组的填充
             lean_optimizer_state = self._get_state_without_padding(self.optimizer.state[p], self.groups_padding[i])
+            gd.debuginfo(prj="ds", info=f'i={i}, lean_optimizer_state={lean_optimizer_state}')
+
+            # 将优化器状态添加到列表中
             optimizer_groups_state.append(lean_optimizer_state)
 
+        # 返回处理后的优化器状态列表
         return optimizer_groups_state
 
+    # 返回优化器的状态字典
     def state_dict(self):
         """
+        返回一个字典，包含当前FP16_Optimizer实例的状态。
+        这个字典包含FP16_Optimizer的属性，以及包含的Pytorch优化器的state_dict。
+        示例::
+            checkpoint = {}
+            checkpoint['model'] = model.state_dict()
+            checkpoint['optimizer'] = optimizer.state_dict()
+            torch.save(checkpoint, "saved.pth")
+
         Returns a dict containing the current state of this :class:`FP16_Optimizer` instance.
         This dict contains attributes of :class:`FP16_Optimizer`, as well as the state_dict
         of the contained Pytorch optimizer.
@@ -3077,139 +3534,252 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             checkpoint['optimizer'] = optimizer.state_dict()
             torch.save(checkpoint, "saved.pth")
         """
+        # 初始化一个空字典用于存储状态
         state_dict = {}
+        # 存储损失缩放器的状态
         state_dict['loss_scaler'] = self.loss_scaler
+        # 存储动态损失缩放的状态
         state_dict['dynamic_loss_scale'] = self.dynamic_loss_scale
+        # 存储溢出的状态
         state_dict['overflow'] = self.overflow
+        # 存储梯度裁剪的状态
         state_dict[CLIP_GRAD] = self.clip_grad
 
+        # 如果启用了弹性检查点
         if self.elastic_checkpoint:
             gd.debuginfo(prj="ds")
+            # 获取基础优化器的状态
             state_dict[BASE_OPTIMIZER_STATE] = self._get_base_optimizer_state()
         else:
+            # 存储优化器的状态
             gd.debuginfo(prj="ds")
             state_dict[BASE_OPTIMIZER_STATE] = self.optimizer.state_dict()
 
         # Remove paddings for DP alignment to enable loading for other alignment values
+        # 移除DP对齐的填充，以便于加载其他对齐值
         fp32_groups_without_padding = self._get_groups_without_padding(self.single_partition_of_fp32_groups)
         state_dict[SINGLE_PARTITION_OF_FP32_GROUPS] = fp32_groups_without_padding
 
+        # 存储ZeroStage（零阶段）的状态
         state_dict[
             ZERO_STAGE] = ZeroStageEnum.gradients if self.partition_gradients else ZeroStageEnum.optimizer_states
+
+        # 存储分组填充的状态
         state_dict[GROUP_PADDINGS] = self.groups_padding
+
+        # 存储分区计数的状态
         state_dict[PARTITION_COUNT] = self.partition_count
 
+        # 存储DeepSpeed版本的状态
         state_dict[DS_VERSION] = version
+
+        # 存储参数切片映射的状态
         state_dict[PARAM_SLICE_MAPPINGS] = self._param_slice_mappings
 
+        # 返回状态字典
         return state_dict
 
     # Restore base optimizer fp32 weights from elastic checkpoint by:
     # 1) Merging fp32 weights from checkpoints of all partitions
     # 2) Extracting fp32 weights for current partition from merged weights
     # 3) Using extracted weights to update base optimizer weights directly.
+    # only call in  _load_legacy_checkpoint
     def _restore_from_elastic_fp32_weights(self, all_state_dict):
         gd.debuginfo(prj="ds")
+        # 初始化一个空列表用于存储FP32分区数据
         merged_single_partition_of_fp32_groups = []
 
+        # 遍历 self 中的 FP32 分区组
         for i in range(len(self.single_partition_of_fp32_groups)):
+            # 获取当前分区的ID，使用真实的数据并行过程组
             partition_id = dist.get_rank(group=self.real_dp_process_group[i])
+
+            # 从所有的状态字典中获取对应的FP32分区
             merged_partitions = [sd[SINGLE_PARTITION_OF_FP32_GROUPS][i] for sd in all_state_dict]
+
+            # 如果当前优化器的参数组是一个MOE组
             if self.is_moe_group(self.optimizer.param_groups[i]):
+                # 获取EP的排名
                 ranks = self.get_ep_ranks(group_name=self.optimizer.param_groups[i]['name'])
+                # 从合并的分区中选择对应排名的部分
                 merged_partitions = [merged_partitions[i] for i in ranks]
+
+            # 将所有合并的分区数据进行平均，然后根据NCCL开始对齐因子和真实的数据并行过程组的大小进行对齐
             flat_merged_partitions = self.flatten_dense_tensors_aligned(
                 merged_partitions,
                 self.nccl_start_alignment_factor * dist.get_world_size(group=self.real_dp_process_group[i]))
+
+            # 获取数据并行分区
             dp_partitions = self.get_data_parallel_partitions(flat_merged_partitions, i)
+
+            # 将数据并行分区添加到最终的FP32分区组中
             merged_single_partition_of_fp32_groups.append(dp_partitions[partition_id])
 
+        # 遍历当前的FP32分区组和合并后的FP32分区组
         for current, saved in zip(self.single_partition_of_fp32_groups, merged_single_partition_of_fp32_groups):
+            # 将合并后的数据拷贝到当前的数据中
             current.data.copy_(saved.data)
 
     # Restore base optimizer fp32 weights from ZeRO fp16 or bfloat16 weights
+    # 从16位权重恢复
     def _restore_from_bit16_weights(self):
         gd.debuginfo(prj="ds")
+        # 遍历 bit16_partitions 和 fp32_partition
         for group_id, (bit16_partitions, fp32_partition) in enumerate(
                 zip(self.parallel_partitioned_bit16_groups, self.single_partition_of_fp32_groups)):
+            # 获取当前进程在进程组中的排名（ID）
             partition_id = dist.get_rank(group=self.real_dp_process_group[group_id])
+            # 将bit16_partitions中对应ID的数据复制到fp32_partition中
             fp32_partition.data.copy_(bit16_partitions[partition_id].data)
 
     # Refresh the fp32 master params from the fp16 or bfloat16 copies.
+    # 刷新FP32参数
     def refresh_fp32_params(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # 调用内部函数_restore_from_bit16_weights，用于从16位浮点数权重恢复到32位浮点数
         self._restore_from_bit16_weights()
 
     # Extract optimizer state for current partition from merged states of all partitions
+    # 分区基础优化器状态  only call by _restore_elastic_base_optimizer_state
     def _partition_base_optimizer_state(self, state_key, all_partition_states, group_id):
+        # 获取当前进程在数据并行组中的排名
         partition_id = dist.get_rank(group=self.real_dp_process_group[group_id])
+
+        # 获取数据并行组的总进程数
         alignment = dist.get_world_size(group=self.real_dp_process_group[group_id])
+
+        gd.debuginfo(prj="ds", info=f'partition_id={partition_id}, alignment={alignment}')
+
+        # 如果状态是一个张量
         if torch.is_tensor(all_partition_states[0]):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'all_partition_states[0]={all_partition_states[0]}')
+            # 将所有分区状态张量扁平化并对齐
             flat_merged_partitions = self.flatten_dense_tensors_aligned(all_partition_states, alignment)
+
+            # 获取数据并行分区
             dp_partitions = self.get_data_parallel_partitions(flat_merged_partitions, group_id)
+
+            # 返回当前进程对应的分区
             return dp_partitions[partition_id]
         else:
             gd.debuginfo(prj="ds")
             # Assume non-tensor states are not partitioned and equal across ranks, so return first one
+            # 如果状态不是张量，假设它没有分区，并且在所有进程中都是相同的，因此返回第一个状态
             return all_partition_states[0]
 
+    # 恢复基本优化器状态
     def _restore_base_optimizer_state(self, base_optimizer_group_states):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
+        # 如果 base_optimizer_group_states 是字典，我们取出其中的 'state' 键对应的值
         if type(base_optimizer_group_states) == dict:
             gd.debuginfo(prj="ds")
             base_optimizer_group_states = base_optimizer_group_states['state']
+
+        # 遍历优化器中的参数组
         for i, group in enumerate(self.optimizer.param_groups):
+            # 取出参数组中的第一个参数
             p = group['params'][0]
+
+            # 遍历存储的优化器状态
             for key, saved in base_optimizer_group_states[i].items():
+                # 如果优化器的状态是一个张量
                 if torch.is_tensor(self.optimizer.state[p][key]):
+                    # 获取目标张量
                     dst_tensor = self.optimizer.state[p][key]
+                    # 通过_pad_tensor函数获取与目标张量等长的源张量
                     src_tensor = _get_padded_tensor(saved, dst_tensor.numel())
+
+                    # 将源张量的数据复制到目标张量
                     self.optimizer.state[p][key].data.copy_(src_tensor.data)
+
+                    gd.debuginfo(prj="ds", info=f'self.optimizer.state[{p}][{key}], src_tensor={infoTensor(src_tensor)}, dst_tensor={infoTensor(dst_tensor)}')
                 else:
+                    # 如果优化器的状态不是张量，直接赋值
+                    gd.debuginfo(prj="ds", info=f'self.optimizer.state[{p}][{key}]={saved}')
                     self.optimizer.state[p][key] = saved
 
+    # 获取EP等级
     def get_ep_ranks(self, rank=0, group_name=None):
-        gd.debuginfo(prj="ds")
+
+        # 导入deepspeed库中的groups模块，该模块提供了并行计算组的管理功能
         from deepspeed.utils import groups
+
+        # _get_expert_parallel_world_size函数返回专家并行世界的大小
+        # 专家并行世界是指在专家并行（Expert Parallelism）策略下，所有专家（即模型的一部分）所在的并行计算环境
         expert_parallel_size_ = groups._get_expert_parallel_world_size(group_name)
+
+        # _get_data_parallel_world_size函数返回数据并行世界的大小
+        # 数据并行世界是指在数据并行（Data Parallelism）策略下，所有数据所在的并行计算环境
         world_size = groups._get_data_parallel_world_size()
+
+        # _get_expert_parallel_rank函数获取当前处理器在专家并行世界中的排名
+        # 排名决定了当前处理器在并行计算中的执行顺序
         rank = groups._get_expert_parallel_rank(group_name)
+
+        # range函数生成一个序列，范围从当前处理器的排名开始，到数据并行世界的大小，步长为专家并行世界的大小
+        # 这样可以确保每个处理器在其执行顺序上都是均匀分布的
         ranks = range(rank, world_size, expert_parallel_size_)
+
+        gd.debuginfo(prj="ds", info=f'expert_parallel_size_={expert_parallel_size_}, world_size={world_size}, rank={rank}, ranks={ranks}')
+
+        # 返回一个由处理器排名组成的列表，这个列表可以用于管理处理器的执行顺序
         return list(ranks)
 
     # Restore base optimizer state from elastic checkpoint by
     # 1) Merging optimizer state from checkpoints of all partitions
     # 2) Extracting optimizer state for current partition from the merged state
     # 3) Using the extracted value to directly update the base optimizer.
+    #  恢复弹性基本优化器状态
     def _restore_elastic_base_optimizer_state(self, all_state_dict):
         gd.debuginfo(prj="ds")
+        # 初始化一个空的列表，用于存储基础优化器的状态
         base_optimizer_group_states = []
+
+        # 对优化器的参数组进行遍历
         for i in range(len(self.optimizer.param_groups)):
+            # 初始化一个空字典，用于存储当前参数组的状态
             partition_states = {}
+
+            # 从所有的状态字典中获取当前参数组的状态
             all_partition_group_states = [sd[BASE_OPTIMIZER_STATE][i] for sd in all_state_dict]
 
+            gd.debuginfo(prj="ds", info=f'i={i}, all_partition_group_states={all_partition_group_states}')
+
+            # 如果当前参数组是一个 MOE 组（Mixture of Experts，混合专家模型）
             if self.is_moe_group(self.optimizer.param_groups[i]):
+                # 获取当前参数组在 EP 中的排名
                 ranks = self.get_ep_ranks(group_name=self.optimizer.param_groups[i]['name'])
+                # 根据排名，重新获取当前参数组的状态
                 all_partition_group_states = [all_partition_group_states[i] for i in ranks]
 
+            # 对所有的状态进行遍历，合并分区状态
             for key in all_partition_group_states[0].keys():
+                # 获取所有分区的同一状态
                 all_partition_states = [all_states[key] for all_states in all_partition_group_states]
+
+                # 合并所有分区的状态
                 partition_states[key] = self._partition_base_optimizer_state(key, all_partition_states, i)
+
+            # 将合并后的状态添加到状态列表中
             base_optimizer_group_states.append(partition_states)
 
+        # 通过状态列表，恢复基础优化器的状态
         self._restore_base_optimizer_state(base_optimizer_group_states)
 
+    # 加载优化器状态字典
     def load_state_dict(self,
-                        state_dict_list,
-                        load_optimizer_states=True,
-                        load_from_fp32_weights=False,
-                        checkpoint_folder=None):
+                        state_dict_list,              # 状态字典列表，一般用于存储模型的参数
+                        load_optimizer_states=True,   # 是否加载优化器的状态
+                        load_from_fp32_weights=False, # 是否从fp32权重加载
+                        checkpoint_folder=None):      # 加载序列，默认为None
+        # 如果提供了检查点文件夹
         if checkpoint_folder:
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds")
+            # 从通用检查点加载模型和优化器状态
             self._load_universal_checkpoint(checkpoint_folder, load_optimizer_states, load_from_fp32_weights)
         else:
-            gd.debuginfo(prj="ds")
+            # gd.debuginfo(prj="ds")
+            # 从传统检查点加载模型和优化器状态
             self._load_legacy_checkpoint(state_dict_list, load_optimizer_states, load_from_fp32_weights)
 
     # 定义一个方法来加载通用检查点 用于加载通用的模型检查点
@@ -3217,27 +3787,41 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 从检查点文件夹中加载超参数检查点状态
         self._load_hp_checkpoint_state(checkpoint_folder)
 
+    # 参数组
     @property
     def param_groups(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         """Forward the wrapped optimizer's parameters."""
         return self.optimizer.param_groups
 
+    # 加载HP检查点状态
     def _load_hp_checkpoint_state(self, checkpoint_dir):
-        gd.debuginfo(prj="ds")
+        # 将给定的路径后面添加 "zero" 子目录
         checkpoint_dir = os.path.join(checkpoint_dir, "zero")
+
+        # 获取模型并行的排名
         tp_rank = bwc_tensor_model_parallel_rank(mpu=self.mpu)
+
+        # 获取模型并行的世界大小
         tp_world_size = self.mpu.get_slice_parallel_world_size()
 
+        gd.debuginfo(prj="ds",info=f'checkpoint_dir={checkpoint_dir}, tp_rank={tp_rank}, tp_world_size={tp_world_size}')
+
+        # 遍历优化器的参数组
         for i, _ in enumerate(self.optimizer.param_groups):
+            # 遍历16位的参数组
             for lp in self.bit16_groups[i]:
+                # 如果参数有映射
                 if lp._hp_mapping is not None:
-                    #print(f"Loading {self.param_names[lp]} {tp_rank=} {tp_world_size=}")
+                    gd.debuginfo(f"Loading {self.param_names[lp]}=tp_rank={tp_rank}, tp_world_size={tp_world_size}")
+                    # 加载检查点状态
                     lp.load_hp_checkpoint_state(os.path.join(checkpoint_dir, self.param_names[lp]), tp_rank,
                                                 tp_world_size)
 
+    # 加载旧版检查点
+    # 定义了一个名为 _load_legacy_checkpoint 的函数，这个函数的目的是从旧版的检查点中加载模型和优化器的状态
     def _load_legacy_checkpoint(self, state_dict_list, load_optimizer_states=True, load_from_fp32_weights=False):
-        gd.debuginfo(prj="ds")
+
         r"""Loading ZeRO checkpoint
 
         Arguments:
@@ -3247,6 +3831,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             load_optimizer_states: Boolean indicating whether or not to load base optimizer states
             load_from_fp32_weights: Boolean indicating whether to initialize fp32 master weights from fp32
             copies in checkpoints (no precision loss) or from model's fp16 copies (with precision loss).
+            
+        加载 ZeRO 检查点
+        参数：
+            state_dict_list: 所有保存的 ZeRO 检查点的列表，每个保存的分区一个。
+                注意，保存的分区数量可能与加载的分区数量不同，以支持在保存和加载检查点之间更改 GPU 数量，特别是 DP 世界大小。
+            load_optimizer_states: 布尔值，表示是否加载基础优化器状态
+            load_from_fp32_weights: 布尔值，表示是否从检查点的 fp32 副本（无精度损失）或模型的 fp16 副本（有精度损失）初始化 fp32 主权重。
+
         """
         """
         Loads a state_dict created by an earlier call to state_dict().
@@ -3265,18 +3857,35 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         """
 
         # I think it should actually be ok to reload the optimizer before the model.
+
+        # 获取当前进程的等级，这是在分布式训练中使用的
         dp_rank = dist.get_rank(group=self.dp_process_group)
+
+        # 获取当前等级的状态字典
         current_rank_sd = state_dict_list[dp_rank]
+        gd.debuginfo(prj="ds", info=f'dp_rank={dp_rank}, current_rank_sd={current_rank_sd}')
+
+        # 获取状态信息，包括损失缩放器，动态损失缩放，溢出状态，梯度裁剪等
         self.loss_scaler = current_rank_sd.get('loss_scaler', self.loss_scaler)
         self.dynamic_loss_scale = current_rank_sd.get('dynamic_loss_scale', self.dynamic_loss_scale)
         self.overflow = current_rank_sd.get('overflow', self.overflow)
         self.clip_grad = current_rank_sd.get(CLIP_GRAD, self.clip_grad)
+        gd.debuginfo(prj="ds", info=f'self.loss_scaler={self.loss_scaler}')
+        gd.debuginfo(prj="ds", info=f'self.dynamic_loss_scale={self.dynamic_loss_scale}')
+        gd.debuginfo(prj="ds", info=f'self.overflow={self.overflow}')
+        gd.debuginfo(prj="ds", info=f'self.clip_grad={self.clip_grad}')
 
+        # 获取检查点版本，版本信息在加载时需要进行检查以保证兼容性
         ckpt_version = current_rank_sd.get(DS_VERSION, False)
-        assert ckpt_version, f"Empty ds_version in checkpoint, not clear how to proceed"
-        ckpt_version = pkg_version.parse(ckpt_version)
+        gd.debuginfo(prj="ds", info=f'A-ckpt_version={ckpt_version}')
 
-        # zero stage 1 mode
+        assert ckpt_version, f"Empty ds_version in checkpoint, not clear how to proceed"
+
+        ckpt_version = pkg_version.parse(ckpt_version)
+        gd.debuginfo(prj="ds", info=f'B-ckpt_version={ckpt_version}')
+
+        # zero stage 1 mode # 针对 zero stage 1 模式进行版本检查
+        # 如果当前使用的是 ZeRO stage 1 模式，需要进行版本检查
         if not self.partition_gradients:
             required_version = pkg_version.parse("0.3.17")
             error_str = f"ZeRO stage 1 changed in {required_version} and is not backwards compatible " \
@@ -3284,7 +3893,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 "please use an older version of DeepSpeed (<= 0.5.8) and set 'legacy_stage1': true in your zero config json."
             assert required_version <= ckpt_version, f"Old version: {ckpt_version} {error_str}"
 
+        # 检查状态字典中基础优化器状态的数据类型是否为字典
         ckpt_is_rigid = isinstance(current_rank_sd[BASE_OPTIMIZER_STATE], dict)
+        gd.debuginfo(prj="ds", info=f'ckpt_is_rigid={ckpt_is_rigid}')
 
         # padding is always at the last rank/partition
         # if DP=1024 and param-group elems=16 -> padding will be 1024-16 across all but one rank
@@ -3300,14 +3911,16 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             if ckpt_is_rigid:
                 gd.debuginfo(prj="ds")
                 # loading rigid ckpt into either rigid or elastic exec
+                # 如果状态字典中基础优化器状态的数据类型是字典，则直接加载状态
                 self.optimizer.load_state_dict(current_rank_sd[BASE_OPTIMIZER_STATE])
             else:
+                # 如果状态字典中基础优化器状态的数据类型不是字典，那么根据是否是弹性检查点来使用不同的恢复方法
                 if self.elastic_checkpoint:
-                    gd.debuginfo(prj="ds")
+                    gd.debuginfo(prj="ds")  # 如果是弹性检查点，使用对应的恢复方法
                     # loading elastic into elastic exec
                     self._restore_elastic_base_optimizer_state(state_dict_list)
                 else:
-                    gd.debuginfo(prj="ds")
+                    gd.debuginfo(prj="ds") # 如果是非弹性检查点，使用基础的恢复方法
                     # loading an elastic checkpoint into rigid exec
                     self._restore_base_optimizer_state(current_rank_sd[BASE_OPTIMIZER_STATE])
 
@@ -3326,17 +3939,30 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # constructed in the same way as the one whose state_dict we are loading, the same master params
         # are guaranteed to exist, so we can just copy_() from the saved master params.
 
+        # 在这一点上，优化器对模型的 fp32 参数的引用是最新的。
+        # 优化器的超参数和内部缓冲区也是最新的。
+        # 然而，优化器存储的模型的 fp16 参数的 fp32 主副本仍然过时。有两个选择。
+        # 1：从模型的 fp16 参数刷新主参数。
+        #    这需要更少的存储但会导致精度损失。
+        # 2：单独保存和恢复 fp32 主副本。
+        #    如果改变 DP 度，我们选择选项 1，否则选择选项 2
+
         if load_from_fp32_weights:
             # option 2 from above
+            # 选择方案2，如果是弹性检查点并且状态字典不是字典类型，使用对应的恢复方法
             if self.elastic_checkpoint and not ckpt_is_rigid:
                 gd.debuginfo(prj="ds")
                 self._restore_from_elastic_fp32_weights(state_dict_list)
             else:
                 gd.debuginfo(prj="ds")
+                # 对于非弹性检查点，简单地从当前等级的保存权重复制就足够了
                 # For non-elastic checkpoint, simply copying from saved weights of current rank is sufficient.
                 for current, saved in zip(self.single_partition_of_fp32_groups,
                                           current_rank_sd[SINGLE_PARTITION_OF_FP32_GROUPS]):
+
                     src_tensor = _get_padded_tensor(saved, current.numel())
+                    gd.debuginfo(prj="ds", info=f'current={current}, saved={saved}, src_tensor={infoTensor(src_tensor)}')
+
                     current.data.copy_(src_tensor.data)
         else:
             gd.debuginfo(prj="ds")
@@ -3349,9 +3975,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
 
 def _handle_overflow(cpu_sum, x, i):
-    gd.debuginfo(prj="ds")
     import math
     rank = dist.get_rank()
+    gd.debuginfo(prj="ds", info=f'rank={rank}')
     if rank == 0:
         t_i = -1
         for v_i, v in enumerate(x.data.contiguous().view(-1)):
@@ -3381,9 +4007,9 @@ def estimate_zero2_model_states_mem_needs(total_params,
     return int(cpu_mem), int(gpu_mem)
 
 def model_to_params(model):
-    gd.debuginfo(prj="ds")
     # shared params calculated only once
     total_params = sum(dict((p.data_ptr(), p.numel()) for p in model.parameters()).values())
+    gd.debuginfo(prj="ds", info=f'total_params={total_params}')
     return total_params
 
 

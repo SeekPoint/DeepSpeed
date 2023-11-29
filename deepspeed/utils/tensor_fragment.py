@@ -47,15 +47,19 @@ class tensor_fragment:
 
 
 def get_full_hp_param(self, optim_state_key=None):
-    gd.debuginfo(prj="ds")
     reduce_buffer = torch.zeros_like(self, dtype=torch.float32).flatten()
+    gd.debuginfo(prj="ds", info=f'reduce_buffer={reduce_buffer}')
+
     if self._hp_mapping is not None:
         lp_frag_address = self._hp_mapping.lp_fragment_address
         reduce_fragment = torch.narrow(reduce_buffer, 0, lp_frag_address.start, lp_frag_address.numel)
+        gd.debuginfo(prj="ds", info=f'lp_frag_address={lp_frag_address}, reduce_fragment={reduce_fragment}')
         if optim_state_key is None:
             hp_fragment = self._hp_mapping.hp_fragment
+            gd.debuginfo(prj="ds", info=f'hp_fragment={hp_fragment}')
         else:
             hp_fragment = self._hp_mapping.get_optim_state_fragment(optim_state_key)
+            gd.debuginfo(prj="ds", info=f'hp_fragment={hp_fragment}')
 
         reduce_fragment.data.copy_(hp_fragment.data)
     dist.all_reduce(reduce_buffer, group=self._dp_group)
@@ -63,28 +67,38 @@ def get_full_hp_param(self, optim_state_key=None):
 
 
 def get_full_hp_grad(self):
-    gd.debuginfo(prj="ds")
     reduce_buffer = torch.zeros_like(self, dtype=torch.float32).flatten()
+    gd.debuginfo(prj="ds", info=f'reduce_buffer={reduce_buffer}')
+
     if self._hp_mapping is not None:
         hp_mapping = self._hp_mapping
+        gd.debuginfo(prj="ds", info=f'hp_mapping={hp_mapping}')
 
         if hp_mapping.use_offload:
             gradient_dict = hp_mapping.offload_gradient_dict
+            gd.debuginfo(prj="ds", info=f'gradient_dict={gradient_dict}')
         else:
             gradient_dict = hp_mapping.gradient_dict
+            gd.debuginfo(prj="ds", info=f'gradient_dict={gradient_dict}')
 
         if hp_mapping.param_group_index not in gradient_dict or gradient_dict[hp_mapping.param_group_index] is None:
             raise ValueError("Gradients are only available immediately after backward and before engine step")
 
         lp_grad_fragment = gradient_dict[hp_mapping.param_group_index][self._index_in_param_group]
         hp_grad_fragment = lp_grad_fragment.to(torch.float32).flatten()
+        gd.debuginfo(prj="ds", info=f'gradient_dict[{hp_mapping.param_group_index}][{self._index_in_param_group}]={lp_grad_fragment}')
+        gd.debuginfo(prj="ds", info=f'hp_grad_fragment={hp_grad_fragment}')
 
         lp_frag_address = self._hp_mapping.lp_fragment_address
         reduce_fragment = torch.narrow(reduce_buffer, 0, lp_frag_address.start, lp_frag_address.numel)
 
+        gd.debuginfo(prj="ds", info=f'self.view(-1).shape={self.view(-1).shape}, hp_grad_fragment.shape={hp_grad_fragment.shape}')
+
         if self.view(-1).shape == hp_grad_fragment.shape:
+            gd.debuginfo(prj="ds")
             reduce_buffer.data.copy_(hp_grad_fragment.data)
         else:
+            gd.debuginfo(prj="ds")
             reduce_fragment.data.copy_(hp_grad_fragment.data)
 
     dist.all_reduce(reduce_buffer, group=self._dp_group)
@@ -147,12 +161,34 @@ def safe_get_full_grad(param):
     return None
 
 
-def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict, offload_gradient_dict, use_offload,
-                            param_group_index, partition_start, partition_size, optimizer_state_dict):
+def get_hp_fragment_mapping(lp_param,
+                            lp_start,
+                            flat_hp_partition,
+                            gradient_dict,
+                            offload_gradient_dict,
+                            use_offload,
+                            param_group_index,
+                            partition_start,
+                            partition_size,
+                            optimizer_state_dict):
+
+    gd.debuginfo(prj='ds', info=f'FUNC_IN, input: '
+                                f'lp_param={infoTensor(lp_param)}, '
+                                f'lp_start={lp_start}, '
+                                f'flat_hp_partition={flat_hp_partition}, '
+                                f'gradient_dict={gradient_dict},'
+                                f'offload_gradient_dict={offload_gradient_dict},'
+                                f'use_offload={use_offload}'
+                                f'param_group_index={param_group_index}'
+                                f'partition_start={partition_start}'
+                                f'partition_size={partition_size}'
+                                f'optimizer_state_dict={optimizer_state_dict}')
 
     lp_end = lp_param.numel() + lp_start
     hp_start = partition_start
     hp_end = partition_start + partition_size
+
+    gd.debuginfo(prj="ds", info=f'hp_start={hp_start}, hp_end={hp_end}, lp_param.numel()={lp_param.numel()}, lp_end={lp_end}')
 
     fragment_start = max(lp_start, hp_start)
     fragment_end = min(lp_end, hp_end)
@@ -160,28 +196,48 @@ def get_hp_fragment_mapping(lp_param, lp_start, flat_hp_partition, gradient_dict
         f'fragment start {fragment_start} should be < fragment_end {fragment_end}'
 
     fragment_numel = fragment_end - fragment_start
-    hp_frag_address = fragment_address(start=fragment_start - hp_start, numel=fragment_numel)
+    hp_frag_address = fragment_address(start=fragment_start - hp_start, numel=fragment_numel)  # 这是一个数据类型
+
+    gd.debuginfo(prj="ds", info=f'fragment_start={fragment_start}, fragment_end={fragment_end}, fragment_numel={fragment_numel}, hp_frag_address={hp_frag_address}')
+
     hp_fragment_tensor = flat_hp_partition.narrow(0, hp_frag_address.start, hp_frag_address.numel)
+
+    gd.debuginfo(prj="ds", info=f'hp_fragment_tensor={infoTensor(hp_fragment_tensor)}')
+
     optim_fragment = {
         key: value.narrow(0, hp_frag_address.start, hp_frag_address.numel)
         for key, value in optimizer_state_dict.items()
         if torch.is_tensor(value) and value.shape == flat_hp_partition.shape
     }
 
+    for k, v in enumerate(optim_fragment):
+        gd.debuginfo(prj="ds", info=f'optim_fragment[{k}]={infoTensor(v)}')
+
     lp_frag_address = fragment_address(start=fragment_start - lp_start, numel=fragment_numel)
+
+    gd.debuginfo(prj="ds", info=f'lp_frag_address={lp_frag_address}')
+
     lp_fragment_tensor = lp_param.flatten().narrow(0, lp_frag_address.start, lp_frag_address.numel)
 
     gd.debuginfo(prj="ds",
-                 info=f'T: lp_fragment_tensor={infoTensor(lp_fragment_tensor)}+++lp_frag_address={lp_frag_address}'
-                      f'+++T: hp_fragment_tensor={infoTensor(hp_fragment_tensor)}+++hp_frag_address={hp_frag_address}'
-                      f'+++offload_gradient_dict={offload_gradient_dict}'
-                      f'+++use_offload={use_offload}+++param_group_index={param_group_index}')
+                 info=f'T: lp_fragment_tensor={infoTensor(lp_fragment_tensor)},'
+                      f'lp_frag_address={lp_frag_address}'
+                      f'T: hp_fragment_tensor={infoTensor(hp_fragment_tensor)},'
+                      f'hp_frag_address={hp_frag_address}'
+                      f'param_group_index={param_group_index}')
+
+    for k, v in offload_gradient_dict.items():
+        gd.debuginfo(prj='ds', info=f'offload_gradient_dict.items[{k}] has {len(v)} tensors')
+        for index, val in enumerate(v):
+            gd.debuginfo(prj='ds', info=f'offload_gradient_dict.items[{k}][index]={infoTensor(val)}')
 
     for k,v in gradient_dict.items():
         gd.debuginfo(prj="ds", info=f'gradient_dict[{k}]={infoTensor(v)}')
 
     for k, v in optim_fragment.items():
         gd.debuginfo(prj="ds", info=f'optim_fragment[{k}]={infoTensor(v)}')
+
+    gd.debuginfo(prj='ds', info=f'FUNC_OUT')
 
     return tensor_fragment(lp_fragment=lp_fragment_tensor,
                            lp_fragment_address=lp_frag_address,

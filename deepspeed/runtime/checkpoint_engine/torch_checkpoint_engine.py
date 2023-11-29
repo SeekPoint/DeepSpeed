@@ -17,20 +17,20 @@ class TorchCheckpointEngine(CheckpointEngine):
         super().__init__(config_params)
 
     def create(self, tag):
-        log_dist(f"[Torch] Checkpoint {tag} is about to be saved!", ranks=[0])
+        gd.debuginfo(prj="ds", info=f"[Torch] Checkpoint {tag} is about to be saved!")
 
     def save(self, state_dict, path: str):
-        logger.info(f"[Torch] Saving {path}...")
+        gd.debuginfo(prj="ds", info=f"[Torch] Saving {path}...")
         torch.save(state_dict, path)
-        logger.info(f"[Torch] Saved {path}.")
+        gd.debuginfo(prj="ds", info=f"[Torch] Saved {path}.")
         return None
 
     def load(self, path: str, map_location=None):
-        logger.info(f"[Torch] Loading checkpoint from {path}...")
+        gd.debuginfo(prj="ds", info=f"[Torch] Loading checkpoint from {path}...")
         partition = torch.load(path, map_location=map_location)
-        logger.info(f"[Torch] Loaded checkpoint from {path}.")
+        gd.debuginfo(prj="ds", info=f"[Torch] Loaded checkpoint from {path}.")
         return partition
 
     def commit(self, tag):
-        logger.info(f"[Torch] Checkpoint {tag} is ready now!")
+        gd.debuginfo(prj="ds", info=f"[Torch] Checkpoint {tag} is ready now!")
         return True

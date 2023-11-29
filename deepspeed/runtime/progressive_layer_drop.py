@@ -24,21 +24,21 @@ class ProgressiveLayerDrop(object):
         self.theta = theta
         self.gamma = gamma
         self.current_theta = 1.0
-        log_dist(f'Enabled progressive layer dropping (theta = {self.theta})', ranks=[0])
+        gd.debuginfo(prj="ds", info=f'Enabled progressive layer dropping (theta = {self.theta})')
 
     def get_state(self):
-        gd.debuginfo(prj="ds")
         kwargs = {'progressive_layer_drop': True, 'pld_theta': self.get_theta()}
+        gd.debuginfo(prj="ds", info=f'get_state: progressive_layer_drop={True}, pld_theta={self.get_theta()}')
         return kwargs
 
     def get_theta(self):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'self.current_theta={self.current_theta}')
         return self.current_theta
 
     def update_state(self, global_step):
-        gd.debuginfo(prj="ds")
 
         def _prob(x, gamma, p):
             return (1. - p) * np.exp(-gamma * x) + p
 
         self.current_theta = _prob(global_step, self.gamma, self.theta)
+        gd.debuginfo(prj="ds", info=f'self.current_theta={self.current_theta}')

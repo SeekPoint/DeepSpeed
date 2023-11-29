@@ -51,7 +51,6 @@ class LayerSpec:
     """
 
     def __init__(self, typename, *module_args, **module_kwargs):
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
         self.typename = typename
         self.module_args = module_args
         self.module_kwargs = module_kwargs
@@ -64,13 +63,19 @@ class LayerSpec:
         else:
             self.global_rank = -1
 
+        gd.debuginfo(prj="ds",
+                     info=f"typename={typename}, "
+                          f"self.global_rank={self.global_rank}, "
+                          f"self.module_args={module_args}, "
+                          f"self.module_kwargs={module_kwargs}")
+
     def __repr__(self):
         return ds_utils.call_to_str(self.typename.__name__, self.module_args, self.module_kwargs)
 
     def build(self, log=False):
         """Build the stored specification."""
-        if log:
-            logger.info(f'RANK={self.global_rank} building {repr(self)}')
+        # if log:
+        gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} building {repr(self)}')
 
         return self.typename(*self.module_args, **self.module_kwargs)
 
@@ -78,12 +83,13 @@ class LayerSpec:
 class TiedLayerSpec(LayerSpec):
 
     def __init__(self, key, typename, *module_args, forward_fn=None, tied_weight_attr='weight', **module_kwargs):
-        gd.debuginfo(prj="ds")
         super().__init__(typename, *module_args, **module_kwargs)
         self.key = key
         self.forward_fn = forward_fn
         self.tied_weight_attr = tied_weight_attr
-
+        gd.debuginfo(prj="ds", info=f"self.key={self.key}, "
+                                         f"self.forward_fn={self.forward_fn}, "
+                                         f"self.tied_weight_attr={self.tied_weight_attr}")
 
 class PipelineModule(nn.Module):
     """Modules to be parallelized with pipeline parallelism.
@@ -134,7 +140,7 @@ class PipelineModule(nn.Module):
                  activation_checkpoint_func=checkpointing.checkpoint,
                  checkpointable_layers=None):
         
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"---------__init__ start-----------------")
 
         super().__init__()
 
@@ -157,22 +163,28 @@ class PipelineModule(nn.Module):
                 seed_str = self.seed_fn.__name__
             except AttributeError:
                 seed_str = None
-            print(f'SEED_LAYERS={self.seed_layers} BASE_SEED={self.base_seed} SEED_FN={seed_str}')
+            gd.debuginfo(prj="ds", info=f'SEED_LAYERS={self.seed_layers} BASE_SEED={self.base_seed} SEED_FN={seed_str}')
 
-        # Setup world info
+        # Setup world info  将 RANK 实例放入一个组中
         self.world_group = dist.new_group(ranks=range(dist.get_world_size()))
         self.global_rank = dist.get_rank(group=self.world_group)
         self.world_size = dist.get_world_size(group=self.world_group)
         self.local_rank = int(os.environ.get("LOCAL_RANK", None))
         assert self.local_rank is not None
 
+        gd.debuginfo(prj="ds", info=f"self.world_group={self.world_group}")
+        gd.debuginfo(prj="ds", info=f"self.global_rank={self.global_rank}")
+        gd.debuginfo(prj="ds", info=f"self.world_size={self.world_size}")
+        gd.debuginfo(prj="ds", info=f"self.local_rank={self.local_rank}")
+
         if topology:
-            gd.debuginfo(prj="ds")
             self._topo = topology
             self.num_stages = self._topo.get_dim('pipe')
+            gd.debuginfo(prj="ds", info=f"self._topo={self._topo}, "
+                                             f"self.num_stages={self.num_stages}")
         else:
-            gd.debuginfo(prj="ds")
             self.num_stages = num_stages
+            gd.debuginfo(prj="ds", info=f"self.num_stages={self.num_stages}")
             if topology is None:
                 if self.world_size % self.num_stages != 0:
                     raise RuntimeError(
@@ -180,11 +192,15 @@ class PipelineModule(nn.Module):
                 dp = self.world_size // num_stages
                 topology = PipeDataParallelTopology(num_pp=num_stages, num_dp=dp)
                 self._topo = topology
+                gd.debuginfo(prj="ds", info=f"dp={dp}, "
+                                                 f"self._topo={self._topo}")
 
         # Construct communicators for pipeline topology
         self._grid = PipelineParallelGrid(process_group=self.world_group, topology=self._topo)
+        gd.debuginfo(prj="ds", info=f"self._grid={self._grid}")
 
         self.stage_id = self._topo.get_coord(self.global_rank).pipe
+        gd.debuginfo(prj="ds", info=f"self.stage_id={self.stage_id}")
 
         # Initialize partition information
         self._layer_specs = list(layers)
@@ -196,7 +212,10 @@ class PipelineModule(nn.Module):
         self.forward_funcs = []
         self.fwd_map = {}
         self.tied_modules = nn.ModuleDict()
+        gd.debuginfo(prj="ds", info=f"self.tied_modules={self.tied_modules}")
         self.tied_weight_attrs = {}
+
+        gd.debuginfo(prj="ds", info=f"-----------sep 0-----------------")
 
         # Offset the random seed by the stage ID.
         #newseed = get_accelerator().initial_seed() + self._grid.get_stage_id()
@@ -204,25 +223,50 @@ class PipelineModule(nn.Module):
 
         #with torch.random.fork_rng(devices=[get_accelerator().current_device_name()]):
         self._build()
+        '''
+        如何做到分区? 我们知道程序一开始便开启了两个 RANK 进程,即每个 RANK 都会运行 global 的代码.
+        当每个 RANK 运行到 set_bound 函数时,传入的参数 stage_id 是通过 get_coord(global_rank) 得到的,
+        即不同的 RANK 执行到这一步时,会得到不同的 stage_id 此时,不同 RANK 上保存的 self._local_start 将会不同.
+
+        再使用 _build 函数,根据每个 RANK 所保存的不同 self._local_start & stop map 一下所对应的 module forward 函数名字
+         得到 RANK 私有的 self.forward_funcs & self.fwd_map,
+         之后便可以使用 self.module() 内存有不同的 module 数据,此时每张卡内已经存有不同的 model 结构了.
+         之后初始化 engine 时,传入的便已经是分区好的model.
+        '''
+        gd.debuginfo(prj="ds", info=f"-----------sep 1-----------------")
+
         self.to(get_accelerator().device_name(self.local_rank))
+        gd.debuginfo(prj="ds", info=f"-----------sep 2-----------------")
 
         self.tied_comms = self._index_tied_modules()
+        gd.debuginfo(prj="ds", info=f"-----------sep 3-----------------")
+
         self._synchronize_tied_weights()
+        gd.debuginfo(prj="ds", info=f"-----------sep 4-----------------")
 
         self.activation_checkpoint_interval = activation_checkpoint_interval
         self.activation_checkpoint_func = activation_checkpoint_func
 
+        gd.debuginfo(prj="ds", info=f"---------__init__ end-----------------")
+
     def _build(self):
-        gd.debuginfo(prj="ds")
         specs = self._layer_specs
 
         for local_idx, layer in enumerate(specs[self._local_start:self._local_stop]):
+            gd.debuginfo(prj="ds", info=f"local_idx={local_idx}, "
+                                        f"layer={layer}, "
+                                        f"self._local_start={self._local_start}, "
+                                        f"self._local_stop={self._local_stop}")
             layer_idx = local_idx + self._local_start
             if self.seed_layers:
                 if self.seed_fn:
+                    gd.debuginfo(prj="ds")
                     self.seed_fn(self.base_seed + layer_idx)
                 else:
+                    gd.debuginfo(prj="ds")
                     ds_utils.set_random_seed(self.base_seed + layer_idx)
+            else:
+                gd.debuginfo(prj="ds")
 
             # Recursively build PipelineModule objects
             if isinstance(layer, PipelineModule):
@@ -230,6 +274,7 @@ class PipelineModule(nn.Module):
 
             # LayerSpec objects contain an nn.Module that should be allocated now.
             elif isinstance(layer, nn.Module):
+                gd.debuginfo(prj="ds")
                 name = str(layer_idx)
                 self.forward_funcs.append(layer)
                 self.fwd_map.update({name: len(self.forward_funcs) - 1})
@@ -237,20 +282,25 @@ class PipelineModule(nn.Module):
 
             # TiedLayerSpec objects contain an nn.Module that should be allocated now.
             elif isinstance(layer, TiedLayerSpec):
+                gd.debuginfo(prj="ds")
                 # Build and register the module if we haven't seen it before.
                 if layer.key not in self.tied_modules:
+                    gd.debuginfo(prj="ds")
                     self.tied_modules[layer.key] = layer.build()
                     self.tied_weight_attrs[layer.key] = layer.tied_weight_attr
 
                 if layer.forward_fn is None:
+                    gd.debuginfo(prj="ds")
                     # Just use forward()
                     self.forward_funcs.append(self.tied_modules[layer.key])
                 else:
+                    gd.debuginfo(prj="ds")
                     # User specified fn with args (module, input)
                     self.forward_funcs.append(partial(layer.forward_fn, self.tied_modules[layer.key]))
 
             # LayerSpec objects contain an nn.Module that should be allocated now.
             elif isinstance(layer, LayerSpec):
+                gd.debuginfo(prj="ds")
                 module = layer.build()
                 name = str(layer_idx)
                 self.forward_funcs.append(module)
@@ -260,13 +310,16 @@ class PipelineModule(nn.Module):
             # Last option: layer may be a functional (e.g., lambda). We do nothing in
             # that case and just use it in forward()
             else:
+                gd.debuginfo(prj="ds")
                 self.forward_funcs.append(layer)
 
         # All pipeline parameters should be considered as model parallel in the context
         # of our FP16 optimizer
         for p in self.parameters():
+            gd.debuginfo(prj="ds", info=f'p={infoTensor(p)}')
             p.ds_pipe_replicated = False
 
+    # 计算出模型每一层的参数量
     def _count_layer_params(self):
         """Count the trainable parameters in individual layers.
 
@@ -275,167 +328,236 @@ class PipelineModule(nn.Module):
         Returns:
             A list of the number of parameters in each layer.
         """
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f'len(self._layer_specs)={len(self._layer_specs)}')
+
         param_counts = [0] * len(self._layer_specs)
+
         for idx, layer in enumerate(self._layer_specs):
+            gd.debuginfo(prj="ds", info=f'C-idx={idx}, layer={layer}')
             if isinstance(layer, LayerSpec):
                 l = layer.build()
                 params = filter(lambda p: p.requires_grad, l.parameters())
                 param_counts[idx] = sum(p.numel() for p in params)
+                gd.debuginfo(prj="ds", info=f'layer.build={l}, '
+                                            f'params={infoTensor(params)}, '
+                                            f'param_counts[{idx}]={param_counts[idx]}')
             elif isinstance(layer, nn.Module):
                 params = filter(lambda p: p.requires_grad, layer.parameters())
                 param_counts[idx] = sum(p.numel() for p in params)
+                gd.debuginfo(prj="ds", info=f'params={params}, '
+                                            f'param_counts[{idx}]={param_counts[idx]}')
         return param_counts
 
     def _find_layer_type(self, layername):
-        gd.debuginfo(prj="ds")
         idxs = []
         typeregex = regex.compile(layername, regex.IGNORECASE)
+        gd.debuginfo(prj="ds", info=f'typeregex={typeregex}')
         for idx, layer in enumerate(self._layer_specs):
+            gd.debuginfo(prj="ds", info=f'A-idx={idx}, layer={layer}')
             name = None
             if isinstance(layer, LayerSpec):
                 name = layer.typename.__name__
+                gd.debuginfo(prj="ds", info=f'name={name}')
             elif isinstance(layer, nn.Module):
                 name = layer.__class__.__name__
+                gd.debuginfo(prj="ds", info=f'name={name}')
             else:
                 try:
                     name = layer.__name__
+                    gd.debuginfo(prj="ds", info=f'name={name}')
                 except AttributeError:
                     continue
             if typeregex.search(name):
+                gd.debuginfo(prj="ds")
                 idxs.append(idx)
 
         if len(idxs) == 0:
             raise RuntimeError(f"Partitioning '{layername}' found no valid layers to partition.")
+        else:
+            gd.debuginfo(prj="ds", info=f'len(idxs)={len(idxs)}')
+
+        gd.debuginfo(prj="ds", info=f'idxs={idxs}')
+
         return idxs
 
     def forward(self, forward_input):
         # We need to offset the seed by the microbatch ID. Save it in a local var to
         # ensure it is preserved in the closure. Otherwise checkpointed forward funcs
         # will see a different offset.
+        gd.debuginfo(prj="ds", info=f'self.micro_offset={self.micro_offset}')
         self.micro_offset += 1
 
         def exec_range_func(start, end):
             ''' Helper function to be used with checkpoint()
             Adapted from torch.utils.checkpoint:checkpoint_sequential()
             '''
+            gd.debuginfo(prj="ds", info=f'self.micro_offset={self.micro_offset}')
             local_micro_offset = self.micro_offset + 1
 
             def exec_func(*inputs):
+
                 # Single tensor inputs need to be unwrapped
                 if len(inputs) == 1:
+                    gd.debuginfo(prj="ds", info=f'inputs={infoTensor(inputs[0])}')
                     inputs = inputs[0]
                 for idx, layer in enumerate(self.forward_funcs[start:end]):
+                    gd.debuginfo(prj="ds", info=f'B-idx={idx}, '
+                                                f'layer={layer}')
                     self.curr_layer = idx + self._local_start
+
+                    gd.debuginfo(prj="ds", info=f'self.curr_layer={self.curr_layer}, '
+                                                f'self._local_start={self._local_start}')
                     if self.seed_layers:
                         new_seed = (self.base_seed * local_micro_offset) + self.curr_layer
+                        gd.debuginfo(prj="ds", info=f'new_seed={new_seed}, '
+                                                    f'self.base_seed={self.base_seed}, '
+                                                    f'local_micro_offset={local_micro_offset}')
                         if self.seed_fn:
+                            gd.debuginfo(prj="ds")
                             self.seed_fn(new_seed)
                         else:
+                            gd.debuginfo(prj="ds")
                             ds_utils.set_random_seed(new_seed)
-
+                    gd.debuginfo(prj="ds", info=f'A-inputs={infoTensor(inputs)}')
                     inputs = layer(inputs)
+
+                    gd.debuginfo(prj="ds", info=f'B-inputs={infoTensor(inputs)}')
+
                 return inputs
 
             return exec_func
 
         if self.activation_checkpoint_interval == 0:
-            gd.debuginfo(prj="ds")
             func = exec_range_func(0, len(self.forward_funcs))
+            gd.debuginfo(prj="ds", info=f'func={func}')
             x = func(forward_input)
+            gd.debuginfo(prj="ds", info=f'A-x={infoTensor(x)}')
         else:
-            gd.debuginfo(prj="ds")
             num_layers = len(self.forward_funcs)
             x = forward_input
+            gd.debuginfo(prj="ds", info=f'num_layers={num_layers}')
+            gd.debuginfo(prj="ds", info=f'B-x={x}')
+
             for start_idx in range(0, num_layers, self.activation_checkpoint_interval):
                 end_idx = min(start_idx + self.activation_checkpoint_interval, num_layers)
+                gd.debuginfo(prj="ds", info=f'start_idx={start_idx}, end_idx={end_idx}')
 
                 funcs = self.forward_funcs[start_idx:end_idx]
+                gd.debuginfo(prj="ds", info=f'funcs={funcs}')
+
                 # Since we either pass tensors or tuples of tensors without unpacking, we
                 # need to be careful not to double-wrap tensors with tuple.
                 if not isinstance(x, tuple):
+                    gd.debuginfo(prj="ds")
                     x = (x, )
 
                 if self._is_checkpointable(funcs):
                     x = self.activation_checkpoint_func(exec_range_func(start_idx, end_idx), *x)
+                    gd.debuginfo(prj="ds", info=f'C-x={x}')
                 else:
                     x = exec_range_func(start_idx, end_idx)(*x)
+                    gd.debuginfo(prj="ds", info=f'D-x={x}')
         return x
 
     def _partition_layers(self, method='uniform'):
         num_stages = self._topo.get_dim('pipe')
         stage_id = self._topo.get_coord(self.global_rank).pipe
+        gd.debuginfo(prj="ds", info=f'num_stages={num_stages}, stage_id={stage_id}')
 
-        if self.global_rank == 0:
-            logger.info(f'Partitioning pipeline stages with method {method}')
+        # if self.global_rank == 0:
+        gd.debuginfo(prj="ds", info=f'Partitioning pipeline stages with method {method}')
 
         method = method.lower()
 
         # Each stage gets a simple uniform number of layers.
         if method == 'uniform':
-            gd.debuginfo(prj="ds")
             num_layers = len(self._layer_specs)
             self.parts = ds_utils.partition_uniform(num_items=num_layers, num_parts=num_stages)
+            gd.debuginfo(prj="ds", info=f'num_layers={num_layers}, self.parts={self.parts}')
         elif method == 'parameters':
-            gd.debuginfo(prj="ds")
+            # 使用 _count_layer_params（） 方法计算出模型每一层的参数量 1.2.1.1 _partition_layers()
             param_counts = self._count_layer_params()
+
+            # 跟据每一层的参数量，使用 partition_balanced（） 方法进行简单的 stage 划分，平衡每张卡的计算量
             self.parts = ds_utils.partition_balanced(weights=param_counts, num_parts=num_stages)
+
+            gd.debuginfo(prj="ds", info=f'param_counts={param_counts}, self.parts={self.parts}')
+            '''
+            得到一个 global 的数组 保存分层的 index，
+            例如下面的数组表示，stage 0 将运行 层0～层19，stage 1 将运行 层19～层22
+            self.parts= [0,19,22]
+            '''
         elif method.startswith('type:'):
-            gd.debuginfo(prj="ds")
             layertype = method.split(':')[1]
             binary_weights = [0] * len(self._layer_specs)
+
             for idx in self._find_layer_type(layertype):
+                gd.debuginfo(prj="ds", info=f'idx={idx}')
                 binary_weights[idx] = 1
+
             self.parts = ds_utils.partition_balanced(weights=binary_weights, num_parts=num_stages)
+            gd.debuginfo(prj="ds", info=f'layertype={layertype}, binary_weights={binary_weights}, self.parts={self.parts}')
         elif method == 'profile':
             raise NotImplementedError(f'Partitioning method {method} not implemented.')
         else:
             raise NotImplementedError(f'Partitioning method {method} not implemented.')
 
         # Print some information on the partitioning.
-        if self.global_rank == 0:
-            for stage in range(num_stages):
-                start = self.parts[stage]
-                stop = self.parts[stage + 1]
-                print(f'stage={stage} layers={stop - start}')
-                for idx, layer in enumerate(self._layer_specs[start:stop]):
-                    name = str(layer)
-                    if isinstance(layer, LayerSpec):
-                        name = layer.typename.__name__
-                    if isinstance(layer, nn.Module):
-                        name = layer.__class__.__name__
-                    else:
-                        try:
-                            name = layer.__name__
-                        except AttributeError:
-                            pass
-                    print(f'    {idx+start:2d}: {name}')
-            if self.loss_fn:
-                try:
-                    print(f'  loss: {self.loss_fn.__name__}')
-                except AttributeError:
-                    print(f'  loss: {self.loss_fn.__class__.__name__}')
+        #if self.global_rank == 0:
+        for stage in range(num_stages):
+            start = self.parts[stage]
+            stop = self.parts[stage + 1]
+            gd.debuginfo(prj="ds", info=f'stage={stage}, start={start}, stop={stop}, layers={stop - start}')
+            for idx, layer in enumerate(self._layer_specs[start:stop]):
+                gd.debuginfo(prj="ds", info=f'E-idx={idx}, '
+                                            f'layer={layer}')
+                name = str(layer)
+                if isinstance(layer, LayerSpec):
+                    name = layer.typename.__name__
+                    gd.debuginfo(prj="ds", info=f'name={name}')
+                if isinstance(layer, nn.Module):
+                    name = layer.__class__.__name__
+                    gd.debuginfo(prj="ds", info=f'name={name}')
+                else:
+                    try:
+                        name = layer.__name__
+                        gd.debuginfo(prj="ds", info=f'name={name}')
+                    except AttributeError:
+                        pass
+                gd.debuginfo(prj="ds", info=f'    {idx+start:2d}: {name}')
 
+        if self.loss_fn:
+            try:
+                gd.debuginfo(prj="ds", info=f'  loss: {self.loss_fn.__name__}')
+            except AttributeError:
+                gd.debuginfo(prj="ds", info=f'  loss: {self.loss_fn.__class__.__name__}')
+
+        gd.debuginfo(prj="ds", info=f'self.parts[{stage_id}]={self.parts[stage_id]}, '
+                                    f'stop=self.parts[{stage_id + 1}]={self.parts[stage_id + 1]}')
+
+        # _set_bounds 方法通过传入 rank 的 id（即 stage id）可以使得每张卡存储不同的私有的变量，以实现分区
         self._set_bounds(start=self.parts[stage_id], stop=self.parts[stage_id + 1])
 
     def allreduce_tied_weight_gradients(self):
-        gd.debuginfo(prj="ds")
         '''All reduce the gradients of the tied weights between tied stages'''
         for key, comm in self.tied_comms.items():
             weight = getattr(self.tied_modules[key], comm['weight_attr'])
+            gd.debuginfo(prj="ds", info=f'C-key={key}, comm={comm}, weight={weight}')
             dist.all_reduce(weight.grad, group=comm['group'])
+
 
     def get_tied_weights_and_groups(self):
         gd.debuginfo(prj="ds")
         weight_group_list = []
         for key, comm in self.tied_comms.items():
             weight = getattr(self.tied_modules[key], comm['weight_attr'])
+            gd.debuginfo(prj="ds", info=f'A-key={key}, comm={comm}, weight={weight}')
             weight_group_list.append((weight, comm['group']))
         return weight_group_list
 
     def _synchronize_tied_weights(self):
-        gd.debuginfo(prj="ds")
         for key, comm in self.tied_comms.items():
+            gd.debuginfo(prj="ds", info=f'B-key={key}, comm={comm}')
             dist.broadcast(
                 getattr(comm['module'], comm['weight_attr']),
                 src=min(comm['ranks']),
@@ -443,7 +565,6 @@ class PipelineModule(nn.Module):
             )
 
     def _index_tied_modules(self):
-        gd.debuginfo(prj="ds")
         ''' Build communication structures for tied modules. '''
         tied_comms = {}
         if self._topo.get_dim('pipe') == 1:
@@ -452,10 +573,12 @@ class PipelineModule(nn.Module):
 
         specs = self._layer_specs
         tie_keys = set(s.key for s in specs if isinstance(s, TiedLayerSpec))
+        gd.debuginfo(prj="ds", info=f'tie_keys={tie_keys}')
         for key in tie_keys:
             # Find the layers that the tied module appears in
             tied_layers = []
             for idx, layer in enumerate(specs):
+                gd.debuginfo(prj="ds", info=f'key={key}, idx={idx}, layer={layer}')
                 if isinstance(layer, TiedLayerSpec) and layer.key == key:
                     tied_layers.append(idx)
             # Find all stages with this tied module
@@ -464,15 +587,22 @@ class PipelineModule(nn.Module):
             # TODO: stage that owns the tied layer. Then loop over each (dp, mp, ...)
             # TODO: fiber to generate process groups.
             tied_stages = set(self.stage_owner(idx) for idx in tied_layers)
+            gd.debuginfo(prj="ds", info=f'tied_stages={tied_stages}')
+
             for dp in range(self._grid.data_parallel_size):
                 for mp in range(self._grid.get_slice_parallel_world_size()):
                     tied_ranks = []
                     for s in sorted(tied_stages):
                         if self._grid.get_slice_parallel_world_size() > 1:
-                            tied_ranks.append(self._grid.stage_to_global(stage_id=s, data=dp, model=mp))
+                            tmp = self._grid.stage_to_global(stage_id=s, data=dp, model=mp)
+                            tied_ranks.append(tmp)
+                            gd.debuginfo(prj="ds", info=f'dp={dp}, mp={mp}, s={s}, tmp={tmp}')
                         else:
-                            tied_ranks.append(self._grid.stage_to_global(stage_id=s, data=dp))
+                            tmp = self._grid.stage_to_global(stage_id=s, data=dp)
+                            tied_ranks.append(tmp)
+                            gd.debuginfo(prj="ds", info=f'dp={dp}, mp={mp}, s={s}, tmp={tmp}')
                     group = dist.new_group(ranks=tied_ranks)
+                    gd.debuginfo(prj="ds", info=f'dp={dp}, mp={mp}, group={group}')
 
                     # Record this tied module if we own a local copy of it.
                     if self.global_rank in tied_ranks:
@@ -484,26 +614,32 @@ class PipelineModule(nn.Module):
                                 'weight_attr': self.tied_weight_attrs[key],
                                 'module': self.tied_modules[key],
                             }
+
+                            gd.debuginfo(prj="ds", info=f'tied_comms[{key}]={tied_comms[key]}')
+
                             # Only count the tied module once in the eyes of the FP16 optimizer
                             if self.global_rank != tied_ranks[0]:
                                 for p in self.tied_modules[key].parameters():
+                                    gd.debuginfo(prj="ds", info=f'p={p}')
                                     p.ds_pipe_replicated = True
-        '''
-        if len(tied_comms) > 0:
-            print(f'RANK={self.global_rank} tied_comms={tied_comms}')
-        '''
+
+        #if len(tied_comms) > 0:
+        gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} tied_comms={tied_comms}')
 
         return tied_comms
 
     def partitions(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return self.parts
 
     def stage_owner(self, layer_idx):
-        gd.debuginfo(prj="ds")
         assert 0 <= layer_idx < self._num_layers
         for stage in range(self._topo.get_dim('pipe')):
             if self.parts[stage] <= layer_idx < self.parts[stage + 1]:
+                gd.debuginfo(prj="ds", info=f'stage={stage}, '
+                                            f'self.parts[stage]={self.parts[stage]}, '
+                                            f'layer_idx={layer_idx}, '
+                                            f'self.parts[stage + 1]={self.parts[stage + 1]}')
                 return stage
         raise RuntimeError(f'Layer {layer_idx} not owned? parts={self.parts}')
 
@@ -514,30 +650,33 @@ class PipelineModule(nn.Module):
         exclusive. The default of None for both results in all layers being built
         locally.
         """
-        gd.debuginfo(prj="ds")
         self._local_start = start
         self._local_stop = stop
+        gd.debuginfo(prj="ds", info=f'self._local_start={self._local_start}, '
+                                    f'self._local_stop={self._local_stop}')
 
+    # no caller
     def set_checkpoint_interval(self, interval):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         assert interval >= 0
         self.checkpoint_interval = interval
 
+    # no caller
     def topology(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         """ ProcessTopology object to query process mappings. """
         return self._topo
 
     def mpu(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return self._grid
 
+    # no caller
     def num_pipeline_stages(self):
-        gd.debuginfo(prj="ds")
+        # gd.debuginfo(prj="ds")
         return self._topo.get_dim('pipe')
 
     def ckpt_prefix(self, checkpoints_path, tag):
-        gd.debuginfo(prj="ds")
         """Build a prefix for all checkpoint files written by this module. """
         # All checkpoint files start with this
         rank_name = 'module'
@@ -546,33 +685,38 @@ class PipelineModule(nn.Module):
         # to this in the checkpoint.
         omit_dims = frozenset(['data'])
         axes = [a for a in self._grid._topo.get_axis_names() if a not in omit_dims]
+        gd.debuginfo(prj="ds", info=f'axes={axes}')
         for dim in axes:
             rank = getattr(self._grid._topo.get_coord(rank=self.global_rank), dim)
             rank_name += f'-{dim}_{rank:02d}'
 
         ckpt_name = os.path.join(checkpoints_path, str(tag), rank_name)
+        gd.debuginfo(prj="ds", info=f'ckpt_name={ckpt_name}')
         return ckpt_name
 
     def ckpt_layer_path(self, ckpt_dir, local_layer_idx):
-        gd.debuginfo(prj="ds")
         """Customize a prefix for a specific pipeline module layer. """
         idx = local_layer_idx + self._local_start
         layer_ckpt_path = os.path.join(ckpt_dir, f'layer_{idx:02d}')
         rank_repr = self._grid._topo.get_rank_repr(rank=self.global_rank)
+        gd.debuginfo(prj="ds", info=f'idx={idx}, '
+                                    f'layer_ckpt_path={layer_ckpt_path}, '
+                                    f'rank_repr={rank_repr}')
         if rank_repr != '':
             gd.debuginfo(prj="ds")
             layer_ckpt_path += f'-{rank_repr}'
         layer_ckpt_path += '-model_states.pt'
+        gd.debuginfo(prj="ds", info=f'layer_ckpt_path={layer_ckpt_path}')
         return layer_ckpt_path
 
     def ckpt_layer_path_list(self, ckpt_dir, local_layer_idx):
-        gd.debuginfo(prj="ds")
         """Get all ckpt file list for a specific pipeline module layer. """
         idx = local_layer_idx + self._local_start
         layer_ckpt_path = os.path.join(ckpt_dir, f'layer_{idx:02d}-')
         layer_ckpt_path += "*model_states.pt"
         ckpt_files = glob.glob(layer_ckpt_path)
         ckpt_files.sort()
+        gd.debuginfo(prj="ds", info=f'layer_ckpt_path={layer_ckpt_path}, ckpt_files={ckpt_files}')
         return ckpt_files
 
     def save_state_dict(self, save_dir, checkpoint_engine):
@@ -584,24 +728,29 @@ class PipelineModule(nn.Module):
         dp_rank = self._grid.data_parallel_id
         dp_size = self._grid.data_parallel_size
         num_layers = len(self.forward_funcs)
+        gd.debuginfo(prj="ds", info=f'dp_rank={dp_rank}, dp_size={dp_size}, num_layers={num_layers}')
+
         if self.checkpoint_parallel_write_pipeline:
-            gd.debuginfo(prj="ds")
             # spread layers evenly across data parallel ranks
             offsets = ds_utils.partition_uniform(num_layers, dp_size)
             start, end = offsets[dp_rank], offsets[dp_rank + 1]
+            gd.debuginfo(prj="ds", info=f'start={start}, end={end}, offsets={offsets}')
         else:
-            gd.debuginfo(prj="ds")
             # data parallel rank 0 writes all layers
             if dp_rank != 0:
                 gd.debuginfo(prj="ds")
                 return
             start, end = 0, num_layers
+            gd.debuginfo(prj="ds", info=f'start={start}, end={end}')
         layer_list = self.forward_funcs[start:end]
 
         checkpoint_engine.makedirs(save_dir, exist_ok=True)
         for idx, layer in enumerate(layer_list):
+            gd.debuginfo(prj="ds", info=f'idx={idx}, layer={layer}')
             model_ckpt_path = self.ckpt_layer_path(save_dir, start + idx)
+            gd.debuginfo(prj="ds", info=f'model_ckpt_path={model_ckpt_path}')
             if not hasattr(layer, 'state_dict'):
+                gd.debuginfo(prj="ds",info=f'layer={layer} has no state_dict layer')
                 continue
             # We pass cloned tensors to torch.save() to avoid checkpoint bloat which occurs because torch.save()
             # saves the underlying storage rather than the slice of the storage corresponding to individual tensors.
@@ -610,14 +759,17 @@ class PipelineModule(nn.Module):
             # It is expected that the garbage collector will reclaim the cloned tensor storage to avoid memory bloat.
             # See https://pytorch.org/docs/stable/notes/serialization.html#preserve-storage-sharing
             orig_state_dict = layer.state_dict()
+            gd.debuginfo(prj="ds", info=f'orig_state_dict={orig_state_dict}')
             final_state_dict = type(orig_state_dict)({k: v.clone() for k, v in orig_state_dict.items()})
+            gd.debuginfo(prj="ds", info=f'final_state_dict={final_state_dict}')
             checkpoint_engine.save(final_state_dict, model_ckpt_path)
 
     def load_state_dir(self, load_dir, checkpoint_engine, strict=True):
-        gd.debuginfo(prj="ds")
         for idx, layer in enumerate(self.forward_funcs):
+            gd.debuginfo(prj="ds", info=f'idx={idx}, layer={layer}')
             # Functions, etc. will not have state_dicts
             if not hasattr(layer, 'load_state_dict'):
+                gd.debuginfo(prj="ds", info=f'idx={idx}, layer={layer} has no load_state_dict')
                 continue
 
             # get all checkpoint files for the layer.
@@ -625,16 +777,22 @@ class PipelineModule(nn.Module):
             mp_rank = self._grid.get_slice_parallel_rank()
             mp_world_size = self._grid.get_slice_parallel_world_size()
 
+            gd.debuginfo(prj="ds", info=f'mp_rank={mp_rank}, mp_world_size={mp_world_size}')
+            gd.debuginfo(prj="ds", info=f'model_ckpt_list={model_ckpt_list}')
+
             sd_loader = SDLoaderFactory.get_sd_loader(model_ckpt_list,
                                                       version=2.0,
                                                       checkpoint_engine=checkpoint_engine)
+            gd.debuginfo(prj="ds", info=f'sd_loader={sd_loader}')
+
             load_path, checkpoint, _ = sd_loader.load(mp_world_size, mp_rank, module_key=None, is_pipe_parallel=True)
+            gd.debuginfo(prj="ds", info=f'load_path={load_path}')
+            gd.debuginfo(prj="ds", info=f'checkpoint={checkpoint}')
 
             layer.load_state_dict(checkpoint)
 
             # if self._grid.data_parallel_id == 0:
-            #     logger.info(
-            #         f'RANK={self.global_rank} Loaded layer={idx+self._local_start} file={load_path}'
+            #     gd.debuginfo(prj="ds", info=f'RANK={self.global_rank} Loaded layer={idx+self._local_start} file={load_path}'
             #     )
 
         self._synchronize_tied_weights()
@@ -644,11 +802,12 @@ class PipelineModule(nn.Module):
         # Some layers like torch.nn.Embedding will not receive grads if checkpointed, which breaks things.
         # I presume it's related to the discrete inputs that cannot require_grad? Need to revisit.
         if self.__class__.__name__ in ('GPTModelPipe', 'GPT2ModelPipe'):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f'self.__class__.__name__={self.__class__.__name__}')
             return all('ParallelTransformerLayerPipe' in f.__class__.__name__ for f in funcs)
         if self.checkpointable_layers is not None:
             gd.debuginfo(prj="ds")
             return all(f.__class__.__name__ in self.checkpointable_layers for f in funcs)
 
         params = [f.parameters() for f in funcs if isinstance(f, torch.nn.Module)]
+        gd.debuginfo(prj="ds", info=f'params={params}')
         return any(len(list(p)) > 0 for p in params)

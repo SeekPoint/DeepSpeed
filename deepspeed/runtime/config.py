@@ -785,6 +785,7 @@ class DeepSpeedConfig(object):
 
     def __init__(self, config: Union[str, dict], mpu=None):
         super(DeepSpeedConfig, self).__init__()
+        gd.debuginfo(prj="ds")
         if isinstance(config, dict):
             self._param_dict = config
             gd.debuginfo(prj="ds", info=f'self._param_dict={self._param_dict}')
@@ -880,6 +881,9 @@ class DeepSpeedConfig(object):
         self._initialize_params(copy.copy(self._param_dict))
         self._configure_train_batch_size()
         self._do_sanity_check()
+
+        gd.printall(prj='ds', cname=self)
+        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
 
     def _initialize_params(self, param_dict):
         gd.debuginfo(prj="ds", info=f'param_dict={param_dict}')
@@ -996,7 +1000,7 @@ class DeepSpeedConfig(object):
 
 
     def _batch_assertion(self):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds")
 
         train_batch = self.train_batch_size
         micro_batch = self.train_micro_batch_size_per_gpu

@@ -231,7 +231,7 @@ class PartitionedParameterCoordinator:
         gd.debuginfo(prj='ds', info=f"step_id={step_id}")
 
         for param in sorted(set(iter_params(sub_module)), key=lambda p: p.ds_id):
-            gd.debuginfo(prj='ds', info=f"param={param}")  # 同一个子模块的stepid相同
+            gd.debuginfo(prj='ds', info=f"param={infoTensor(param)}")  # 同一个子模块的stepid相同
             self.__param_order.append(__class__.__ParamInTrace(param=param, step_id_last_used_at=step_id))
 
     # 把 __submodule_order 中的子模块的参数全部加入到 __param_order 中

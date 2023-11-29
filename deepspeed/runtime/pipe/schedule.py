@@ -200,19 +200,27 @@ class TrainSchedule(PipeSchedule):
     """
 
     def steps(self):
-        gd.debuginfo(prj="ds")
+    
         """"""
         prev_micro_batch_id = -1
         total_steps = 2 * (self.micro_batches + self.stages - 1)
-        for step_id in range(total_steps):
+        gd.debuginfo(prj="ds", info=f'total_steps={total_steps}')
+        
+        for index, step_id in enumerate(range(total_steps)):
             # Map the step of the pipeline to the micro-batch id and also whether it is a
             # forward or backward pass step.
             micro_batch_id, is_forward = self._step_to_micro_batch(step_id)
+            gd.debuginfo(prj="ds", info=f'index={index}, '
+                                        f'micro_batch_id={micro_batch_id}, '
+                                        f'is_forward={is_forward}')
 
             if self._valid_micro_batch(prev_micro_batch_id):
                 prev_buffer = self._buffer_idx(prev_micro_batch_id)
+                gd.debuginfo(prj="ds", info=f'prev_buffer={prev_buffer}')
+
             if self._valid_micro_batch(micro_batch_id):
                 curr_buffer = self._buffer_idx(micro_batch_id)
+                gd.debuginfo(prj="ds", info=f'curr_buffer={curr_buffer}')
 
             cmds = []
 
@@ -220,34 +228,65 @@ class TrainSchedule(PipeSchedule):
             if is_forward:
                 if self._valid_micro_batch(prev_micro_batch_id) and self._valid_stage(self.prev_stage):
                     cmds.append(SendGrad(prev_buffer))
+                    gd.debuginfo(prj="ds")
                 if self._valid_micro_batch(micro_batch_id) and self._valid_stage(self.prev_stage):
                     cmds.append(RecvActivation(curr_buffer))
+                    gd.debuginfo(prj="ds")
             else:
                 if self._valid_micro_batch(micro_batch_id) and self._valid_stage(self.next_stage):
                     cmds.append(RecvGrad(curr_buffer))
+                    gd.debuginfo(prj="ds")
                 if self._valid_micro_batch(prev_micro_batch_id) and self._valid_stage(self.next_stage):
                     cmds.append(SendActivation(prev_buffer))
+                    gd.debuginfo(prj="ds")
 
             # First/last stage loads
             if self.stage_id == 0 or self.stage_id == self.stages - 1:
+                gd.debuginfo(prj="ds")
                 if is_forward and self._valid_micro_batch(micro_batch_id):
+                    gd.debuginfo(prj="ds")
                     cmds.append(LoadMicroBatch(curr_buffer))
 
             # Computation
             if self._valid_micro_batch(micro_batch_id):
                 if is_forward:
+                    gd.debuginfo(prj="ds")
                     cmds.append(ForwardPass(curr_buffer))
                 else:
+                    gd.debuginfo(prj="ds")
                     cmds.append(BackwardPass(curr_buffer))
 
             # Model step at the end of the batch
             if step_id == total_steps - 1:
+                gd.debuginfo(prj="ds")
                 cmds.append(ReduceTiedGrads())
                 cmds.append(ReduceGrads())
                 cmds.append(OptimizerStep())
 
             # Prepare state for next time
             prev_micro_batch_id = micro_batch_id
+            gd.debuginfo(prj="ds", info=f'prev_micro_batch_id={prev_micro_batch_id}')
+
+            '''
+            cmds result:
+
+            [RecvActivation(buffer_id=0), LoadMicroBatch(buffer_id=0), ForwardPass(buffer_id=0)]
+            图示： 其中该图展现了运行时的物理结构，分为两个 stage 进行流水并行，
+            每个 stage 有 6 步，stage 内串行执行，stage 间并行执行。
+            
+            0 表示在一个 batch 内的 第一个 micro batch 的数据，他将在 rank 0 上通过使用 load 函数被加载，
+            然后跟据生成的 nn.Module 模块执行 层0-19 的 Module 的 forward 函数，
+            forward 结束后的 activation 将会由 step 1 发送给 stage 1 的 step 1.
+            在 stage 1 的 0，也将使用 load 加载数据，然后接收 stage1 发送的前 19 层的 activation，
+            在这个基础上用同样的数据完成模型 层19-22 的 forward 计算。
+            
+            根据 1f1b 策略，一个batch 的数据前向结束后，应该立即进行 backward，
+            此时 stage 1 的 step 2 将对 层19-22 的参数进行反向传播，
+            反向传播后产生的 gradient 参数将有 stage 1 的 step 3 发送给 stage 0 的 step 3. 
+            stage 0 的 step 3 接收到层 19-22 的 grad 后便可以进行 层0-19 的 反向传播，
+            同时它还需要做 第二个 micro batch 前向 activation 的 发送操作。
+            '''
+
             yield cmds
 
     def num_pipe_buffers(self):

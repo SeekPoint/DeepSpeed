@@ -91,10 +91,11 @@ def _apply_to_tensors_only(module, functional, backward_function, outputs):
         if not is_builtin_type(outputs):
             global warned
             if not warned and dist.get_rank() == 0:
-                logger.warning(
-                    f"A module has unknown inputs or outputs type ({type(outputs)}) and the tensors embedded in it cannot be detected. "
-                    "The ZeRO-3 hooks designed to trigger before or after backward pass of the module relies on knowing the input and "
-                    "output tensors and therefore may not get triggered properly.")
+                gd.debuginfo(prj='ds',
+                             info=f"A module has unknown inputs or outputs type ({type(outputs)}) "
+                                  f"and the tensors embedded in it cannot be detected. "
+                                  f"The ZeRO-3 hooks designed to trigger before or after backward pass of the module relies on "
+                                  f"knowing the input and output tensors and therefore may not get triggered properly.")
                 warned = True
         return outputs
 
@@ -198,7 +199,7 @@ class PostBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, module, pre_backward_function, output):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds")
         ctx.module = module
         if output.requires_grad:
             gd.debuginfo(prj="ds")
@@ -222,7 +223,6 @@ class PostBackwardFunction(torch.autograd.Function):
         if ctx.module.ds_grads_remaining == 0:
             ctx.pre_backward_function(ctx.module)
             gd.debuginfo(prj="ds", info=f"After Backward: {ctx.module.__class__.__name__}")
-            #print(f"After Backward: {ctx.module.__class__.__name__}")
         return (None, None) + args
 
 # 4.2. DeepSpeedZeRoOffload
@@ -244,7 +244,7 @@ class DeepSpeedZeRoOffload(object):
                  mpu=None,
                  zero_param_parallel_group=None,
                  zero_quantized_weights=False):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"FUNC_IN")
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [begin]", force=True)
 
@@ -260,10 +260,16 @@ class DeepSpeedZeRoOffload(object):
         self.zero_param_parallel_group = zero_param_parallel_group
         self.zero_quantized_weights = zero_quantized_weights
 
+        gd.debuginfo(prj="ds", info=f"self.module={self.module}")
+        gd.debuginfo(prj="ds", info=f"self.offload_param_pin_memory={self.offload_param_pin_memory}")
+        gd.debuginfo(prj="ds", info=f"self.dtype={self.dtype}")
+        gd.debuginfo(prj="ds", info=f"self.zero_param_parallel_group={self.zero_param_parallel_group}")
+
         if offload_param_config is not None and offload_param_config.device != OffloadDeviceEnum.none:
-            gd.debuginfo(prj="ds")
             self.offload_device = offload_param_config.device
             self.offload_param_pin_memory = offload_param_config.pin_memory
+            gd.debuginfo(prj="ds", info=f"self.offload_device={self.offload_device}")
+            gd.debuginfo(prj="ds", info=f"self.offload_param_pin_memory={self.offload_param_pin_memory}")
 
         # 参数分割的逻辑
         self._convert_to_zero_parameters(ds_config, module, mpu)
@@ -301,6 +307,8 @@ class DeepSpeedZeRoOffload(object):
         gd.debuginfo(prj='ds', info=tmp)
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [end]", force=True)
+
+        gd.debuginfo(prj="ds", info=f"FUNC_IN")
 
     @instrument_w_nvtx
     def partition_all_parameters(self):
@@ -408,7 +416,9 @@ class DeepSpeedZeRoOffload(object):
         #reset step if in inference mode
         @instrument_w_nvtx
         def _end_of_forward_hook(module, *args):
+            gd.debuginfo(prj="ds")
             if not torch._C.is_grad_enabled():
+                gd.debuginfo(prj="ds")
                 self.get_param_coordinator(training=False).reset_step()
 
         #likely one of them should be enough but just to be safe
@@ -420,35 +430,45 @@ class DeepSpeedZeRoOffload(object):
         # Add top module to stack trace
         global FWD_MODULE_STACK
         FWD_MODULE_STACK.append(self.module)
+        gd.debuginfo(prj="ds", info=f'len of FWD_MODULE_STACK={len(FWD_MODULE_STACK)}')
 
     def mark_persistent_parameters(self, param_threshold, model_threshold):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"param_threshold={param_threshold}, "
+                                    f"model_threshold={model_threshold}")
         persistent_params = []
         total_persistent_parameters = 0
         params_count = 0
         for name, param in self.module.named_parameters(recurse=True):
+            gd.debuginfo(prj="ds", info=f"name={name}, "
+                                        f"param={infoTensor(param)}, "
+                                        f"param.ds_numel={param.ds_numel}, "
+                                        f"total_persistent_parameters={total_persistent_parameters}")
             if param.ds_numel + total_persistent_parameters > model_threshold:
                 continue
 
             if param.ds_numel <= param_threshold:
+                gd.debuginfo(prj="ds")
                 params_count += 1
                 param.ds_persist = True
                 persistent_params.append(param)
                 total_persistent_parameters += param.ds_numel
 
-        tmp = f"Parameter Offload: Total persistent parameters: {total_persistent_parameters} in {params_count} params"
+        tmp = f"Parameter Offload: " \
+              f"Total persistent parameters: " \
+              f"{total_persistent_parameters} in {params_count} params"
         # print_rank_0(tmp, force=True)
         gd.debuginfo(prj='ds', info=tmp)
+
+        gd.debuginfo(prj="ds", info=f"len of ={len(persistent_params)}")
 
         return persistent_params
 
     def _register_hooks_recursively(self, module, count=[0]):
-        # gd.debuginfo(prj="ds")
         """真正执行hook操作"""
         my_count = count[0]
         module.id = my_count
 
-        #print(f"{module.__class__} : {module.id}")
+        gd.debuginfo(prj="ds", info=f"module={module}, count={count}, {module.__class__} : {module.id}")
 
         for child in module.children():
             count[0] = count[0] + 1
@@ -456,7 +476,7 @@ class DeepSpeedZeRoOffload(object):
 
         @instrument_w_nvtx
         def _pre_forward_module_hook(module, *args):
-             # gd.debuginfo(prj="ds") 必定进入下一个，可以省略
+             gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
             self.pre_sub_module_forward_function(module)
 
         @instrument_w_nvtx
@@ -468,11 +488,10 @@ class DeepSpeedZeRoOffload(object):
                 output = []
             elif not isinstance(output, (list, tuple)):
                 if torch.is_tensor(output):
-                    gd.debuginfo(prj="ds")
+                    gd.debuginfo(prj="ds", info=f"output={infoTensor(output)}")
                     output = [output]
                 else:
-                    gd.debuginfo(prj="ds")
-                    #print(f'got UNKNOWN type {type(output)}')
+                    gd.debuginfo(prj="ds", info=f'got UNKNOWN type {type(output)}')
                     outputs = []
                     output = output if isinstance(output, dict) else vars(output)
                     for name, val in output.items():
@@ -482,7 +501,9 @@ class DeepSpeedZeRoOffload(object):
 
             for item in filter(lambda item: is_zero_param(item) or hasattr(item, 'ds_param_alias'), output):
                 key = id(item) if hasattr(item, 'ds_id') else id(item.ds_param_alias)
+                gd.debuginfo(prj="ds", info=f"item={infoTensor(item)}, key={key}")
                 actual_external_param = item if hasattr(item, 'ds_id') else item.ds_param_alias
+                gd.debuginfo(prj="ds", info=f"actual_external_param={infoTensor(actual_external_param)}")
 
                 if not any(key in m._external_params for m in FWD_MODULE_STACK):
                     actual_external_param.is_external_param = True
@@ -526,7 +547,7 @@ class DeepSpeedZeRoOffload(object):
         #This is an alternate to doing _post_backward_module_hook
         #it uses tensor.register_hook instead of using torch.autograd.Function
         def _alternate_post_backward_module_hook(module, inputs):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f"module={module}, input={input}")
             module.ds_grads_remaining = 0
 
             #print(f"Before Forward {module.__class__.__name__}")
@@ -540,7 +561,7 @@ class DeepSpeedZeRoOffload(object):
                     self.post_sub_module_backward_function(module)
 
             def _run_before_forward_function(input):
-                gd.debuginfo(prj="ds")
+                gd.debuginfo(prj="ds", info=f"input={input}")
                 if input.requires_grad:
                     gd.debuginfo(prj="ds")
                     module.ds_grads_remaining += 1
@@ -549,7 +570,7 @@ class DeepSpeedZeRoOffload(object):
                                                                _run_after_backward_hook, inputs)
 
         def _post_backward_module_hook(module, inputs):
-            gd.debuginfo(prj="ds")
+            gd.debuginfo(prj="ds", info=f"module={module}, input={input}")
             module.ds_grads_remaining = 0
 
             @instrument_w_nvtx
@@ -594,6 +615,8 @@ class DeepSpeedZeRoOffload(object):
     '''
     @torch.no_grad()
     def pre_sub_module_forward_function(self, sub_module):
+        gd.debuginfo(prj="ds", info=f"sub_module={sub_module}")
+
         see_memory_usage(f"Before sub module function {sub_module.__class__.__name__}", force=False)
 
         global FWD_MODULE_STACK
@@ -621,7 +644,7 @@ class DeepSpeedZeRoOffload(object):
     # 前向过程之后 post_forward
     @torch.no_grad()
     def post_sub_module_forward_function(self, sub_module):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"sub_module={sub_module}")
         see_memory_usage(f"After sub module function {sub_module.__class__.__name__} {sub_module.id} before release",
                          force=False)
         # 重新释放参数
@@ -635,7 +658,7 @@ class DeepSpeedZeRoOffload(object):
     # 后向过程之前 pre_backward
     @torch.no_grad()
     def pre_sub_module_backward_function(self, sub_module):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"sub_module={sub_module}")
         assert sub_module.training, "backward pass is invalid for module in evaluation mode"
         param_coordinator = self.get_param_coordinator(training=True)
         param_coordinator.trace_prologue(sub_module)
@@ -647,7 +670,7 @@ class DeepSpeedZeRoOffload(object):
     #后向过程之后 post_backward
     @torch.no_grad()
     def post_sub_module_backward_function(self, sub_module):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"sub_module={sub_module}")
         assert sub_module.training, "backward pass is invalid for module in evaluation mode"
         see_memory_usage(
             f"After sub module backward function {sub_module.__class__.__name__} {sub_module.id} before release",

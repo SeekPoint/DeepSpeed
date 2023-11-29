@@ -36,15 +36,15 @@ from pydebug import gd, infoTensor
 # def print_rank_0(message, debug=False, force=False):
 #     rank = dist.get_rank()
 #     if rank == 0 and (debug or force):
-#         logger.info(message)
+#         gd.debuginfo(prj='ds', info=message)
 #     # other variations
 #     # - print for all ranks w/o interleaving
 #     # printflock(f"[{rank}] {message}")
 #     # - print to log file per rank
 #     # log_rank_file(rank, message)
-def print_rank_0(message, debug=False, force=False):
-    if dist.get_rank() == 0:
-        gd.debuginfo(prj='ds', info=message, level = 2)
+# def print_rank_0(message, debug=False, force=False):
+#     if dist.get_rank() == 0:
+#         gd.debuginfo(prj='ds', info=message, level = 2)
 
 def input(msg):
     return
@@ -90,12 +90,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                  init_optimizer,  # 基础优化器
                  timers,
                  ds_config,  # 配置信息
-                 static_loss_scale=1.0,
-                 dynamic_loss_scale=False,
-                 dynamic_loss_args=None,
-                 verbose=True,
-                 contiguous_gradients=True,
-                 reduce_bucket_size=500000000,
+                 static_loss_scale=1.0,  # 静态损失缩放，用于控制损失的缩放比例
+                 dynamic_loss_scale=False,  # 是否使用动态损失缩放，当为True时，损失会根据训练过程动态调整
+                 dynamic_loss_args=None,  # 动态损失缩放的参数
+                 verbose=True,  # 是否打印详细的日志信息
+                 contiguous_gradients=True,  # 是否连续存储梯度，有助于提高内存效率
+                 reduce_bucket_size=500000000,  # reduce操作的bucket大小，用于梯度聚合
                  prefetch_bucket_size=50000000,
                  max_reuse_distance=1000000000,
                  max_live_parameters=1000000000,
@@ -107,25 +107,24 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                  offload_optimizer_config=None,
                  offload_param_config=None,
                  sub_group_size=1000000000000,
-                 mpu=None,
-                 clip_grad=0.0,
-                 communication_data_type=torch.float16,
-                 postscale_gradients=True,
-                 gradient_predivide_factor=1.0,
-                 gradient_accumulation_steps=1,
+                 mpu=None,  # 模型并行单元，用于处理模型并行的相关操作
+                 clip_grad=0.0,  # 梯度裁剪值，用于防止梯度爆炸
+                 communication_data_type=torch.float16,  # 通信时的数据类型，使用float16可以减少通信带宽，提高效率
+                 postscale_gradients=True,  # 是否在计算完梯度后进行缩放，可以防止数值溢出
+                 gradient_predivide_factor=1.0,  # 在梯度累积前的预缩放因子
+                 gradient_accumulation_steps=1,  # 梯度累积步数，通过累积梯度可以模拟大批量训练，提高训练稳定性
                  elastic_checkpoint=False,
                  aio_config=None,
                  all2all_process_group=None,
                  zero_hpz_partition_size=1,
                  zero_quantized_weights=False):
-        
+        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}, FUNC_IN")
         see_memory_usage("Stage 3 initialize beginning", force=True)
 
-        print_rank_0(f"initialized {__class__.__name__} with args: {locals()}", force=False)
 
         if dist.get_rank() == 0:
-            logger.info(f"Reduce bucket size {reduce_bucket_size}")
-            logger.info(f"Prefetch bucket size {prefetch_bucket_size}")
+            gd.debuginfo(prj='ds', info=f"Reduce bucket size {reduce_bucket_size}")
+            gd.debuginfo(prj='ds', info=f"Prefetch bucket size {prefetch_bucket_size}")
         # The fused optimizer does all the work. We need this layer for two reason:
         # 1. maintain same user API from apex.fp16_utils
         # 2. keep common stuff here in case we need to add ne552w fused optimizer later
@@ -141,6 +140,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.optimizer = init_optimizer   # 基础优化器，可能是 torch的优化器对象
 
         # Use torch (un)flatten ops
+        # 把张量打开扁平化的方法，这两个方法调用的是 torch 的方法， 设置参数展平和反展平的函数
         self.flatten = _flatten_dense_tensors
         self.unflatten = _unflatten_dense_tensors
         self.dtype = self.optimizer.param_groups[0]['params'][0].dtype
@@ -164,11 +164,14 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.zero_hpz_partition_size = zero_hpz_partition_size
 
         zpg = groups._get_zero_param_intra_parallel_group()
-        print_rank_0(f"ZeRO Stage 3 param partitioning group {self.zero_hpz_partition_size} {zpg}", force=False)
+        gd.debuginfo(prj="ds", info=f"ZeRO Stage 3 param partitioning group {self.zero_hpz_partition_size} {zpg}")
         if self.zero_hpz_partition_size > 1 and zpg is None:
             gd.debuginfo(prj="ds")
             self._set_zero_group_parallelism()
             zpg = groups._get_zero_param_intra_parallel_group()
+            gd.debuginfo(prj="ds", info=f"ZeRO Stage 3 param partitioning group - 2 {self.zero_hpz_partition_size} {zpg}")
+
+        gd.debuginfo(prj="ds", info=f"-----initialized {__class__.__name__} sep 1--------")
 
         # 参数的处理核心逻辑在这里
         # self.parameter_offload 是一个 DeepSpeedZeRoOffload 对象
@@ -185,6 +188,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                                             mpu=mpu,
                                                             zpg=zpg,
                                                             zero_quantized_weights=zero_quantized_weights)
+
+        gd.debuginfo(prj="ds", info=f"-----initialized {__class__.__name__} sep 2--------")
 
         self.persistent_parameters = self.parameter_offload.persistent_parameters
         self._configure_offloading(offload_optimizer_config, offload_param_config)
@@ -335,7 +340,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             max([max(tensor.numel(), tensor.ds_numel) for tensor in fp16_partitioned_group])
             for fp16_partitioned_group in self.fp16_partitioned_groups
         ])
-        print_rank_0(f'Largest partitioned param numel = {largest_partitioned_param_numel}', force=False)
+        gd.debuginfo(prj="ds", info=f'Largest partitioned param numel = {largest_partitioned_param_numel}', force=False)
 
         self._setup_for_real_optimizer()
         self.grad_position = {}
@@ -376,6 +381,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         if dist.get_rank(group=self.dp_process_group) == 0:
             gd.debuginfo(prj="ds")
             see_memory_usage(f"After initializing ZeRO optimizer", force=True)
+
+        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}, FUNC_OUT")
 
     def destroy(self):
         gd.debuginfo(prj="ds")
@@ -450,7 +457,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         dist.barrier()
 
         if dist.get_rank() == 0:
-            logger.info(f"optimizer state initialized")
+            gd.debuginfo(prj='ds', info=f"optimizer state initialized")
 
         # IPG
         if self.contiguous_gradients:
@@ -552,16 +559,15 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.offload_param_pin_memory = offload_param_config.pin_memory
             self.params_in_nvme_and_cpu = offload_param_config.device == OffloadDeviceEnum.nvme
             self.max_params_in_cpu = offload_param_config.max_in_cpu
-            print_rank_0(
-                f"FP16 params swapping is {self.params_in_nvme_and_cpu}, Max params in CPU is {self.max_params_in_cpu}",
-                force=False)
+            gd.debuginfo(prj="ds", info=f"FP16 params swapping is {self.params_in_nvme_and_cpu}, "
+                                        f"Max params in CPU is {self.max_params_in_cpu}")
 
     def _configure_tensor_swapping(self, offload_optimizer_config, aio_config):
         gd.debuginfo(prj="ds")
         nvme_swap_folder = os.path.join(offload_optimizer_config.nvme_path, 'zero_stage_3')
         os.makedirs(nvme_swap_folder, exist_ok=True)
         if dist.get_rank() == 0:
-            logger.info(f'Tensor Swapping: Adding optimizer tensors')
+            gd.debuginfo(prj='ds', info=f'Tensor Swapping: Adding optimizer tensors')
 
         swapper_type = PipelinedOptimizerSwapper if offload_optimizer_config.pipeline else PartitionedOptimizerSwapper
 
@@ -599,8 +605,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             start = start + src.ds_numel
             '''if the parameter was initialized in nvme then bring it to the destination buffer directly'''
             if src.status == PartitionedParamStatus.NOT_AVAILABLE:
-                print_rank_0(
-                    f"Swapping in {param.ds_id} with partition size {param.partition_numel()} permanently to CPU")
+                gd.debuginfo(prj="ds", info=f"Swapping in {param.ds_id} "
+                                            f"with partition size {param.partition_numel()} permanently to CPU")
                 param.nvme_swapper.swap_into_buffer(param, dest)
                 src.data = dest.data
                 src.status = PartitionedParamStatus.AVAILABLE
@@ -631,11 +637,11 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             aggregate_params_count += params_in_group
 
             if flat_buffer_size > 0:
-                print_rank_0(f"group {j} flat buffer size {flat_buffer_size}", force=False)
+                gd.debuginfo(prj="ds", info=f"group {j} flat buffer size {flat_buffer_size}")
                 self.param_groups_fp16_flat_cpu_memory.append(get_accelerator().pin_memory(
                     torch.empty(int(flat_buffer_size), dtype=self.dtype)))
             else:
-                print_rank_0(f"No flat buffer size. Param group size was  {params_in_group}", force=False)
+                gd.debuginfo(prj="ds", info=f"No flat buffer size. Param group size was  {params_in_group}")
 
                 self.param_groups_fp16_flat_cpu_memory.append(torch.empty(1, dtype=self.dtype))
 
@@ -690,19 +696,18 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                 flat_offset = 0
                 for i, sub_group in enumerate(param_group):
                     total_elements = sum(p.partition_numel() for p in sub_group)
-                    print_rank_0(f"Params in nvme and cpu {self.params_in_nvme_and_cpu}")
+                    gd.debuginfo(prj="ds", info=f"Params in nvme and cpu {self.params_in_nvme_and_cpu}")
                     #Flat buffer may not be available for parameters that reside in NVME
                     if not self.params_in_nvme_and_cpu or flat_offset + total_elements <= self.param_groups_fp16_flat_cpu_memory[
                             param_group_idx].numel():
                         fp16_partitioned_group_flat = self.param_groups_fp16_flat_cpu_memory[param_group_idx].narrow(
                             0, flat_offset, total_elements)
-                        print_rank_0(
-                            f"Creating a flat buffer for subgroup {i} requiring {total_elements} elements, and cumulative CPU elements {flat_offset + total_elements}",
-                            force=False)
+                        gd.debuginfo(prj="ds", info=f"Creating a flat buffer for subgroup {i} requiring {total_elements} elements, "
+                                                    f"and cumulative CPU elements {flat_offset + total_elements}")
 
                     elif self.params_in_nvme_and_cpu:
                         fp16_partitioned_group_flat = None
-                        print_rank_0(f"No flat buffer for sub group {i} of {total_elements} elements", force=False)
+                        gd.debuginfo(prj="ds", info=f"No flat buffer for sub group {i} of {total_elements} elements")
                     else:
                         assert False, "Either params are in nvme, or they are in CPU memory. This code path should not be triggered. Please see you max_params_in_cpu and params_in_nvme configs"
 
@@ -738,13 +743,12 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                                             self.fp16_partitioned_groups[sub_group_id]):
             dest = flat_buffer.narrow(0, offset, partitioned_param.ds_numel)
             if partitioned_param.status == PartitionedParamStatus.NOT_AVAILABLE:
-                print_rank_0(
-                    f"Swapping in {param.ds_id} with elements {param.ds_numel} and partition {param.partition_numel()}"
-                )
+                gd.debuginfo(prj="ds", info=f"Swapping in {param.ds_id} with elements {param.ds_numel} and "
+                                            f"partition {param.partition_numel()}")
                 param.nvme_swapper.swap_in([param], async_op=False)
                 dest.data.copy_(partitioned_param.data)
                 param.nvme_swapper.remove_partition_and_release_buffers([param])
-                print_rank_0(f"Swapping in {param.ds_id} done")
+                gd.debuginfo(prj="ds", info=f"Swapping in {param.ds_id} done")
             else:
                 dest.data.copy_(partitioned_param.data)
             offset += partitioned_param.ds_numel
@@ -851,19 +855,21 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             self.fp16_groups[0][0].nvme_swapper.release_reserved_buffers()
 
         nvme_gigabytes = nvme_memory_usage / GIGA_BYTES
-        print_rank_0(f'Swappable FP32 Partitions: count={num_swappable_partitions} size={nvme_gigabytes:5.2f} GB',
-                     force=False)
+        gd.debuginfo(prj="ds", info=f'Swappable FP32 Partitions: '
+                                    f'count={num_swappable_partitions} '
+                                    f'size={nvme_gigabytes:5.2f} GB')
         if self.params_in_nvme_and_cpu:
-            print_rank_0(
-                f'Swap from NVMe Partitions: count = {num_swap_from_nvme_partitions}, size = {swap_from_nvme_memory_usage/GIGA_BYTES:5.2f}GB',
-                force=False)
-            print_rank_0(
-                f'Swap from CPU Partitions: count = {num_swap_from_cpu_partitions}, size = {swap_from_cpu_memory_usage/GIGA_BYTES:5.2f}GB',
-                force=False)
+            gd.debuginfo(prj="ds", info=f'Swap from NVMe Partitions: '
+                                        f'count = {num_swap_from_nvme_partitions}, '
+                                        f'size = {swap_from_nvme_memory_usage/GIGA_BYTES:5.2f}GB')
+            gd.debuginfo(prj="ds", info=f'Swap from CPU Partitions: '
+                                        f'count = {num_swap_from_cpu_partitions}, '
+                                        f'size = {swap_from_cpu_memory_usage/GIGA_BYTES:5.2f}GB')
 
         cpu_memory_gigabytes = cpu_memory_usage / GIGA_BYTES
-        print_rank_0(f'In-Memory FP32 Partitions: count={cpu_memory_sub_groups} size={cpu_memory_gigabytes:5.2f} GB',
-                     force=False)
+        gd.debuginfo(prj="ds", info=f'In-Memory FP32 Partitions: '
+                                    f'count={cpu_memory_sub_groups} '
+                                    f'size={cpu_memory_gigabytes:5.2f} GB')
 
         # Clear for on-the-fly population before the optimizer step
         for param_group in self.optimizer.param_groups:
@@ -1101,13 +1107,13 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     def create_reduce_and_remove_grad_hooks(self):
         gd.debuginfo(prj="ds")
-        print_rank_0(f'[Begin] Create gradient reduction hooks')
+        gd.debuginfo(prj="ds", info=f'[Begin] Create gradient reduction hooks')
         self.grad_accs = []
         for i, param_group in enumerate(self.fp16_groups):
             for param in param_group:
                 if param.requires_grad:
-                    #print_rank_0(f" Before all gather {param.device}, {param.shape}")
-                    print_rank_0(f"Before all gather {param.device}, {param.shape}", force=False)
+                    #gd.debuginfo(prj="ds", info=f" Before all gather {param.device}, {param.shape}")
+                    gd.debuginfo(prj="ds", info=f"Before all gather {param.device}, {param.shape}")
 
                     # The hook must be created in un-partitioned parameter
                     param.all_gather()
@@ -1129,7 +1135,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
                     # Partition the parameter after creating the hook
                     param.partition()
-        print_rank_0(f'[End] Create gradient reduction hooks')
+        gd.debuginfo(prj="ds", info=f'[End] Create gradient reduction hooks')
 
     def get_param_id(self, param):
         # gd.debuginfo(prj="ds")
@@ -1146,7 +1152,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     ###############Independent Partition Gradient ########################
     def reduce_independent_p_g_buckets_and_remove_grads(self, param, i):
-        #print_rank_0(f"Inside reduce ipg buckets. {debug_param2name_id_shape(param)}, ipg elements {self.elements_in_ipg_bucket}, reduce bucket size {self.reduce_bucket_size}", force=True)
+        #gd.debuginfo(prj="ds", info=f"Inside reduce ipg buckets. {debug_param2name_id_shape(param)}, ipg elements {self.elements_in_ipg_bucket}, reduce bucket size {self.reduce_bucket_size}")
 
         # Because the ipg bucket is initialized with a random place holder tensor, we must
         # explicitly check that the bucket has any real data in it (self.elements_in_ipg_bucket >
@@ -1430,7 +1436,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
     def reduce_ready_partitions_and_remove_grads(self, param, i):
         
-        print_rank_0(f"Backward {debug_param2name_id_shape(param)}", force=True)
+        gd.debuginfo(prj="ds", info=f"Backward {debug_param2name_id_shape(param)}")
         self.reduce_independent_p_g_buckets_and_remove_grads(param, i)
 
     def zero_reduced_gradients(self, partition_id, i):
@@ -1451,7 +1457,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         flatten_tensor = self.flatten(tensors)
 
         def print_func():
-            logger.info(flatten_tensor.contiguous().view(-1).narrow(0, start, n))
+            gd.debuginfo(prj='ds', info=f'T: {infoTensor((flatten_tensor.contiguous().view(-1).narrow(0, start, n))}')
 
         self.sequential_execution(print_func, message)
 
@@ -1491,7 +1497,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             gd.debuginfo(prj="ds")
             group = self.dp_process_group
         if dist.get_rank(group=group) == 0:
-            logger.info(message)
+            gd.debuginfo(prj='ds', info=message)
         for id in range(dist.get_world_size(group=group)):
             if id == dist.get_rank(group=group):
                 function()
@@ -1685,7 +1691,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             total_norm = total_norm_cuda[0].item()
         else:
             # if dist.get_rank() == 0:
-            #    logger.info(f"Total Norm beginning {total_norm}")
+            #    gd.debuginfo(prj='ds', info=f"Total Norm beginning {total_norm}")
             grad_norms = []
             for g, p in zip(gradients, params):
                 if is_model_parallel_parameter(p) or (self.model_parallel_rank == 0):
@@ -1796,13 +1802,13 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         gd.debuginfo(prj="ds")
         self.micro_step_id = 0
 
-        print_rank_0(f"Inside Step function")
+        gd.debuginfo(prj="ds", info=f"Inside Step function")
         see_memory_usage(f"In step before checking overflow", force=False)
 
-        print_rank_0("Finished Tracing at Beginning of Step")
+        gd.debuginfo(prj="ds", info=f"Finished Tracing at Beginning of Step")
         self._get_param_coordinator(training=True).hierarchy = 0
 
-        print_rank_0("Finished Tracing at Beginning of Step")
+        gd.debuginfo(prj="ds", info=f"Finished Tracing at Beginning of Step")
 
     @instrument_w_nvtx
     def _get_norm_groups(self):
@@ -1985,7 +1991,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         self.log_timers(timer_names)
 
         see_memory_usage('After zero_optimizer step', force=False)
-        print_rank_0(f"------------------Finishing Step-----------------------")
+        gd.debuginfo(prj="ds", info=f"------------------Finishing Step-----------------------")
 
     @instrument_w_nvtx
     def _reassign_or_swap_out_partitioned_parameters(self, sub_group_id):
@@ -2001,7 +2007,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
     def override_loss_scale(self, loss_scale):
         gd.debuginfo(prj="ds")
         if loss_scale != self.external_loss_scale:
-            logger.info(f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
+            gd.debuginfo(prj='ds', info=f'[deepspeed] setting loss scale from {self.external_loss_scale} -> {loss_scale}')
         self.custom_loss_scaler = True
         self.external_loss_scale = loss_scale
 
@@ -2369,7 +2375,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         individual_tensors = self.unflatten(padded_flattened_tensor, group_tensors)
         lean_lengths = [t.numel() - pad for t, pad in zip(group_tensors, paddings)]
         lean_tensors = [t[:len] for t, len in zip(individual_tensors, lean_lengths)]
-        #logger.info(f'rank {dist.get_rank()}: lean_tensors = {[t.numel() for t in lean_tensors]}')
+        # gd.debuginfo(prj='ds', info=f'rank {dist.get_rank()}: lean_tensors = {[t.numel() for t in lean_tensors]}')
         return lean_tensors
 
     #TODO REVISIT this for stage 3
@@ -2633,7 +2639,7 @@ def _handle_overflow(cpu_sum, x, i):
             if not math.isfinite(float(v)):
                 t_i = v_i
                 break
-        logger.info(f"rank {rank} detected overflow {cpu_sum} in tensor {i}:{t_i} shape {x.shape}")
+        gd.debuginfo(prj='ds', info=f"rank {rank} detected overflow {cpu_sum} in tensor {i}:{t_i} shape {x.shape}")
 
 
 def estimate_zero3_model_states_mem_needs(total_params,

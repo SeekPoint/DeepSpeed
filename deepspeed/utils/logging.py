@@ -66,10 +66,10 @@ logger.warning_once = warning_once
 
 
 def print_configuration(args, name):
-    logger.info("{}:".format(name))
+    gd.debuginfo(prj="ds", info=f"name={name}:")
     for arg in sorted(vars(args)):
         dots = "." * (29 - len(arg))
-        logger.info("  {} {} {}".format(arg, dots, getattr(args, arg)))
+        gd.debuginfo(prj="ds", info=f" {arg} {dots} {getattr(args, arg)}")
 
 
 def log_dist(message, ranks=None, level=logging.INFO):

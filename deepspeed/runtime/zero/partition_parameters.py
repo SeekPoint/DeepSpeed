@@ -124,7 +124,7 @@ def is_zero_param(parameter):
 
 
 def _init_external_params(module):
-    # gd.debuginfo(prj='ds')
+    gd.debuginfo(prj='ds')
     if not hasattr(module, '_external_params'):
         module._external_params = {}
 
@@ -136,6 +136,8 @@ def _init_external_params(module):
             # gd.debuginfo(prj='ds')
             return itertools.chain(self.named_parameters(self, recurse=False), external_parameters(self))
 
+        # https://blog.csdn.net/shuibuzhaodeshiren/article/details/87115118
+        # 2.2.把方法绑定到类中,此时方法为类方法,操作的属性也变成类属性
         module.ds_external_parameters = types.MethodType(external_parameters, module)
         module.all_parameters = types.MethodType(all_parameters, module)
 
@@ -205,7 +207,6 @@ def unregister_external_parameter(module, parameter):
         RuntimeError: If ``parameter`` is not of type ``torch.nn.Parameter``.
         RuntimeError: If ``parameter`` is not a registered external parameter of ``module``.
     """
-    gd.debuginfo(prj='ds')
     if not isinstance(parameter, torch.nn.Parameter):
         raise RuntimeError('Parameter is not a torch.nn.Parameter')
 
@@ -213,6 +214,8 @@ def unregister_external_parameter(module, parameter):
         raise RuntimeError('Parameter is not a registered external parameter of module.')
 
     key = id(parameter)
+    gd.debuginfo(prj='ds', info=f'unset module._external_params[{key}]={parameter}')
+
     del module._external_params[key]
 
 

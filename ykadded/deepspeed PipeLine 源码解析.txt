@@ -1,7 +1,7 @@
 deepspeed PipeLine 源码解析
-https://blog.csdn.net/Chenql716/article/details/127537718?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-127537718-blog-132630214.235%5Ev38%5Epc_relevant_default_base&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-127537718-blog-132630214.235%5Ev38%5Epc_relevant_default_base&utm_relevant_index=6
+缺图===https://blog.csdn.net/Chenql716/article/details/127537718?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-127537718-blog-132630214.235%5Ev38%5Epc_relevant_default_base&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-127537718-blog-132630214.235%5Ev38%5Epc_relevant_default_base&utm_relevant_index=6
 https://chenqll-blog.readthedocs.io/en/latest/doctor/deepspeed/deepspeed_alexnet.html#
-https://zhuanlan.zhihu.com/p/576673548
+https://zhuanlan.zhihu.com/p/576673548   ===完整
 深度学习大模型训练--DeepSpeed 源码解读
 
 basic concept

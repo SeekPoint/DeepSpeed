@@ -53,8 +53,8 @@ class DeepSpeedConfigModel(BaseModel):
     def __init__(self, strict=False, **data):
         gd.debuginfo(prj="ds")
         if (not strict):  # This is temporary until we refactor all DS configs, allows HF to load models
-            gd.debuginfo(prj="ds")
             data = {k: v for k, v in data.items() if (v != "auto" or k == "replace_method")}
+            gd.debuginfo(prj="ds", info=f'data={data}')
         super().__init__(**data)
         self._deprecated_fields_check(self)
 
