@@ -19,7 +19,8 @@ The wheel will be located at: dist/*.whl
 """
 from pydebug import gd, infoTensor
 logf = f"setup.py"
-gd.enable(info=logf)
+# gd.enable(info=logf)
+gd.emb_start(info=logf)
 
 gd.debuginfo(prj="dsST",info=f"............ds setpy.py start.........")
 
@@ -375,4 +376,5 @@ gd.debuginfo(prj="dsST", info=f".................call setup ends...........\n\n\
 
 end_time = time.time()
 gd.debuginfo(prj="dsST", info=f"Done: deepspeed build time = {end_time - start_time} secs")
-gd.disable(info=logf)
+# gd.disable(info=logf)
+gd.emb_end(info=logf)

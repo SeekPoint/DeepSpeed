@@ -14,6 +14,9 @@ from packaging import version as pkg_version
 
 from pydebug import gd, infoTensor
 
+import os
+# pid = os.getpid()
+
 gd.debuginfo(prj="ds")
 
 try:
@@ -149,9 +152,11 @@ def initialize(args=None,
         z_stage = 'Z' + str(args.zero_stage)
     else:
         z_stage = 'pipeline'
-    if args.local_rank == 0:
-        logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
-        gd.enable_times(prj="ds", info=logf)
+
+    logf001 = f'Z{z_stage}_deepspeed.initialize_init'
+    # if args.local_rank == 0:
+    #     gd.enable_times(prj="ds", info=logf001)
+    gd.emb_start(info=logf001)
 
     # deepspeed.initialize入口处
     gd.debuginfo(prj="ds", info=f'FUNC_IN, config_params={config_params}')
@@ -213,10 +218,6 @@ def initialize(args=None,
         gd.debuginfo(prj="ds", info=f'A-config_class={config_class}')
         gd.debuginfo(prj="ds", info=f'===initialize sep00======================================================')
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
-            gd.disable_times(prj="ds", info=logf)
-
         if config_class.hybrid_engine.enabled:
             # 混合引擎（Hybrid Engine）。它利用原始DeepSpeed引擎进行高速训练模式，
             # 同时轻松应用DeepSpeed推理引擎进行生成/评估模式，
@@ -257,10 +258,6 @@ def initialize(args=None,
 
         gd.debuginfo(prj="ds", info=f'===initialize sep31===============================================================')
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_init.py_A_'
-            gd.disable_times(prj="ds", info=logf)
-
         # 如果是流水线模式，就用 PipelineEngine
         engine = PipelineEngine(args=args,     # ppl
                                 model=model,
@@ -276,9 +273,13 @@ def initialize(args=None,
 
         gd.debuginfo(prj="ds", info=f'===initialize sep32===============================================================')
 
-    if args.local_rank == 0:
-        logf = f'_{z_stage}_deepspeed.initialize_init.py_B_'
-        gd.enable_times(prj="ds", info=logf)
+    # 采用embedded模式后，一般不在需要在用一个函数内部分段！！！！
+    # 日志过大的话，可以在所调用的函数内部再start一个log
+    # if args.local_rank == 0:
+    #     gd.disable_times(prj="ds", info=logf001)
+    # if args.local_rank == 0:
+    #     gd.enable_times(prj="ds", info=logf002)
+
 
     # Restore zero.Init context if necessary
     zero.partition_parameters.restore_init_context()
@@ -286,9 +287,9 @@ def initialize(args=None,
 
     gd.debuginfo(prj="ds", info=f'FUNC_OUT, return_items={return_items}')
 
-    if args.local_rank == 0:
-        logf = f'_{z_stage}_deepspeed.initialize_init.py_B_'
-        gd.disable_times(prj="ds", info=logf)
+    # if args.local_rank == 0:
+    #     gd.disable_times(prj="ds", info=logf002)
+    gd.emb_end(info=logf001)
 
     return tuple(return_items)
 

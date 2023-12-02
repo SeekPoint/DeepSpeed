@@ -104,6 +104,9 @@ DeepSpeedOptimizerCallable = \
     Callable[[Union[Iterable[Parameter], Dict[str, Iterable]]], Optimizer]
 DeepSpeedSchedulerCallable = Callable[[Optimizer], _LRScheduler]
 
+import os
+# pid = os.getpid()
+
 try:
     gd.debuginfo(prj='ds')
     import apex
@@ -214,9 +217,10 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         else:
             z_stage = 'pipeline'
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_1'
-            gd.enable_times(prj="ds", info=logf)
+        logf003 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_1'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf003)
+        gd.emb_start(info=logf003)
 
         gd.debuginfo(prj="ds", info=f'FUNC_IN')
         super(DeepSpeedEngine, self).__init__()  #https://blog.csdn.net/dongjinkun/article/details/114575998
@@ -261,12 +265,14 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         # for debug purposes - can then debug print: debug_get_module_name(module)
         debug_extract_module_and_param_names(model)
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf003)
+        gd.emb_end(info=logf003)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_2'
-            gd.enable_times(prj="ds", info=logf)
+        logf004 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_2'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf004)
+        gd.emb_start(info=logf004)
 
         # needed for zero_to_fp32 weights reconstruction to remap nameless data to state_dict
         self.param_names = {param: name for name, param in model.named_parameters()}
@@ -304,22 +310,26 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         self.pipeline_parallelism = isinstance(model, PipelineModule)
         gd.debuginfo(prj='ds', info=f"self.pipeline_parallelism={self.pipeline_parallelism}") # ph1 z2 is false
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf004)
+        gd.emb_end(info=logf004)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_3'
-            gd.enable_times(prj="ds", info=logf)
+        logf005 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_3'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf005)
+        gd.emb_start(info=logf005)
 
         # Configure distributed model
         self._configure_distributed_model(model)
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf005)
+        gd.emb_end(info=logf005)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_4'
-            gd.enable_times(prj="ds", info=logf)
+        logf006 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_4'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf006)
+        gd.emb_start(info=logf006)
 
         self._get_model_parameters()
         gd.debuginfo(prj="ds", info=f'############sep 11########################')
@@ -369,12 +379,15 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             for index, p in enumerate(model_parameters):
                 gd.debuginfo(prj='ds', info=f'{index}_p={infoTensor(p)}')
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf006)
+        gd.emb_end(info=logf006)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_5'
-            gd.enable_times(prj="ds", info=logf)
+        logf007 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_5'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf007)
+        gd.emb_start(info=logf007)
+
         # 优化器的初始化
         # 注意，这三种情况是互斥的。
         if has_optimizer:
@@ -397,12 +410,14 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__}')
             self.optimizer = self._configure_bf16_optimizer(optimizer=None)
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf007)
+        gd.emb_end(info=logf007)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_6'
-            gd.enable_times(prj="ds", info=logf)
+        logf008 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_6'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf008)
+        gd.emb_start(info=logf008)
 
         # Hook optimizer for snip_momentum pruning
         if hasattr(model, 'pruners'):
@@ -425,12 +440,14 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         self.save_non_zero_checkpoint = False
         self.save_zero_checkpoint = False
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf008)
+        gd.emb_end(info=logf008)
 
-        if args.local_rank == 0:
-            logf = f'_{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_7'
-            gd.enable_times(prj="ds", info=logf)
+        logf009 = f'Z{z_stage}_deepspeed.initialize_DeepSpeedEngine_init_7'
+        # if args.local_rank == 0:
+        #     gd.enable_times(prj="ds", info=logf009)
+        gd.emb_start(info=logf009)
 
         if not isinstance(self.optimizer, DeepSpeedZeRoOffload):
             gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__}')
@@ -472,8 +489,9 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
 
         gd.debuginfo(prj="ds", info=f'FUNC_OUT')
 
-        if args.local_rank == 0:
-            gd.disable_times(prj="ds", info=logf)
+        # if args.local_rank == 0:
+        #     gd.disable_times(prj="ds", info=logf009)
+        gd.emb_end(info=logf009)
 
     def destroy(self):
         gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__}')
