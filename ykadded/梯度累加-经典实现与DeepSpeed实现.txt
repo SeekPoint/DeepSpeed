@@ -1,0 +1,59 @@
+梯度累加-经典实现与DeepSpeed实现
+https://zhuanlan.zhihu.com/p/649967668
+
+
+miangangzhen
+
+模型申请的显存超过了设备实际显存大小，就会报错Out of Memory。一般情况下，减少batch size可以解决这个问题，但是batch size又是很影响训练效果的超参。此时，有钱就选择加卡，不然就只能另辟蹊径来磨一磨手里这张小显存的计算卡了。
+
+梯度累加，顾名思义，就是将多次计算得到的梯度值进行累加，然后一次性进行参数更新。假设我们有batch size = 256的global-batch，在单卡训练显存不足时，将其分为多个小的mini-batch（如图分为大小为64的4个mini-batch），每个step送入1个mini-batch获得梯度，将多次获得的梯度进行累加后再更新参数，以次达到模拟单次使用global-batch训练的目的。
+
+简单来说：时间换空间。加长训练时间，来换取大batch在小设备上可训练。
+
+2 Pytorch经典实现
+# batch accumulation parameter
+accum_iter = 4
+
+# loop through enumaretad batches
+for batch_idx, (inputs, labels) in enumerate(data_loader):
+
+    # forward pass
+    preds = model(inputs)
+    loss  = criterion(preds, labels)
+
+    # scale the loss to the mean of the accumulated batch size
+    loss = loss / accum_iter
+
+    # backward pass
+    loss.backward()
+
+    # weights update
+    if ((batch_idx + 1) % accum_iter == 0) or (batch_idx + 1 == len(data_loader)):
+        optimizer.step()
+        optimizer.zero_grad()
+由于Pytorch本身在求完梯度后会自动挂载到Tensor.grad属性上，而在没有手动清空（即optimizer.zero_grad()）的情况下，每个step训练求得的梯度会自动累加，因此只需要控制梯度清零和参数更新的间隔步数即可。
+
+loss = loss / accum_iter实际上这里就是做了一次求mean的操作。原因是直接累加的accum_iter次梯度值作为一次参数更新的梯度，是将梯度值放大了accum_iter倍，而Pytorch的参数更新是写在optimizer.step()方法内部，无法手动控制，因此只能根据链式法则，在loss处进行缩放，来达到缩放梯度的目的。与常规理解的正则化没有任何关系。
+
+3 DeepSpeed中的实现
+def backward(self, loss, ...):
+    ...
+
+    if self.gradient_accumulation_steps() > 1 and scale_wrt_gas:
+        loss = self._scale_loss_by_gas(loss.float())
+    ...
+    loss.backward(retain_graph=retain_graph)
+    ...
+
+def _scale_loss_by_gas(self, prescaled_loss):
+    scaled_loss = prescaled_loss / self.gradient_accumulation_steps()
+    return scaled_loss
+
+def step(self, lr_kwargs=None):
+    ...
+    if self.is_gradient_accumulation_boundary():
+        optimizer.step()
+    ....
+DeepSpeed的实现更为复杂，为了支持各种训练策略，它用backward和step方法封装loss.backword和optimizer.step两个方法。
+
+发布于 2023-08-14 17:14・IP 属地广东

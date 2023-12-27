@@ -118,7 +118,8 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
                  all2all_process_group=None,
                  zero_hpz_partition_size=1,
                  zero_quantized_weights=False):
-        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}, FUNC_IN")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
+        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}")
         see_memory_usage("Stage 3 initialize beginning", force=True)
 
 
@@ -340,7 +341,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             max([max(tensor.numel(), tensor.ds_numel) for tensor in fp16_partitioned_group])
             for fp16_partitioned_group in self.fp16_partitioned_groups
         ])
-        gd.debuginfo(prj="ds", info=f'Largest partitioned param numel = {largest_partitioned_param_numel}', force=False)
+        gd.debuginfo(prj="ds", info=f'Largest partitioned param numel = {largest_partitioned_param_numel}')
 
         self._setup_for_real_optimizer()
         self.grad_position = {}
@@ -382,7 +383,9 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
             gd.debuginfo(prj="ds")
             see_memory_usage(f"After initializing ZeRO optimizer", force=True)
 
-        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}, FUNC_OUT")
+        gd.debuginfo(prj="ds", info=f"initialized {__class__.__name__} with arg={locals()}")
+
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
 
     def destroy(self):
         gd.debuginfo(prj="ds")
@@ -1457,7 +1460,7 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         flatten_tensor = self.flatten(tensors)
 
         def print_func():
-            gd.debuginfo(prj='ds', info=f'T: {infoTensor((flatten_tensor.contiguous().view(-1).narrow(0, start, n))}')
+            gd.debuginfo(prj='ds', info=f'T: {infoTensor(flatten_tensor.contiguous().view(-1).narrow(0, start, n))}')
 
         self.sequential_execution(print_func, message)
 
@@ -2214,11 +2217,20 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         2. scaled_loss = fp32_loss*loss_scale
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
+        logf = f'stage3.backward'
+        # if args.local_rank == 0:
+        # gd.enable(info=logf)
+        gd.emb_start(info=logf)
+
         if self.swap_optimizer:
             gd.debuginfo(prj="ds")
             self.optimizer_swapper.pre_backward()
 
+        gd.debuginfo(prj="ds", info=f"---------------0--------------------")
+
         see_memory_usage(f"Before backward", force=False)
+
+        gd.debuginfo(prj="ds", info=f"---------------1--------------------")
 
         if self.custom_loss_scaler:
             gd.debuginfo(prj="ds")
@@ -2230,9 +2242,13 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
 
         self._get_param_coordinator(training=True).reset_step()
 
+        gd.debuginfo(prj="ds", info=f"---------------2--------------------")
+
         if self.swap_optimizer:
             gd.debuginfo(prj="ds")
             self.optimizer_swapper.post_backward()
+
+        gd.emb_end(info=logf)
 
     def get_fp32_grad_partitions(self) -> Dict[int, Dict[int, Tensor]]:
         """get fp32 gradient partition dictionary

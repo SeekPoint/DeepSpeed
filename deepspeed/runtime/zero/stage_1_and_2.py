@@ -149,7 +149,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                  fp16_master_weights_and_gradients = False,  # 是否使用fp16存储主权重和梯度，可以节省内存
                  elastic_checkpoint = False):  # 是否使用弹性检查点，当为True时，可以在训练过程中动态保存和加载模型，提高训练的容错性
 
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # gd.debuginfo(prj='ds', info=f'init_optimizer={init_optimizer.param_groups}')
         for gi, g in enumerate(init_optimizer.param_groups):
             for k, v in g.items():
@@ -774,7 +774,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
 
         gd.printall(prj='ds', cname=self)
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     # 检查点启用  用于开启通用的模型检查点。
     def _enable_universal_checkpoint(self):
@@ -822,7 +822,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     def _link_all_hp_params(self):
         # 获取分布式处理过程中的世界大小
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
-        gd.debuginfo(prj='ds', info=f'FUNC_IN, dp_world_size={dp_world_size}')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__, dp_world_size={dp_world_size}')
 
         # 如果启用了CPU卸载，获取卸载梯度字典
         if self.cpu_offload:
@@ -871,7 +871,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                            partition_optimizer_state=self.optimizer.state[flat_hp_partition],   # 分区优化器状态，由优化器的状态和fp32参数的单个分区确定
                            dp_group=self.real_dp_process_group[i])  # 分布式处理过程组
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     # 检查是否为MOE（Mixture of Experts）组
     def is_moe_group(self, group):
@@ -880,7 +880,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 用于配置MOE设置检查
     def _configure_moe_settings(self):
-        gd.debuginfo(prj='ds', info=f'FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # if we're using ZeRO stage 2, ensure contiguous gradients are used
         # 如果我们使用的是ZeRO阶段2，确保使用连续梯度
         if self.partition_gradients:
@@ -925,11 +925,12 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 专家并行组应当在MoE中配置
         assert self.ep_process_group is not None, "Expert parallel group should be configured with MoE"
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     #更新16位浮点数权重的模型。
     def _update_model_bit16_weights(self, group_index):
-        gd.debuginfo(prj="ds", info=f'group_index={group_index}  FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds", info=f'group_index={group_index}')
         # 解压缩16位小组的数据 是pytorch函数
         updated_params = self.unflatten(self.bit16_groups_flat[group_index],
                                         self.round_robin_bit16_groups[group_index])
@@ -980,11 +981,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                                         f'param.data={infoTensor(param.data)}'
                                         f'param.equal(tmp)={param.equal(tmp)}')  # init中都是相等
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 用于在多个设备间重新排序数据。
     def _round_robin_reorder(self, tensor_list, num_partitions):
-        gd.debuginfo(prj='ds', info=f'FUNC_IN', num_partitions={num_partitions})
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__', num_partitions={num_partitions})
         # disable round robin if need to debug something
         # 如果需要调试某个问题，可以禁用round robin
         # return tensor_list, list(range(len(tensor_list)))
@@ -1027,7 +1028,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
         # 返回重排序后的张量列表和索引字典
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         return reordered_tensors, reordered_indices
 
     # 释放一些用于异步梯度累积的缓冲区
@@ -1044,7 +1045,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 初始化优化器状态
     def initialize_optimizer_states(self):
-        gd.debuginfo(prj='ds', info=f'FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # 遍历 bit16_groups，i 是索引，group 是组
         for i, group in enumerate(self.bit16_groups):
             # 创建一个全零的张量，大小等于 partition_size[i]，数据类型和 device 都与 single_partition_of_fp32_groups[i]
@@ -1074,7 +1075,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             for group in self.single_partition_of_fp32_groups:
                 group.grad = None  #class init  # 初始化类
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         return
 
     #########################################################################
@@ -1082,7 +1083,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     #########################################################################
     # reduce - 梯度。
     def reduce_gradients(self, pipeline_parallel=False):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 获取集群中的计算节点总数
         world_size = dist.get_world_size(self.dp_process_group)
         # 获取当前计算节点的编号
@@ -1124,7 +1125,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 在hook或non-hook情况下，reduce任何待处理的梯度
         self.overlapping_partition_gradients_reduce_epilogue()
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     #########################################################################
     #########################ZeRO Partition Gradients########################
@@ -1150,7 +1151,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 初始化梯度分区的数据结构
     def initialize_gradient_partitioning_data_structures(self):
-        gd.debuginfo(prj='ds', info=f'FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # 遍历所有的参数组
         for i, param_group in enumerate(self.round_robin_bit16_groups):
             # 获取分区的总数，也就是分布式处理组的大小
@@ -1197,10 +1198,10 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             gd.debuginfo(prj='ds', info=f'self.grad_start_offset[{i}]={self.grad_start_offset[i]}')
             gd.debuginfo(prj='ds', info=f'self.first_param_index_in_partition[{i}]={self.first_param_index_in_partition[i]}')
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     def independent_gradient_partition_epilogue(self):
-        gd.debuginfo(prj='ds', info=f'FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # 报告在执行梯度reduce之前的内存使用情况
         self.report_ipg_memory_usage(f"In ipg_epilogue before reduce_ipg_grads", 0)
 
@@ -1264,7 +1265,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 报告在执行完independent_gradient_partition_epilogue函数后的内存使用情况
         see_memory_usage(f"End ipg_epilogue")
 
-        gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     # resets all partition to no reduced
     # sets remaining grads to the total number of grads in each partition
@@ -1295,8 +1296,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 初始化reduce分区
     def initialize_gradient_partition(self, i, param_group, partition_id):
-
-        gd.debuginfo(prj="ds", info=f'i={i}+++partition_id={partition_id} FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds", info=f'i={i}+++partition_id={partition_id}')
         # param_group={infoTensor(param_group)} 是一个tensor的列表，太大
         gd.debuginfo(prj='ds', info=f"len of param_group={len(param_group)}")  # 防止消失，直接打印
         for index, v in enumerate(param_group):
@@ -1377,7 +1378,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 更新当前索引
             current_index = current_index + param_size
 
-        gd.debuginfo(prj="ds", info=f'{i}_param_group, partition_id={partition_id}, FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'{i}_param_group, partition_id={partition_id}')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 调用IGP的梯度reduce操作
     def overlapping_partition_gradients_reduce_epilogue(self):
@@ -1387,7 +1389,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # 创建并删除梯度钩子  本身只是init执行，
     # 注册的函数reduce_ready_partitions_and_remove_grads会在train的backward执行
     def create_reduce_and_remove_grad_hooks(self):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 初始化一个用于存储梯度累积函数的列表
         self.grad_accs = []
 
@@ -1425,7 +1427,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                     gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)} NOT requires_grad')
             gd.debuginfo(prj="ds", info=f'---END HOOK--------------------------')
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 获取参数ID。
     def get_param_id(self, param):
@@ -1491,10 +1493,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     ############### Independent Partition Gradient ########################
     # reduce ipg的梯度桶并删除梯度
     def reduce_independent_p_g_buckets_and_remove_grads(self, param, i):
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         gd.debuginfo(prj="ds",
                      info=f'self.elements_in_ipg_bucket={self.elements_in_ipg_bucket}, \
                      param.numel()={param.numel()}, \
-                     self.reduce_bucket_size={self.reduce_bucket_size} FUNC_IN')
+                     self.reduce_bucket_size={self.reduce_bucket_size}')
         # 如果当前bucket中的元素数量加上参数的元素数量超过了bucket的大小
         if self.elements_in_ipg_bucket + param.numel() > self.reduce_bucket_size:
             gd.debuginfo(prj="ds")
@@ -1575,7 +1578,9 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         gd.debuginfo(prj="ds",
                      info=f'self.elements_in_ipg_bucket={self.elements_in_ipg_bucket}, \
                      param.numel()={param.numel()}, \
-                     self.reduce_bucket_size={self.reduce_bucket_size} FUNC_OUT')
+                     self.reduce_bucket_size={self.reduce_bucket_size}')
+
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # def print_rank_0(self, message):
     # `dist.get_rank()`是获取当前进程的标识
@@ -1589,7 +1594,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 实现了分布式训练中的梯度同步，确保每个进程的模型参数更新是一致的
     def gradient_reduction_w_predivide(self, tensor):
-        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 获取当前分布式处理组的大小
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
 
@@ -1625,12 +1631,14 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             tensor.copy_(tensor_to_allreduce)
             gd.debuginfo(prj="ds", info=f'T: tensor={infoTensor(tensor)}')
 
-        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         return tensor
 
     # 计算张量的平均值 , only call by reduce_ipg_grads
     def average_tensor(self, tensor):
-        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}')
         # 如果允许重叠通信
         if self.overlap_comm:
             gd.debuginfo(prj="ds")
@@ -1768,14 +1776,16 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             if self.communication_data_type != tensor.dtype:
                 tensor.copy_(tensor_to_reduce)
 
-        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}, FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'tensor={infoTensor(tensor)}')
+
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     ##############################################################################
     ############################# CPU Offload Methods#############################
     ##############################################################################
     # 获取梯度位置, only call in init
     def get_grad_position(self, group_id, tensor_list, first_offset, partition_size):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 当前已处理的元素偏移量
         current_offset = 0
 
@@ -1826,7 +1836,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 更新当前已处理的元素偏移量
             current_offset += num_elements
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 更新参数梯度的溢出跟踪器, only call in copy_grads_in_partition
     def update_overflow_tracker_for_param_grad(self, param):
@@ -1838,7 +1848,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # only call in _link_all_hp_params  获取卸载梯度的字典
     def _get_offload_gradient_dict(self):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 遍历优化器的所有参数组
         for param_group_index, _ in enumerate(self.optimizer.param_groups):
             # 初始化当前参数组的梯度字典
@@ -1861,11 +1871,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 将梯度张量添加到当前参数组的梯度字典中
                 self.offload_gradient_dict[param_group_index].append(dest_tensor)
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 通过GPU在CPU上异步累积梯度， only call in copy_grads_in_partition
     def async_accumulate_grad_in_cpu_via_gpu(self, param):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 获取参数的ID
         param_id = self.get_param_id(param)
 
@@ -1943,11 +1953,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 在边界处，我们将直接发送32位
             copy_gradients_to_cpu()
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 为参数梯度设置范数  没有被触发？？？？
     def set_norm_for_param_grad(self, param):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 获取参数的ID
         param_id = self.get_param_id(param)
 
@@ -1968,7 +1978,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         # 计算调整后的累积梯度的2范数（即欧几里得范数，或者叫做欧氏距离），并将其设置为对应参数梯度的范数
         self.norm_for_param_grads[param_id] = accumulated_grad.data.double().norm(2)
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 在GPU中为参数梯度设置范数
     def set_norm_for_param_grad_in_gpu(self, param):
@@ -2018,7 +2028,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 完成CPU卸载的梯度范数计算  only call by scaled_global_norm
     def complete_grad_norm_calculation_for_cpu_offload(self, params):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         total_norm = 0.0  # 初始化总梯度范数为0
         norm_type = 2.0  # 设置范数类型为2，即L2范数
 
@@ -2075,7 +2085,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 将总范数设置为-1
             total_norm = -1
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 返回总范数
         return total_norm
@@ -2083,7 +2093,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     ############################################################################################
     # 在分区中复制梯度， only call in reduce_ipg_grads
     def copy_grads_in_partition(self, param):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 检查是否启用了CPU offload
         if self.cpu_offload:
@@ -2142,11 +2152,11 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         #print(f"Grad norm after copy to contiguous_buffer {param.grad.data.norm()}")
         self.grads_in_partition_offset += param.numel()
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # reduce-IPG梯度
     def reduce_ipg_grads(self):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 如果梯度是连续的
         if self.contiguous_gradients:
@@ -2244,12 +2254,13 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
         self.ipg_bucket_has_moe_params = False
         self.elements_in_ipg_bucket = 0
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         #####################################################################
 
     # 减少已准备好的分区并删除梯度  #这是hook，由backward触发！
     def reduce_ready_partitions_and_remove_grads(self, param, i):
-        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)},  FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)}')
         # 如果满足以下两个条件之一，执行操作：
         # 1. 需要对梯度进行分区处理
         # 2. 当前处于梯度累积的边界
@@ -2259,11 +2270,12 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             gd.debuginfo(prj="ds")
             self.reduce_independent_p_g_buckets_and_remove_grads(param, i)
 
-        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)},  FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'i={i}, param={infoTensor(param)}')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 将减少的梯度设置为零
     def zero_reduced_gradients(self, partition_id, i):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 定义一个函数，用于检查与当前参数相关的所有分区是否已经完成了梯度的计算
         def are_all_related_partitions_reduced(params_id):
@@ -2282,7 +2294,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                 # 将当前参数的梯度设为None，这样可以节省存储空间
                 self.param_dict[params_id].grad = None  # dead code
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 压平并打印, 没有被使用
     def flatten_and_print(self, message, tensors, start=0, n=5):
@@ -2301,7 +2313,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 获取要reduce的梯度
     def get_grads_to_reduce(self, i, partition_id):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 定义一个函数，用于获取可以reduce的梯度部分
         def get_reducible_portion(key):
@@ -2349,7 +2361,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 将梯度添加到列表中
             grads_to_reduce.append(grad)
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # 返回reduce的梯度列表
         return grads_to_reduce
@@ -2530,7 +2542,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # views the tensor as multiple partitions and returns
     # those partitions  获取数据并行分区
     def get_data_parallel_partitions(self, tensor, group_id):
-        gd.debuginfo(prj="ds",info=f'group_id={group_id}, FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj="ds",info=f'group_id={group_id}')
         # 初始化一个空列表，用于存储每个分区的数据
         partitions = []
 
@@ -2577,7 +2590,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
                                         f'base_size={base_size}, '
                                         f'partition_size={partition_size}, '
                                         f'start={start}')
-        gd.debuginfo(prj="ds", info=f'group_id={group_id}, FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'group_id={group_id}')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         # 返回分区列表，列表中的每个元素都是一个张量，表示一个分区的数据
         return partitions
 
@@ -3321,7 +3335,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 执行反向传播      ph1-z2 train1batch 入口  只有backward调用z2优化器
     def backward(self, loss, retain_graph=False):
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_IN, loss={infoTensor(loss)}')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj='ds', info=f'loss={infoTensor(loss)}')
         """
         :attr:`backward` 执行以下步骤:
 
@@ -3378,7 +3393,7 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
             # 如果没有使用自定义损失缩放器，使用 loss_scaler 对损失进行反向传播
             self.loss_scaler.backward(loss.float(), retain_graph=retain_graph)
 
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # 检查是否溢出
     def check_overflow(self, partition_gradients=True):

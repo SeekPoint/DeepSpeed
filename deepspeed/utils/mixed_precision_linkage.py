@@ -19,7 +19,7 @@ def link_hp_params(lp_param_list,
                    partition_optimizer_state,
                    dp_group):
 
-    gd.debuginfo(prj='ds', info=f'FUNC_IN')
+    gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
     local_lp_param_and_offset = _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group)
 
@@ -36,14 +36,15 @@ def link_hp_params(lp_param_list,
         # 太大 gd.debuginfo(prj="ds", info=f'lp_param._hp_mapping={lp_param._hp_mapping}')
         # 就是一个数据类的实例 tensor_fragment(lp_fragment=tensor([ 1.7517e-02,  8.3069e-02,  1.3237e-02,  3.7140e-02,  2.5650e-02,
 
-    gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+    gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
 
 def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_group):
+    gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
     current_offset = 0
     param_and_offset_list = []
     partition_end = partition_start + partition_size
     index_in_param_group = 0
-    gd.debuginfo(prj='ds', info=f'FUNC_IN, partition_start={partition_start}, partition_end={partition_end}')
+    gd.debuginfo(prj='ds', info=f'partition_start={partition_start}, partition_end={partition_end}')
     for i, lp_param in enumerate(lp_param_list):
         lp_param._hp_mapping = None
         lp_param._dp_group = dp_group
@@ -70,7 +71,7 @@ def _init_lp_to_hp_mapping(lp_param_list, partition_start, partition_size, dp_gr
             index_in_param_group += 1
         current_offset += lp_param.numel()
 
-    gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+    gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
     return param_and_offset_list # local_lp_param_and_offset 其实一个tuple的list，每个tupple前面是param/tensor, 后面是offset
 
 

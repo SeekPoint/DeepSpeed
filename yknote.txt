@@ -26,3 +26,4 @@ Using /home/amd00/.cache/torch_extensions/py310_cu121 as PyTorch extensions root
 gd.debuginfo(prj='ds', info=self.__class__.__name__ if 'self' in locals() or 'self' in globals() else '')
 是一个很糟糕的设计
 因为staticmethod的不能出现self！！！！
+

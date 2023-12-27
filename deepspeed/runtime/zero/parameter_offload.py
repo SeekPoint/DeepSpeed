@@ -177,7 +177,7 @@ class PreBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, module, pre_backward_function, outputs):
-        gd.debuginfo(prj="ds",info=f"After Forward:")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         ctx.module = module
         ctx.pre_backward_function = pre_backward_function
         if not hasattr(module, "applied_pre_backward_ref_cnt"):
@@ -185,13 +185,15 @@ class PreBackwardFunction(torch.autograd.Function):
         module.applied_pre_backward_ref_cnt += 1
         #print(f"After Forward: {ctx.module.__class__.__name__}")
         outputs = outputs.detach()
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         return outputs
 
     @staticmethod
     def backward(ctx, *args):
-        gd.debuginfo(prj="ds",info=f"Before Backward:")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         #print(f"Before Backward: {ctx.module.__class__.__name__}")
         ctx.pre_backward_function(ctx.module)
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         return (None, None) + args
 
 
@@ -199,7 +201,7 @@ class PostBackwardFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, module, pre_backward_function, output):
-        gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         ctx.module = module
         if output.requires_grad:
             gd.debuginfo(prj="ds")
@@ -214,15 +216,17 @@ class PostBackwardFunction(torch.autograd.Function):
             module.ds_grads_remaining += 1
             ctx.pre_backward_function = pre_backward_function
         output = output.detach()
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         return output
 
     @staticmethod
     def backward(ctx, *args):
-        # gd.debuginfo(prj="ds")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         ctx.module.ds_grads_remaining = ctx.module.ds_grads_remaining - 1
         if ctx.module.ds_grads_remaining == 0:
             ctx.pre_backward_function(ctx.module)
             gd.debuginfo(prj="ds", info=f"After Backward: {ctx.module.__class__.__name__}")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         return (None, None) + args
 
 # 4.2. DeepSpeedZeRoOffload
@@ -244,7 +248,7 @@ class DeepSpeedZeRoOffload(object):
                  mpu=None,
                  zero_param_parallel_group=None,
                  zero_quantized_weights=False):
-        gd.debuginfo(prj="ds", info=f"FUNC_IN")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [begin]", force=True)
 
@@ -308,7 +312,7 @@ class DeepSpeedZeRoOffload(object):
 
         see_memory_usage("DeepSpeedZeRoOffload initialize [end]", force=True)
 
-        gd.debuginfo(prj="ds", info=f"FUNC_IN")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
 
     @instrument_w_nvtx
     def partition_all_parameters(self):
@@ -476,7 +480,7 @@ class DeepSpeedZeRoOffload(object):
 
         @instrument_w_nvtx
         def _pre_forward_module_hook(module, *args):
-             gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
+            gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
             self.pre_sub_module_forward_function(module)
 
         @instrument_w_nvtx

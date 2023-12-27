@@ -222,7 +222,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         #     gd.enable_times(prj="ds", info=logf003)
         gd.emb_start(info=logf003)
 
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         super(DeepSpeedEngine, self).__init__()  #https://blog.csdn.net/dongjinkun/article/details/114575998
         self.dont_change_device = dont_change_device
         self.client_optimizer = optimizer
@@ -487,7 +487,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         self.flatten = _flatten_dense_tensors
         self.unflatten = _unflatten_dense_tensors
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
         # if args.local_rank == 0:
         #     gd.disable_times(prj="ds", info=logf009)
@@ -500,7 +500,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             self.optimizer.destroy()
 
     def _get_model_parameters(self):
-        gd.debuginfo(prj='ds', info=f"FUNC_IN")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
         if self.autotuning_profile_model_info():
             self.autotuning_model_info = {}
             num_params = 0
@@ -528,7 +528,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
                 self.autotuning_model_info["num_params"] = num_params * self.mp_world_size
                 self.autotuning_model_info["trainable_num_params"] = trainable_num_params * self.mp_world_size
 
-        gd.debuginfo(prj='ds', info=f"FUNC_OUT")
+        gd.debuginfo(prj="ds", info=f"__FUNC_IN_OUT__")
 
     def get_batch_info(self):
         """Get all training batch related settings.
@@ -1240,7 +1240,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         self.__dict__['module'] = model
 
     def _configure_distributed_model(self, model):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         self._set_client_model(model)
 
         is_zero3_model = self.zero_optimization_partition_weights() and any(
@@ -1329,7 +1329,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             gd.debuginfo(prj="ds")
             self._broadcast_model()
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     # check if parameters are duplicated in optimizer param_groups
     def _check_for_duplicates(self, optimizer):
@@ -2043,7 +2043,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
 
     @instrument_w_nvtx
     def forward(self, *inputs, **kwargs):  # ph1_z2_train1batch 入口
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_IN')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         r"""Execute forward propagation
         Arguments:
             *inputs: Variable length input list
@@ -2146,7 +2146,8 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         else:
             gd.debuginfo(prj='ds')
             see_memory_usage("Engine after forward", force=self.memory_breakdown())
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_RETURN loss={infoTensor(loss)}')
+
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__ loss={infoTensor(loss)}')
         return loss
 
     def _cast_inputs_half(self, inputs):
@@ -2222,7 +2223,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             retain_graph: bool, default: false
                 forward on user defined choice of retain_graph
         """
-        gd.debuginfo(prj='ds', info=f'FUNC_IN, A-loss={loss}')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__, A-loss={loss}')
 
         see_memory_usage("Engine before backward", force=self.memory_breakdown())
 
@@ -2311,7 +2312,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             pass
 
         see_memory_usage("Engine after backward", force=self.memory_breakdown())
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT loss={loss}')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__ loss={loss}')
         return loss
 
     def is_gradient_accumulation_boundary(self):

@@ -171,8 +171,8 @@ def get_hp_fragment_mapping(lp_param,
                             partition_start,
                             partition_size,
                             optimizer_state_dict):
-
-    gd.debuginfo(prj='ds', info=f'FUNC_IN, input: '
+    gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
+    gd.debuginfo(prj='ds', info=f'input: '
                                 f'lp_param={infoTensor(lp_param)}, '
                                 f'lp_start={lp_start}, '
                                 f'flat_hp_partition={flat_hp_partition}, '
@@ -237,7 +237,7 @@ def get_hp_fragment_mapping(lp_param,
     for k, v in optim_fragment.items():
         gd.debuginfo(prj="ds", info=f'optim_fragment[{k}]={infoTensor(v)}')
 
-    gd.debuginfo(prj='ds', info=f'FUNC_OUT')
+    gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     return tensor_fragment(lp_fragment=lp_fragment_tensor,
                            lp_fragment_address=lp_frag_address,

@@ -52,7 +52,7 @@ class PipelineEngine(DeepSpeedEngine):
     DTYPE_TO_ID = {dtype: id_ for id_, dtype in enumerate(ID_TO_DTYPE)}
 
     def __init__(self, has_bool_tensors=False, *super_args, **super_kwargs):
-        gd.debuginfo(prj="ds", info=f'FUNC_IN') # ppl
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__') # ppl
         super().__init__(*super_args, **super_kwargs)
         assert isinstance(self.module, PipelineModule), "model must base PipelineModule"
 
@@ -253,7 +253,7 @@ class PipelineEngine(DeepSpeedEngine):
             self.timers('step_microstep').start()
             self.timers('step_microstep').stop()
 
-        gd.debuginfo(prj="ds", info=f'FUNC_OUT')
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     def set_has_attention_mask(self, value):
         gd.debuginfo(prj="ds")

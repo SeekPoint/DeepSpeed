@@ -33,6 +33,65 @@ https://zhuanlan.zhihu.com/p/610587671
 【深度学习】【分布式训练】DeepSpeed：AllReduce与ZeRO-DP
 
 
+https://www.cnblogs.com/marsggbo/p/17883514.html
+https://zhuanlan.zhihu.com/p/670968683
+LLM 学习笔记-Deepspeed-MoE 论文 _
+对MoE大模型的训练和推理做分布式加速——DeepSpeed-MoE论文速读
+https://zhuanlan.zhihu.com/p/466363675
+深度学习并行训练算法一锅炖: DDP, TP, PP, ZeRO
+https://www.cnblogs.com/marsggbo/p/16871789.html
+FastMoE 框架结构解析
+https://zhuanlan.zhihu.com/p/671629618
+
+
+
+
+https://github.com/liucongg/ChatGLM-Finetuning
+https://zhuanlan.zhihu.com/p/636488690
+大模型流水线并行（Pipeline）实战
+
+
+https://github.com/jiangxinyang227/LLM-tuning/tree/master/llama_tuning
+大模型入门（四）—— 基于peft 微调 LLaMa模型   deepspeed zero-3 + cpu offload微调
+https://www.cnblogs.com/jiangxinyang/p/17330352.html
+
+https://github.com/jiangxinyang227/LLM-tuning/tree/master/chatglm_tuning
+https://www.cnblogs.com/jiangxinyang/p/17353431.html
+大模型入门（五）—— 基于peft微调ChatGLM模型  eepspeed 的 zero-3 + cpu offload微调
+
+
+https://github.com/microsoft/DeepSpeedExamples/tree/master/applications/DeepSpeed-Chat
+https://www.cnblogs.com/jiangxinyang/p/17374278.html
+rlhf_tuning
+基于DeepSpeed-Chat框架在bloom上的微调。
+
+https://mathmach.com/archives/
+2023年07月
+10日21:56:45 DeepSpeed-Chat强化学习策略
+07日11:58:27 DeepSpeed-Chat全流程训练实战
+
+
+https://www.xichangyou.com/162246.html?action=onClick
+基于DeepSpeed训练ChatGPT
+
+https://wqw547243068.github.io/chatgpt_mimic
+ChatGPT复现之路
+
+DeepSpeed-Chat训练模型
+https://blog.csdn.net/qq_29788741/article/details/132530073
+
+https://cloud.tencent.com/developer/article/2338330?areaId=106001
+【RLHF】想训练ChatGPT？先来看看强化学习（RL）+语言模型（LM）吧（附源码）
+
+https://www.cnblogs.com/wangbin/p/17328802.html
+ChatGPT 复现
+
+
+https://zhuanlan.zhihu.com/p/632763351
+需要几步可实现FasterTransformer加速Bart模型？
+
+https://blog.csdn.net/weixin_50008473/article/details/130842161
+FasterTransformer编译安装与测试
 
 
 

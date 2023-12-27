@@ -159,7 +159,7 @@ def initialize(args=None,
     gd.emb_start(info=logf001)
 
     # deepspeed.initialize入口处
-    gd.debuginfo(prj="ds", info=f'FUNC_IN, config_params={config_params}')
+    gd.debuginfo(prj="ds", info=f'config_params={config_params}')
     gd.debuginfo(prj="ds",
                  info=f"DeepSpeed info: version={__version__, }, git-hash={__git_hash__}, git-branch={__git_branch__}")
 
@@ -285,7 +285,7 @@ def initialize(args=None,
     zero.partition_parameters.restore_init_context()
     return_items = [engine, engine.optimizer, engine.training_dataloader, engine.lr_scheduler]
 
-    gd.debuginfo(prj="ds", info=f'FUNC_OUT, return_items={return_items}')
+    gd.debuginfo(prj="ds", info=f'return_items={return_items}')
 
     # if args.local_rank == 0:
     #     gd.disable_times(prj="ds", info=logf002)

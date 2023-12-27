@@ -784,8 +784,8 @@ class DeepSpeedConfigWriter:
 class DeepSpeedConfig(object):
 
     def __init__(self, config: Union[str, dict], mpu=None):
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
         super(DeepSpeedConfig, self).__init__()
-        gd.debuginfo(prj="ds")
         if isinstance(config, dict):
             self._param_dict = config
             gd.debuginfo(prj="ds", info=f'self._param_dict={self._param_dict}')
@@ -883,7 +883,8 @@ class DeepSpeedConfig(object):
         self._do_sanity_check()
 
         gd.printall(prj='ds', cname=self)
-        gd.debuginfo(prj='ds', info=f'C:{self.__class__.__name__} FUNC_OUT')
+
+        gd.debuginfo(prj="ds", info=f'__FUNC_IN_OUT__')
 
     def _initialize_params(self, param_dict):
         gd.debuginfo(prj="ds", info=f'param_dict={param_dict}')

@@ -2225,7 +2225,9 @@ class GatheredParameters:
             return
 
         handles = [dist.broadcast(p, self.src_rank, group=p.ds_process_group, async_op=True) for p in self.params]
-        gd.debuginfo(prj='ds', info=f"handles={handles}")
+        # gd.debuginfo(prj='ds', info=f"handles={handles}")
+        # handles=[<torch.distributed.distributed_c10d.Work object at 0x7f3c781ecdb0>,
+        # <torch.distributed.distributed_c10d.Work object at 0x7f3c781ecb70>]
         for h in handles:
             h.wait()
         self.params[0].partition(param_list=self.params, has_been_updated=True)
