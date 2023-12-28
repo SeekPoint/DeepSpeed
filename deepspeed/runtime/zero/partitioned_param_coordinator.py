@@ -230,22 +230,23 @@ class PartitionedParameterCoordinator:
         step_id = self.__step_id_module_fetched_for[sub_module.id].popleft()
         gd.debuginfo(prj='ds', info=f"step_id={step_id}")
 
-        for param in sorted(set(iter_params(sub_module)), key=lambda p: p.ds_id):
-            gd.debuginfo(prj='ds', info=f"param={infoTensor(param)}")  # 同一个子模块的stepid相同
+        for i, param in enumerate(sorted(set(iter_params(sub_module)), key=lambda p: p.ds_id)):
+            gd.debuginfo(prj='ds', info=f"The {i:02}th param={infoTensor(param)}")  # 同一个子模块的stepid相同
             self.__param_order.append(__class__.__ParamInTrace(param=param, step_id_last_used_at=step_id))
 
     # 把 __submodule_order 中的子模块的参数全部加入到 __param_order 中
     def construct_parameter_trace_from_module_trace(self):
         """use module trace to construct parameter trace"""
         self.__param_order = []
-        for sub_module in self.__submodule_order:
-            gd.debuginfo(prj='ds', info=f"sub_module={sub_module}")
+        for i, sub_module in enumerate(self.__submodule_order):
+            gd.debuginfo(prj='ds', info=f"The {i:03}th sub_module={sub_module}")
             self.record_parameters(sub_module)
 
     def reset_step(self) -> None:
         """indicate that we have completed one fwd+bwd for the model"""
         # 意味着完成了模型一轮fwd+bwd
-        gd.debuginfo(prj='ds', info=f"C:{self.__class__.__name__}")
+        logf = f'reset_step'
+        gd.emb_start(info=logf)
         if self.__inflight_param_registry:
             raise RuntimeError(f"still have inflight params "
                                f"{[p.ds_summary() for p in self.__inflight_param_registry.keys()]}")
@@ -285,6 +286,8 @@ class PartitionedParameterCoordinator:
         self.__step_id = 0
         self.__n_available_params = 0
         self.__profiler.reset_events()
+
+        gd.emb_end(info=logf)
 
     def _dump_params(self, tag, sub_module, params, step_id=None):
         if step_id is None:

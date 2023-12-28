@@ -2218,8 +2218,6 @@ class DeepSpeedZeroOptimizer_Stage3(ZeROOptimizer):
         3. scaled_loss.backward(), which accumulates scaled gradients into the ``.grad`` attributes of the model's fp16 leaves
         """
         logf = f'stage3.backward'
-        # if args.local_rank == 0:
-        # gd.enable(info=logf)
         gd.emb_start(info=logf)
 
         if self.swap_optimizer:

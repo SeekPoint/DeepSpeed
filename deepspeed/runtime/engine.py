@@ -2058,7 +2058,7 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
         flops_profiler_active = (self.flops_profiler_enabled()
                                  and self.global_steps == self.flops_profiler_profile_step() and self.global_rank == 0)
 
-        gd.debuginfo(prj='ds_chat', info=f'+C+++++++++++++++++++++++++++++++++++++++++++++')
+        gd.debuginfo(prj='ds_chat', info=f'++++++++++++++++++++++++++++++++++++++++++++++')
 
         # used to check quantization happens at step 0!
         if self.global_steps == 0 and hasattr(self, "compression_scheduler"):
@@ -2102,13 +2102,18 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             gd.debuginfo(prj='ds')
             self.random_ltd_scheduler.update_seq(self.global_steps)
 
+
+        
         if self.zero_optimization_partition_weights():
             gd.debuginfo(prj='ds')
             # Enable automated discovery of external parameters by indicating that
             # we are in a forward pass.
-            for module in self.module.modules():
-                gd.debuginfo(prj='ds', info=f'module={module}')
+            logf = f'forward.module.modules'
+            gd.emb_start(info=logf)
+            for i, module in enumerate(self.module.modules()):
+                gd.debuginfo(prj='ds', info=f'The {i:03}th module={module}')
                 module._parameters._in_forward = True
+            gd.emb_end(info=logf)
 
         self._start_timers(self.engine_timers.forward_timers)
 

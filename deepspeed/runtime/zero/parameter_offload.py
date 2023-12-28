@@ -480,11 +480,16 @@ class DeepSpeedZeRoOffload(object):
 
         @instrument_w_nvtx
         def _pre_forward_module_hook(module, *args):
+            logf = f'_pre_forward_module_hook'
+            gd.emb_start(info=logf)
             gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
             self.pre_sub_module_forward_function(module)
+            gd.emb_end(info=logf)
 
         @instrument_w_nvtx
         def _post_forward_module_hook(module, input, output):
+            logf = f'_post_forward_module_hook'
+            gd.emb_start(info=logf)
             global FWD_MODULE_STACK
             FWD_MODULE_STACK.pop()
             if output is None:
@@ -530,12 +535,13 @@ class DeepSpeedZeRoOffload(object):
                     actual_external_param.all_gather()
 
             self.post_sub_module_forward_function(module)
+            gd.emb_end(info=logf)
 
         def _pre_backward_module_hook(module, inputs, output):
-
+            logf = f'_pre_backward_module_hook'
+            gd.emb_start(info=logf)
             @instrument_w_nvtx
             def _run_before_backward_function(sub_module):
-                gd.debuginfo(prj="ds")
                 # some models (e.g. Albert) may run multiple forwards on the same layer in a loop
                 # before doing backwards, so each backward will need a pre-fetch - using reference
                 # counting to support this scenario
@@ -546,45 +552,56 @@ class DeepSpeedZeRoOffload(object):
                     sub_module.applied_pre_backward_ref_cnt -= 1
                 #print(f"COUNTER after: {sub_module.applied_pre_backward_ref_cnt}")
 
-            return _apply_to_tensors_only(module, PreBackwardFunction, _run_before_backward_function, output)
+            gd.debuginfo(prj="ds", info=f"output={output}")
+            tmp = _apply_to_tensors_only(module, PreBackwardFunction, _run_before_backward_function, output)
+            gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+            gd.emb_end(info=logf)
+            return tmp
 
         #This is an alternate to doing _post_backward_module_hook
         #it uses tensor.register_hook instead of using torch.autograd.Function
-        def _alternate_post_backward_module_hook(module, inputs):
-            gd.debuginfo(prj="ds", info=f"module={module}, input={input}")
-            module.ds_grads_remaining = 0
-
-            #print(f"Before Forward {module.__class__.__name__}")
-
-            def _run_after_backward_hook(*unused):
-                gd.debuginfo(prj="ds")
-                module.ds_grads_remaining = module.ds_grads_remaining - 1
-                if module.ds_grads_remaining == 0:
-                    gd.debuginfo(prj="ds")
-                    #print(f"After backward {module.__class__.__name__}")
-                    self.post_sub_module_backward_function(module)
-
-            def _run_before_forward_function(input):
-                gd.debuginfo(prj="ds", info=f"input={input}")
-                if input.requires_grad:
-                    gd.debuginfo(prj="ds")
-                    module.ds_grads_remaining += 1
-
-            return _apply_forward_and_backward_to_tensors_only(module, _run_before_forward_function,
-                                                               _run_after_backward_hook, inputs)
+        # yknote 没有用到
+        # def _alternate_post_backward_module_hook(module, inputs):
+        #     gd.debuginfo(prj="ds", info=f"module={module}, input={input}")
+        #     module.ds_grads_remaining = 0
+        #
+        #     #print(f"Before Forward {module.__class__.__name__}")
+        #
+        #     def _run_after_backward_hook(*unused):
+        #         gd.debuginfo(prj="ds")
+        #         module.ds_grads_remaining = module.ds_grads_remaining - 1
+        #         if module.ds_grads_remaining == 0:
+        #             gd.debuginfo(prj="ds")
+        #             #print(f"After backward {module.__class__.__name__}")
+        #             self.post_sub_module_backward_function(module)
+        #
+        #     def _run_before_forward_function(input):
+        #         gd.debuginfo(prj="ds", info=f"input={input}")
+        #         if input.requires_grad:
+        #             gd.debuginfo(prj="ds")
+        #             module.ds_grads_remaining += 1
+        #
+        #     tmp = _apply_forward_and_backward_to_tensors_only(module, _run_before_forward_function,
+        #                                                        _run_after_backward_hook, inputs)
+        #     return tmp
 
         def _post_backward_module_hook(module, inputs):
-            gd.debuginfo(prj="ds", info=f"module={module}, input={input}")
+            logf = f'_post_backward_module_hook'
+            gd.emb_start(info=logf)
+            gd.debuginfo(prj="ds", info=f"module={module}")
             module.ds_grads_remaining = 0
 
             @instrument_w_nvtx
             def _run_after_backward_function(sub_module):
-                # gd.debuginfo(prj="ds")
                 if sub_module.ds_grads_remaining == 0:
                     # gd.debuginfo(prj="ds")
                     self.post_sub_module_backward_function(sub_module)
 
-            return _apply_to_tensors_only(module, PostBackwardFunction, _run_after_backward_function, inputs)
+            gd.debuginfo(prj="ds", info=f"input={input}")
+            tmp = _apply_to_tensors_only(module, PostBackwardFunction, _run_after_backward_function, inputs)
+            gd.emb_end(info=logf)
+            gd.debuginfo(prj="ds", info=f"tmp={tmp}")
+            return tmp
 
         # Pre forward hook
         self.forward_hooks.append(module.register_forward_pre_hook(_pre_forward_module_hook))
