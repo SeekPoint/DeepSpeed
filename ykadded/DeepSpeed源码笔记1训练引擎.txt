@@ -1,0 +1,291 @@
+DeepSpeed源码笔记1训练引擎
+https://zhuanlan.zhihu.com/p/664991651
+
+
+DeepSpeed源码笔记1训练引擎
+秀才经商
+秀才经商
+已关注
+分布式环境初始化
+a）init_distributed
+　　初始化加速器并更新到全局变量ds_accelerator(详见get_accelerator函数)，并初始化分布式计算后端框架(用于多个计算节点协同工作以加速训练，处理模型参数和梯度同步、通信等操作，存入全局变量ccl_backend，CCLBackend类，详见init_deepspeed_backend函数)；
+
+　　根据加速器的后端通信名称初始化全局变量cdb，set_backend；
+
+　　　"nccl"：nccl_backend
+
+　　　"mpi"：mpi_backend
+
+　　　"ccl"：ccl_backend
+
+　　　"hccl"：hccl_backend
+
+　　如果torch分布式没有初始化，则调用mpi_discovery初始化MPI分布式环境；
+
+　　　　如果机器的rank为0，则通过"hostname -I"命令获取机器地址，并广播给其他机器；
+
+　　　　更新本地环境变量：
+
+　　　　　"RANK"：机器rank；
+
+　　　　　"WORLD_SIZE"：分布式环境中进程个数；
+
+　　　　　"LOCAL_RANK"：分布式环境中进程编号；
+
+　　　　　"MASTER_ADDR"：当前机器地址；
+
+　　　　　"MASTER_PORT"：分布式端口号，默认值29500；
+
+b）get_accelerator
+　　从环境变量(os.environ)中获取"DS_ACCELERATOR"对应的加速器名称(如"xpu"、"cpu"、"npu"等)，并import对应的文件；
+
+　　如果无法从环境变量中找到加速器名称，则依次尝试加载如下：：
+
+　　　　intel_extension_for_deepspeed.XPU_Accelerator：加速器名称为"xpu"；
+
+　　　　intel_extension_for_pytorch：加速器名称为"cpu"；
+
+　　　　torch_npu：加速器名称为"npu"；
+
+　　　　torch.mps：加速器名称为"mps"；
+
+　　　　如果依然没有找到加速器，则加速器名称为"cuda"；
+
+　　根据加速器名称分别初始化全局变量ds_accelerator
+
+　　　　"cuda"：CUDA_Accelerator(父类DeepSpeedAccelerator)；
+
+　　　　"cpu"：CPU_Accelerator(父类DeepSpeedAccelerator)；
+
+　　　　"xpu"：XPU_Accelerator
+
+　　　　"npu"：NPU_Accelerator
+
+　　　　"mps"：MPS_Accelerator
+
+c）CCLBackend初始化
+　　ccl_comm_op：加载CCLCommBuilder类(通过torch.utils.cpp_extension.load加载"csrc/cpu/comm/ccl.cpp"中的C++类)，详见build_ccl_op函数；
+
+　　调用父类TorchBackend完成初始化(实际上调用torch.distributed.init_process_group初始化torch分布式环环境中进程组)；
+
+　　name："ccl"；
+
+　　通过ccl_comm_op(即CCLCommBuilder)的get_kvs_addr创建一个主要的key-value存储器并将其内存地址广播(TorchBackend的broadcast方法)给其他机器；
+
+　　根据当前机器编号(rank)、key-value存储器地址等初始化ccl_comm_op(即CCLCommBuilder类)
+
+　　intialized设置为true；
+
+　　available_coll：通信操作名列表(broadcast、all_reduce、inference_all_reduce、all_reduce_caching、barrier)，详见ccl_comm_op的get_available_coll；
+
+d）initialize
+　　初始化分布式环境，详见上面init_distributed函数；
+
+　　engine：如果传入的模型不属于PipelineModule，则先初始化DeepSpeed配置(即DeepSpeedConfig)，然后初始化DeepSpeed引擎(DeepSpeedHybridEngine/DeepSpeedEngine)；否则，先初始化DeepSpeed配置(即DeepSpeedConfig)，然后初始化PipelineEngine；
+
+　　返回engine、engine的optimizer、engine的training_dataloader、engine的lr_scheduler；
+
+e）DeepSpeedConfig初始化
+　　_param_dict：传入的配置dict；
+
+　　根据_param_dict初始化如下变量，详见_initialize_params函数
+
+　　　　train_batch_size：
+
+　　　　train_micro_batch_size_per_gpu：
+
+　　　　gradient_accumulation_steps：
+
+　　　　steps_per_print：配置中取值10；
+
+　　　　prescale_gradients：配置中配置为false；
+
+　　　　gradient_clipping：配置中取值为1.0；
+
+　　　　zero_config：zero_optimization配置参数；
+
+　　　　zero_optimization_stage：zero_optimization配置参数中"stage"参数；
+
+　　　　zero_enabled：zero_optimization_stage是否大于0；
+
+　　　　……
+
+　　　　activation_checkpointing_config：初始化DeepSpeedActivationCheckpointingConfig类；
+
+　　　　comms_config：初始化DeepSpeedCommsConfig类；
+
+　　　　flops_profiler_config：初始化DeepSpeedFlopsProfilerConfig类；
+
+　　　　autotuning_config：初始化DeepSpeedAutotuningConfig类；
+
+　　　　nebula_config：初始化DeepSpeedNebulaConfig类；
+
+　　　　weight_quantization_config：初始化WeightQuantConfig类；
+
+　　设置训练batch_size相关参数(如果没有配置则根据其他配置计算)，详见_configure_train_batch_size函数
+
+　　　　gradient_accumulation_steps：train_batch_size/(train_micro_batch_size_per_gpu*分布式进程个数)；
+
+　　　　train_micro_batch_size_per_gpu：train_batch_size/(gradient_accumulation_steps*分布式进程个数)
+
+　　　　train_batch_size：train_micro_batch_size_per_gpu*分布式进程个数*gradient_accumulation_steps
+
+　　　　train_micro_batch_size_per_gpu：train_batch_size/分布式进程个数(如果没有配置gradient_accumulation_steps，则gradient_accumulation_steps设置为1)；
+
+　　　　gradient_accumulation_steps：train_micro_batch_size_per_gpu*分布式进程个数(如果没有配置gradient_accumulation_steps，则gradient_accumulation_steps设置为1)；
+
+　　合法性检测，详见_do_sanity_check函数；
+
+DeepSpeedEngine
+a）初始化
+　　client_optimizer：传入的optimizer参数(即FusedAdam)；
+
+　　enable_backward_allreduce：true；
+
+　　client_lr_scheduler：传入的lr_scheduler参数；
+
+　　param_names：以named_parameters中的模型参数为key，以模型参数名称为value构成dict；
+
+　　更新分布式环境相关变量，详见_set_distributed_vars函数
+
+　　　　device：传入的device_rank参数；
+
+　　　　word_size：分布式进程个数；
+
+　　　　global_rank：进程rank；
+
+　　pipeline_parallelism：如果模型是PipelineModule子类，则为true；
+
+　　配置分布式模型参数，详见_configure_distributed_model函数；
+
+　　如果配置参数autotuning_profile_model_info为true，则统计模型参数量和训练参数量并记录到autotuning_model_info中，详见_get_model_parameters函数；
+
+　　timer：SynchronizedWallClockTimer？
+
+　　tput_timer：ThroughputTimer？
+
+　　初始化针对zero不同stage的优化器，详见_configure_optimizer函数；
+
+　　lr_scheduler：传入的参数，详见_configure_lr_scheduler；
+
+　　如果传入的optimizer不是DeepSpeedZeRoOffload子类，则checkpoint_engine初始化TorchCheckpointEngine类，详见_configure_checkpointing；
+
+　　engine_timers：EngineTimers？
+
+b）_configure_distributed_model
+　　将当前模型存入DeepSpeedEngine的__dict__中，详见_set_client_model；
+
+　　is_zero_init_model：如果zero_optimization_stage>=3且模型参数中具有"ds_id"属性则为true，否则为false；
+
+　　由于数据类型配置为"fp16"，因此调用model的half函数将所有浮点型参数和buffer转换为半浮点数据类型；
+
+　　遍历模型命名参数，更新如下变量：
+
+　　　　has_moe_layers：模型中包含MoE模块；
+
+　　　　num_experts：存储所有MoE模块的num_experts变量；
+
+　　　　gate_modules：存储所有TopKGate模块；
+
+　　　　moe_layers：存储所有MOELayer模块；
+
+　　更新分布式环境相关变量：
+
+　　　　local_all_to_all_group：None
+
+　　　　data_parallel_group：全局变量_WORLD_GROUP，存储新建的进程分组；
+
+　　　　dp_world_size：新建分组的进程个数；
+
+　　　　seq_data_parallel_group：全局变量_WORD_GROUP，存储新建的进程分组；
+
+　　　　seq_dp_world_size：新建分组的进程个数；
+
+　　　　mp_world_size：1
+
+　　　　expert_parallel_group：全局变量_EXPERT_PARALLEL_GROUP；
+
+　　　　expert_data_parallel_group：全局变量_EXPERT_DATA_PARALLEL_GROUP；
+
+　　　　sequence_parallel_size：1
+
+　　将模型参数广播给其他进程，详见_broadcast_model函数；
+
+c）_configure_optimizer
+　　basic_optimizer：传入的优化器参数；
+
+　　optimizer：根据zero配置构造对应stage的优化器，详见_configure_zero_optimizer函数；
+
+　　　　如果zero_stage<=2，则初始化DeepSpeedZeroOptimizer？
+
+　　　　如果zero_stage==3，则初始化DeepSpeedZeroOptimizer_Stage3？
+
+　　compression_scheduler：初始化调度不同压缩方法的compression_scheduler类？
+
+　　quantizer：初始化Quantizer类？
+
+d）forward
+　　根据传入的inputs参数调用module进行预测并计算loss；
+
+e）backward
+　　losses：累加当前batch训练的loss的均值；
+
+　　设置optimizer的is_gradient_accumulation_boundary：如果micro_steps到达了gradient_accumulation_steps，则取值为true；
+
+　　根据当前batch的loss调用optimizer的backward进行反向梯度传播；
+
+　　执行梯度reduce操作，详见allreduce_gradients函数；
+
+f）allreduce_gradients
+　　如果需划分梯度(zero stage>=2)，调用optimizer的overlapping_partition_gradients_reduce_epilogue；
+
+　　如果进划分优化器状态(zero stage=1)且micro_steps到达了gradient_accumulation_steps，则调用optimizer的reduce_gradients操作；
+
+g）step
+　　如果micro_steps到达了gradient_accumulation_steps，则gas_boundary_ctr加1，且调用_take_model_step；
+
+h）_take_model_step
+　　计算所有参数的梯度的L2范数，通过all_reduce的分布式操作将梯度的L2范数广播给所在进程分组，并根据梯度的L2范数对所有参数的梯度按照max_norm(取值1.0)进行正则，详见clip_fp32_gradients函数；
+
+　　调用optimizer的step方法更新权重；
+
+　　调用optimizer的zero_grad方法重置梯度相关数据结构；
+
+　　losses：置为0.0；
+
+　　global_steps：加1；
+
+　　global_samples：累加当前训练batch_size；
+
+DeepSpeedHybridEngine
+a）初始化
+　　调用父类DeepSpeedEngine进行初始化；
+
+　　在所有GPU上同步种子seed；
+
+　　gather_all_layers：取DeepSpeed配置中hybrid_engine的pin_parameters参数，即true；
+
+　　创建推断模块，详见create_inference_module函数；
+
+　　　　inference_policies：详见populate_all_inference_policies函数；
+
+　　　　　nn.Linear：LinearLayer
+
+　　　　　nn.Embedding：EmbeddingLayer，
+
+　　　　　nn.LayerNorm：Normalize，
+
+　　　　　OPTLearnedPositionalEmbedding：OPTEmbedding，
+
+　　　　all_layers_params：所有模型参数；
+
+　　　　create_inference_containers？
+
+　　inference_cuda_module：全局变量，InferenceBuilder？？？
+
+　　is_lora_fused：false，
+
+
+源码地址：https://github.com/microsoft/DeepSpeed
+
+编辑于 2024-01-21 21:37・IP 属地北京

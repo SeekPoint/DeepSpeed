@@ -1,0 +1,53 @@
+DeepSpeed在docker容器内实现多机多卡
+https://blog.csdn.net/qq_21768483/article/details/129841826?spm=1001.2101.3001.6650.1&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-1-129841826-blog-132190637.235%5Ev40%5Epc_relevant_anti_t3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-1-129841826-blog-132190637.235%5Ev40%5Epc_relevant_anti_t3&utm_relevant_index=2
+
+
+DeepSpeed在docker容器内实现多机多卡
+
+Matrix-yang
+
+已于 2023-05-18 11:06:09 修改
+
+阅读量2.6k
+ 收藏 6
+
+点赞数 1
+文章标签： docker 运维 容器
+版权
+多台docker宿主机网络配置
+https://docs.docker.com/network/overlay/
+这里需要创建overlay网络是多台宿主机的容器可以通过网络连接
+
+创建集群
+
+docker swarm init
+1
+另一台机器加入集群
+
+docker swarm join --token SWMTKN-1-1nnq6klpq7z93lqmshd4rqvk44x1qyyen4wacuei1t46wnvm3r-80qzsy8qfdke7hgex7n5x2c37 172.17.0.5:2377
+1
+在集群里创建一个my-attachable-overlay的虚拟网络
+
+docker network create -d overlay --attachable my-attachable-overlay
+1
+启动容器时使用创建的网络
+docker run -it --gpus=all --ipc=host --net=my-attachable-overlay --name ydq_chatglm_env -v /data3:/data3 chatglm:v0.3 /bin/bash
+1
+以该网络创建的容器间可以直接通讯
+两边容器都启动后
+
+#分别查看机器分配到的IP
+ifcofig
+1
+2
+deepspeed的配置
+按照官网设置
+
+#需要注意NCCL的配置,这里需要根据机器的情况指定NCCL的通讯网卡
+NCCL_SOCKET_IFNAME=eth0
+1
+2
+文章知识点与官方知识档案匹配，可进一步学习相关知识
+————————————————
+版权声明：本文为CSDN博主「Matrix-yang」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_21768483/article/details/129841826

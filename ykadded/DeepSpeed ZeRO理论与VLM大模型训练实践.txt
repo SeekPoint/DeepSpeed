@@ -1,0 +1,179 @@
+DeepSpeed ZeRO理论与VLM大模型训练实践
+凯恩博
+凯恩博​
+香港城市大学 计算机科学博士
+​关注他
+10 人赞同了该文章
+背景：大模型 vs. GPU Memory
+大模型最大的特点是模型参数多，训练时需要很大的GPU显存。举个例子，帮助大家的理解：对于一个常见的7B规模参数的大模型（如LLaMA-2 7B），基于16-bit混合精度训练时，在未经过优化的情况下，显存占用合计约112GB，显然目前A100、H100这样主流的显卡单张是放不下的，更别提国内中小厂喜欢用的A6000/5000、甚至消费级显卡。
+
+上面的例子中，参数占GPU 显存近 14GB（每个参数2字节）。再考虑到训练时 梯度的存储占14GB（每个参数对应一个梯度，也是2字节）、优化器Optimizer假设是用目前主流的AdamW则是84GB（每个参数对应一个参数的copy、一个momentum和一个variance，这三个都是float32），合计112GB。
+不理解为什么混合精度训练的显存占用是上面排布的情况，可以参考下图：
+
+混合精度训练的迭代流程
+这种情况，Torch中支持的大家熟悉的数据并行DataParallel是解决不了的。因为数据并行的前提是每个GPU可以host完整的模型。需要用到模型并行和流水线并行。下面对着三种方法做一个简单介绍，熟悉的读者可以直接跳过到下个章节。
+
+三种模型训练的并行方案
+
+
+数据并行、模型并行、流水线并行
+数据并行（Data Parallelism）
+数据并行是一种常用的并行技术（一般的CV模型都是这种用法），它将训练数据集分割成多个micro-batch，并在多个GPU上同时处理这些micro-batch。在数据并行中，每个GPU都有一个模型的完整副本。关键步骤包括：
+
+数据分割：训练数据被分割成多个小批次（例如在PyTorch中通过torch.nn.DataParallel实现）。
+并行处理：每个处理器同时处理不同的数据批次。
+梯度汇总和同步：每个处理器完成一次前向和反向传播后，梯度被汇总并在所有处理器间同步，以更新模型的参数。
+模型并行（Model Parallelism）
+模型并行涉及将一个模型的Layer/tensor分割成多个部分，并在不同的处理器上并行处理这些部分。模型并行的关键步骤包括：
+
+模型分割：将模型的不同部分（例如，不同的层或子网络）分配给不同的处理器。
+分部处理：每个处理器处理分配给它的模型部分。
+交叉通信：处理器间必须进行数据交换，以便完成前向和反向传播。
+
+流水线并行（Pipeline Parallelism）
+流水线并行是一种在模型的不同阶段之间划分工作的策略，类似于工业生产中的装配线。在流水线并行中，模型被分割成几个阶段，每个阶段在不同的处理器上执行。关键步骤包括：
+
+阶段划分：模型被分割成几个连续的阶段。
+流水线处理：每个阶段独立处理其输入数据，然后将其输出传递给下一个阶段。
+效率优化：为了最大限度地提高效率，需要仔细安排每个阶段的执行，以减少处理器的空闲时间。
+从上图可以看到，模型并行和流水行的并行实现相对复杂， 需要实现相对复杂的模型拆分、卡间通讯等。以及在这些并行手段下，如果极致的优化显存占用，是非常关键的。这也是DeepSpeed被设计的初衷。
+
+熟悉英伟达的朋友应该知道，作为垄断AI训练的Nvidia GPU不仅贵，而且难买（尤其是在国内，现在连4090都给禁了），省显存，很明显就是在为项目降本增效。
+DeepSpeed是什么？
+如今的DeepSpeed除了训练之后，还在推理、压缩、Science几个模块做了很多的工作，本文主要关注它在训练中的优化。
+
+
+我们看看DeepSpeed Training的官方介绍：
+
+DeepSpeed 提供了系统创新的融合，使大规模深度学习训练变得有效、高效，大大提高了易用性，并在可能的规模方面重新定义了深度学习训练格局。 ZeRO、3D-Parallelism、DeepSpeed-MoE、ZeRO-Infinity 等创新属于培训支柱。
+可以看到ZeRO技术是非常核心的创新，排在首位。
+
+DeepSpeed ZeRO的核心特点包括：
+
+内存优化：通过创新的内存优化技术，DeepSpeed ZeRO能够显著减少大规模模型训练所需的GPU内存。这使得研究人员和开发人员能够在现有硬件上训练更大、更复杂的模型。
+数据并行性：DeepSpeed ZeRO通过高效的数据并行方法提高了大规模模型训练的效率。它可以跨多个GPU和多个节点分布式地训练模型，从而提高训练速度和扩展性。
+模型并行性：除了数据并行性之外，DeepSpeed ZeRO还支持模型并行性，允许模型的不同部分在不同的GPU上运行。这进一步增加了训练大型模型的灵活性和效率。
+通信效率：DeepSpeed ZeRO优化了分布式训练中的通信机制，减少了节点间同步模型参数时的网络负载。这使得它在大规模分布式环境下更为高效。
+易于使用：DeepSpeed ZeRO旨在与现有的深度学习框架（如PyTorch）无缝集成，使其易于使用和部署。
+支持超大规模模型：DeepSpeed ZeRO被设计来支持非常大的模型，如数十亿甚至数千亿参数的模型，这对于传统训练方法来说是不可能的。
+使用上，包括三个阶段：
+
+Stage 1：优化器状态（例如，对于 Adam 优化器、FP32的权重 及first, second moment estimates）在进程间（不同GPU）Split，以便每个进程仅更新其分区。
+Stage 2：用于更新模型权重的梯度（gradients）也被Split，以便每个进程仅保留与其优化器状态部分相对应的梯度。
+Stage 3：16 位模型参数（params）在进程之间被Split。 ZeRO-3会在前向和后向传递过程中自动收集和划分它们。
+DeepSpeed ZeRO优化理论
+下面这张图是论文中的，一图胜千言。一共四种情况，其中
+ 是模型参数，其中
+ 是GPU卡数：
+
+Baseline是没有ZeRO优化时的GPU消耗，显存消耗
+ ，
+ 是ZeRO Stage 1：单卡显存消耗
+ 是ZeRO Stage 2：单卡显存消耗
+ 是ZeRO Stage 3：单卡显存消耗
+
+从上面的公式可以看出来，关键点是
+ 要大（也就是卡要多 ），当模型为7.5B，有64张GPU卡时，不同ZeRO Stage对显存的占用如下：
+
+单卡显存占用	与Baseline比较
+ZeRO Stage 1	31.4 GB	26%
+ZeRO Stage 2	16.6 GB	13.8%
+ZeRO Stage 3	1.9 GB	1.58%
+GPU卡间通讯的代价
+当然，硬币都是有两面的，凡事也都有利弊。
+
+DeepSpeed之所以这么大幅度的降低单卡显存的开销，背后思想是分布式计算的思路，需要用到什么的时候，临时去其他GPU显存中获取。这里就涉及到GPU通讯的reduce、gather等操作。
+
+推荐参考OneFlow的文章《手把手推导Ring All-reduce的数学性质》：
+需要传输的数据	单张GPU的数据传输量
+普通数据并行	需要聚合其他GPU计算的梯度，以计算梯度均值，通过RingAllReduce操作	梯度
+ZeRO Stage 1	获取其他GPU中存储的对应Optimizer states，需要做gather后算梯度的更新，最后计算梯度均值梯度聚合	$\frac{N_d-1}{N_d}*Φ$ Optimizer States+$2*\frac{N_d-1}{N_d}*Φ$梯度
+ZeRO Stage 2	获取其他GPU中存储的对应Optimizer states和gradients，需要分别做gather后算梯度的更新，最后计算梯度均值梯度聚合	$\frac{N_d-1}{N_d}*Φ$ Optimizer States+$(2+1)*\frac{N_d-1}{N_d}*Φ$梯度
+ZeRO Stage 3	获取其他GPU中存储的对应Params、Optimizer states和gradients，需要分别做gather后算梯度的更新，最后计算梯度均值梯度聚合。参数gather需要在前向传播和反向传播的时候分别做一次。	$2*\frac{N_d-1}{N_d}*Φ$ 个参数+$\frac{N_d-1}{N_d}*Φ$ Optimizer States+$(2+1)*\frac{N_d-1}{N_d}*Φ$梯度 sh
+单
+张
+的
+数
+据
+传
+输
+量
+梯
+度
+梯
+度
+梯
+度
+个
+参
+数
+梯
+度
+
+感觉知乎的表格里没法渲染公式，因此我把上表最后一列，用Latext整体渲染了下。
+除了上述的ZeRO显存优化之外，还集成了ZeRO-Offload这样的方法
+
+ZeRO-Offload：显存不够内存来凑
+
+当然，这不是简单的把放不下到显存的都搬到内存里，是流程创新的。核心的思想是把计算梯度和更新权重的过程拆分到GPU和CPU两部分，并做任务的并行排布，如下图：
+
+
+DeepSpeed踩坑
+上面讲了DeepSpeed的理论介绍。接下来看看实际使用中的体验和踩过的坑。
+
+1、单卡正常，多卡Stuck卡住（GPU Utilization 100%但实际程序已经挂起）
+
+各种加log和一通分析，最后发现是NCCL的通讯有问题。一个简单的排除方法是，利用一个torch分布式的程序做个通讯测试。
+
+# saved as test.py
+import torch.distributed as dist
+import argparse
+import torch
+
+torch.cuda.set_device(int(os.environ['LOCAL_RANK']))
+device = torch.device("cuda", int(os.environ['LOCAL_RANK']))
+
+dist.init_process_group("nccl")
+dist.all_reduce(torch.ones(1).to(device), op=dist.ReduceOp.SUM)
+上述文件存为test.py，运行观察是否挂起:
+
+python -m torch.distributed.launch --nproc_per_node=2 test.py
+如果挂起，那就说明NCCL的GPU卡间通讯是有问题的。有和Host的BIOS设置有关（ACS），可见这里。
+
+如果你用的是平台的容器，无法改Host的配置，一个临时的解决办法是关闭GPU P2P通讯，改为通过PCIe通讯。
+
+NCCL_P2P_DISABLE=1
+在使用DeepSpeed ZeRO优化时，一些常见的问题和解决方法包括：
+
+2、显存不足
+
+如果在训练过程中遇到显存不足的问题，可以尝试减小batch size，也可以调整不同的ZeRO Stage。
+
+# 从左往右，GPU显存占用依次降低
+Stage 1 < Stage 2 < Stage 2 + offload < Stage 3 < Stage 3 + offloads
+3、希望提升训练速度
+
+当使用ZeRO优化时，可能会遇到训练速度下降的情况。这是因为GPU之间的通信开销增加导致的。可以尝试调整ZeRO stage。
+
+# 从左往右，训练速度依次下降
+Stage 1 > Stage 2 > Stage 2 + offload > Stage 3 > Stage 3 + offloads
+4、一个实际的案例，基于多模态大模型 LLaVA 1.5 的指令微调（LoRA）
+
+运行环境是单机A6000多卡，实验的数据如下：
+
+LLaVA Task LoRA FT		1 * A6000	2 * A6000	4 * A6000
+ZeRO 2	内存峰值	68 GB	126 GB	240 GB
+batch size/GPU	8	8	16
+Samples/s	1.043	2.11	4.198
+ZeRO 3	内存峰值	-	30 GB	43 GB
+batch size/GPU	-	16	16
+Samples/s	-	2.09	4.042
+可观察到，对于ZeRO Stage 2很大的一个痛点是峰值内存非常大，遇到过几次因为内存不足导致docker reboot的情况
+从速度上来看，ZeRO Stage 3相对于Stage 2几乎接近，而且因为显存占用更少，可以尝试更大的batch size。因此推荐尽量用ZeRO Stage 3。
+希望这些经验分享对你在使用DeepSpeed ZeRO优化时有所帮助！
+
+最后，附上关于ZeRO的official tutorial：https://www.deepspeed.ai/tutorials/zero/
+
+欢迎留言交流、吐槽、点赞~
+
+编辑于 2023-12-30 20:43・IP 属地广东

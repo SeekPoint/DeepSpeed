@@ -1,0 +1,229 @@
+bloom使用deepspeed的多机多卡训练
+
+http://www.kexue.love/index.php/archives/397/
+
+
+bloom使用deepspeed的多机多卡训练
+作者: admin 时间: 2023-09-04 分类: bloom 访问: 1,196 次
+deepspeed官方文档中有描述关于进行多节点训练与推理教程，但相对简洁，部分细节没有给出，本文对此做出一些细节补充，并列出一些训练中可能遇到的问题。
+
+参考官方文档：https://www.deepspeed.ai/getting-started/#resource-configuration-multi-node
+
+要实现bloom使用deepspeed的多机多卡训练需要如下几步配置：
+
+一、配置ssh无密码登录
+1.master节点创建公钥和私钥
+在主节点(master)上输入以下命令创建一组公钥和私钥:
+
+ssh-keygen
+都是直接enter：
+0727.png
+
+密钥生成位置：默认会将密钥生成到当前登录用户的主目录下的.ssh文件夹中，如：/home/centos/.ssh/
+私钥密码：默认无密码，如果设置了私钥密码，在进行免密登录时需要输入私钥密码
+确认私钥密码：默认无密码
+命令执行成功后将会在指定位置生成密钥：
+id_rsa
+id_rsa.pub
+上面的id_rsa为私钥，需要留在master节点。建议保持其默认存放位置和默认文件名，在SSH连接时会自动使用，如果存放到其他位置或修改为其他文件名，在SSH连接时需要手动指定私钥位置。
+下面的id_rsa.pub为公钥，需要上传到服务器。上传到需要进行免密登录的用户的主目录下的.ssh文件夹中，并且重命名为authorized_keys，如：/home/centos/.ssh/authorized_keys。
+2.上传公钥
+远程登录服务器，在需要免密登录的用户的主目录下创建名为.ssh的文件夹，如：/home/centos/，创建成功后退出连接，如果有的话不需要创建。
+
+scp .ssh/id_rsa.pub  centos@192.168.17.187:/home/centos/.ssh/authorized_keys
+3.登录测试
+在主节点master上输入以下命令登录远程服务器
+
+ssh centos@192.168.17.187
+连接服务器时，会发现在没有输入密码的情况下成功连接
+
+注意事项：主节点上也需要将id_rsa.pub 拷贝成authorized_keys
+4.host配置
+编辑master节点和worker节点服务器的/etc/hosts文件，加入node信息
+
+vim /etc/hosts
+192.168.17.187 host187
+192.168.17.188 host188
+测试hostname是否已经更改：
+
+0224.png
+
+然后通过测试：
+ssh host187
+或者
+ssh host187
+
+便可以直接登录，无需密码，需要注意的是：服务器需要使用相同的用户名比如：centos
+
+参考：
+https://blog.csdn.net/u010044182/article/details/128474371
+https://blog.csdn.net/c1007857613/article/details/91867775
+
+二、安装和配置pdsh
+pdsh是deepspeed里面可选的一种分布式训练工具。适合你有几台裸机，它的优点是只需要在一台机上运行脚本就可以，pdsh会自动帮你把命令和环境变量推送到其他节点上，然后汇总所有节点的日志到主节点。
+
+yum install epel-release
+yum install dnf
+yum install pdsh
+dnf install pdsh-rcmd-ssh
+参考安装：
+https://blog.csdn.net/qq_41748940/article/details/121503695
+
+三、代码修改
+1.代码路径
+预训练代码路径要一致，代码内容也要一样
+
+2.虚拟环境
+虚拟环境位置也要一样，路径也要一样，注意如果已经安装了conda，可能各个节点安装路径不一样，
+
+3.hostfile文件配置
+代码里面默认没有hostfile文件，因为bloom默认多机多卡使用的Slurm系统来进行分布式训练，我们使用非Slurm系统进行分布式训练。
+hostfile文件路径，在项目跟路径文件夹中Megatron-DeepSpeed-main中直接创建hostfile文件,文件内容：
+
+host188 slots=8
+host187 slots=8
+其中，第一列是hostname，slots是显卡数量
+
+4.相关代码修改
+主节点上默认虚拟环境路径系统加载可能不正确,python环境无法正常加载，所以需要在入口python文件:pretrain_gpt.py中加入：
+
+local_env = os.environ.copy()
+local_env["PATH"]="/home/centos/.conda/envs/pretrain6/bin:" + local_env["PATH"]
+os.environ.update(local_env)
+5.环境变量相关修改
+为了不同机器直接的通讯，环境变量需要修改，可以再shell脚本中添加下面的代码：
+
+export NCCL_DEBUG=INFO
+export NCCL_IB_DISABLE=1
+export NCCL_SOCKET_IFNAME=enp4s0，此处enp4s0为每台机器的网卡名字，使用ifconfig查看，要是出现多个网卡名字，找到那个右IP地址、网关和掩码的那个名字，这一步是最重要的
+6.shell脚本可以参考单机多卡训练，稍微改动后如下：
+#!/bin/bash
+
+# Adapted to use deepspeed on a single node
+#
+# Multi-node will require either a `hostfile` or switching to `torch.distributed.launch`
+
+# adjust to the number of GPUs to use
+
+export NCCL_DEBUG=INFO
+export NCCL_IB_DISABLE=1
+export NCCL_SOCKET_IFNAME=ens13f0
+
+
+N_GPUS=8
+
+CHECKPOINT_PATH=checkpoints/gpt_wudao_bf16_mult1
+VOCAB_FILE=data_huatuo/vocab.json
+MERGE_FILE=data_huatuo/merges.txt
+#DATA_PATH=data/meg-gpt2-oscar-en-10k_text_document
+DATA_PATH=data_huatuo/data_huatuo_text_document
+#DATA_PATH=data_train/data_train_wudao_text_document
+
+GPT_ARGS=" \
+    --num-layers 10 \
+    --hidden-size 512 \
+    --num-attention-heads 32 \
+    --seq-length 512 \
+    --max-position-embeddings 1536 \
+    --micro-batch-size 100 \
+    --global-batch-size 1600 \
+    --lr-decay-iters 100000 \
+    --lr 4e-5 \
+    --min-lr 6e-6 \
+    --lr-decay-style cosine \
+    --train-iters 230000 \
+    --vocab-file $VOCAB_FILE \
+    --merge-file $MERGE_FILE \
+    --data-impl mmap \
+    --split 949,50,1 \
+    --distributed-backend nccl \
+    --weight-decay 1e-2 \
+    --clip-grad 1.0 \
+    --lr-warmup-fraction .01 \
+    --bf16 \
+    "
+
+OUTPUT_ARGS=" \
+    --log-interval 10 \
+    --save-interval 200 \
+    --eval-interval 500 \
+    --eval-iters 10 \
+    --checkpoint-activations \
+    "
+
+DATA_ARGS=" \
+    --save $CHECKPOINT_PATH \
+    --load $CHECKPOINT_PATH \
+    --data-path $DATA_PATH \
+    "
+
+ALL_ARGS="$GPT_ARGS $OUTPUT_ARGS $DATA_ARGS"
+
+#LAUNCHER="deepspeed  --num_gpus $N_GPUS"
+LAUNCHER="deepspeed  --hostfile=./hostfile"
+
+CMD="$LAUNCHER pretrain_gpt.py $ALL_ARGS"
+
+echo $CMD
+
+$CMD
+7.训练日志如下：
+531.png
+
+四、和单机打卡做性能对比
+1.平均每秒处理样本数量对比
+使用相同的模型结构和相同的batch size，每个节点batch size相同，看每秒处理样本数量对比
+从日志可以看出
+单机训练时候：samples per second: 1640
+多个机器时候：samples per second: 1920
+多机器使用效率：1920/1640 = 1.17
+
+2.处理相同数据用时对比
+使用相同的模型结构和相同的batch size，每个节点batch size相同，处理500个batch数据，用时
+单机训练时候用时：240秒
+多个机器时候：201秒
+多机器使用效率：240/201=1.194
+
+两种方式相差不大：基本效率在 1.2左右
+
+五、配置过程中遇见的问题以及解决办法：
+(1) AssertionError: global batch size (224) is not divisible by micro batch size (28) times data parallel size (16)
+解决：hostfile中先节点顺序，第一个是本地节点
+(2)/home/centos/anaconda3/bin/python3: No module named pybind11
+host188: g++ -O3 -Wall -shared -std=c++11 -fPIC -fdiagnostics-color helpers.cpp -o helpers.cpython-39-x86_64-linux-gnu.so
+host188: helpers.cpp:26:10: fatal error: pybind11/pybind11.h: No such file or directory
+host188: #include <pybind11/pybind11.h>
+
+默认虚拟环境路径不正确,python环境无法正常加载，类似的问题：
+
+解决：
+在训练代码的开头加入，注意对应具体环境变量：
+
+local_env = os.environ.copy()
+local_env["PATH"]="/data/.conda/env/llms/bin:" + local_env["PATH"]
+os.environ.update(local_env)
+
+(3)[2023-09-05 11:35:50,451] [INFO] [comm.py:622:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+
+解决：hostfile文件中主节点第一个，并且注意模型和数据的权限，使用相同的用户
+
+(4)ncclSystemError: System call (socket, malloc, munmap, etc) failed.
+
+解决：
+直接在终端输入以下命令，方便查看NCCL日志
+
+export NCCL_DEBUG=INFO
+export NCCL_IB_DISABLE=1
+export NCCL_SOCKET_IFNAME=enp4s0，此处enp4s0为每台机器的网卡名字，使用ifconfig查看，要是出现多个网卡名字，找到那个右IP地址、网关和掩码的那个名字，这一步是最重要的
+
+(5)host188: host188:565865:566598 [7] include/socket.h:409 NCCL WARN Net : Connect to 192.168.17.187<60595> failed : No route to host
+
+解决：开一下每台机器的防火墙状态，关闭防火墙
+
+systemctl stop firewalld
+
+(6)subprocess.CalledProcessError: Command '['which', 'c++']' returned non-zero exit status 1.
+
+解决：安装 yum -y install gcc gcc-c++
+
+标签: none

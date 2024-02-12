@@ -2152,7 +2152,8 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             gd.debuginfo(prj='ds')
             see_memory_usage("Engine after forward", force=self.memory_breakdown())
 
-        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__ loss={infoTensor(loss)}')
+        gd.debuginfo(prj='ds', info=f'loss={infoTensor(loss)}')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         return loss
 
     def _cast_inputs_half(self, inputs):
@@ -2228,7 +2229,8 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             retain_graph: bool, default: false
                 forward on user defined choice of retain_graph
         """
-        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__, A-loss={loss}')
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj='ds', info=f'A-loss={loss}')
 
         see_memory_usage("Engine before backward", force=self.memory_breakdown())
 
@@ -2317,7 +2319,9 @@ class DeepSpeedEngine(Module):  # Module come from pytorch
             pass
 
         see_memory_usage("Engine after backward", force=self.memory_breakdown())
-        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__ loss={loss}')
+        gd.debuginfo(prj='ds', info=f'loss={loss}')
+
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         return loss
 
     def is_gradient_accumulation_boundary(self):

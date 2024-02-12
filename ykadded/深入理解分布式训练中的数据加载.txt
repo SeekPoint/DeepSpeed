@@ -1,0 +1,149 @@
+深入理解分布式训练中的数据加载
+https://zhuanlan.zhihu.com/p/675512835
+
+深入理解分布式训练中的数据加载
+游凯超
+游凯超​
+深度学习（Deep Learning）话题下的优秀答主
+已关注
+
+你关注的 科技猛兽 赞同
+关于分布式训练的原理，网络上已经有非常多精彩的解读了。但是关于分布式训练中的数据加载过程，却很少有相关解读，以至于我们经常搞不懂数据加载的细节。数据是深度学习的原料，如果数据加载出问题，动辄影响训练效果、甚至计算得出错误的指标。本文将深入分析分布式训练中的数据加载问题，希望将这一问题解释清楚。
+
+关于分布式训练的前置知识——分布式训练启动，请参见另一篇解读一文读懂分布式训练启动方式
+为了深入理解数据集加载的细节，我们使用一个长度为7、内容为1/2/3/4/5/6/7的人造数据集，这样我们可以通过数据的内容直接看到它是第几条数据。同时我们用正数表示训练数据、负数表示测试数据。
+
+简单来说，就是：
+
+from torch.utils.data import Dataset
+
+class TrainDataset(Dataset):
+    def __init__(self):
+        self.data = [1, 2, 3, 4, 5, 6, 7]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+class TestDataset(Dataset):
+    def __init__(self):
+        self.data = [-1, -2, -3, -4, -5, -6, -7]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+我们使用三个进程、每个进程batchsize为2的配置来加载这些数据。这是为了分析当数据集长度不整除batchsize乘以进程数的情况。
+
+具体的数据集加载的代码为：
+
+import torch
+import torch.distributed as dist
+from torch.utils.data import DataLoader, DistributedSampler
+
+def run():
+    # Initialize the process group
+    dist.init_process_group("gloo")
+
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+
+    # Create datasets
+    train_dataset = TrainDataset()
+    test_dataset = TestDataset()
+
+    # Create distributed samplers
+    train_sampler = DistributedSampler(train_dataset, shuffle=True)
+    test_sampler = DistributedSampler(test_dataset, shuffle=False)
+
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=2, sampler=train_sampler)
+    test_loader = DataLoader(test_dataset, batch_size=2, sampler=test_sampler)
+
+    # Run two epochs
+    for epoch in range(2):
+        # Train data
+        for i, data in enumerate(train_loader):
+            print(f"Process {rank}, Epoch {epoch}, Batch {i}, Train data: {data}")
+            dist.barrier()
+
+        train_sampler.set_epoch(epoch + 1)
+
+        # Test data
+        for i, data in enumerate(test_loader):
+            print(f"Process {rank}, Epoch {epoch}, Batch {i}, Test data: {data}")
+            dist.barrier()
+
+    # Cleanup
+    dist.destroy_process_group()
+
+if __name__ == "__main__":
+    run()
+具体测试脚本为：torchrun --nproc-per-node=3 code.py。
+
+每一个epoch内、每一个process、每一个batch在train、test上面加载到的数据如下图所示：
+
+
+代码层面，相比于普通的训练代码，我们可以看到以下改动：
+
+数据集加载的shuffle参数会变成DistributedSampler的参数
+Dataloader构造函数多了sampler参数
+每一个epoch结束时需要调用train_sampler.set_epoch(epoch + 1)
+每个iteration结束后调用dist.barrier()保持多进程同步
+根据以上内容，我们可以得到以下分析（假设进程数为
+，batchsize为
+，数据集长度为
+）：
+
+当数据集长度
+不能整除
+时，PyTorch会将数据集的某些元素重复，直到新的数据集长度
+能够整除
+。如果DistributedSampler设置了drop_last=True，则PyTorch会将数据集截断到
+。上图中，重复的数据用红色标出。PyTorch重复了两个元素，使得新的数据集长度
+能够整除进程数
+。
+分布式训练中，我们必须保证每个进程的计算量是完全一样的，因此必须将数据集进行补齐或者截断。这里需要和简单的数据并行区别开（详见深入理解PyTorch数据并行模块DataParallel及其反向传播细节），简单的数据并行只有一个进程，能够容忍任意长度的数据集，不会进行补齐或者截断。
+
+drop_last=True的作用是确保每个进程、每个batch的数据量都一致。当我们使用一些模型编译技术（比如torch.compile）时，它们通常在输入大小不变的情况下有更好的加速效果。如果没有设置drop_last=True，那么最后一个batch的大小发生变化（例如上图，batchsize从2变成1），一般会触发重新编译，增加运行时间。
+shuffle=False的条件下，补齐或者截断按照数据集顺序进行。所以我们看到测试数据集被重复的元素总是前两个元素（-1/-2）。
+shuffle=True的条件下，补齐或者截断发生在shuffle之后。所以我们看到训练数据被重复的元素随着epoch的变化而变化，第0个epoch重复的是1/5，第1个epoch重复的是1/7。
+shuffle操作采用的是无状态的shuffle，DistributedSampler内部有一个随机种子用于产生随机排列。具体来说，这个随机种子的值就是self.seed + self.epoch，两者的值默认都是0.
+我们通常采用的随机操作都是有状态的。例如我们调用torch.randperm(9)，两次调用得到的结果不同。这是因为它内部有一个随机状态，每次调用之后这个状态会发生改变。还有一种无状态的随机操作，例如torch.randperm(9, generator=torch.Generator().manual_seed(0))，指定随机种子为0，每次调用得到的随机数都是一样的，是[8, 0, 2, 3, 7, 1, 4, 5, 6]（具体的值可能随着PyTorch版本而发生变化）。分布式训练要求各个进程的状态保持一致，因此常采用无状态的随机操作。
+为了达到每个epoch的shuffle顺序不同的目的，仅设置shuffle=True的参数并不够。我们必须在每个epoch结束之后手动调用train_sampler.set_epoch(epoch + 1)来改变下一个epoch的随机种子。
+注意细节，这里我们设置的epoch为epoch + 1。这也是有讲究的。如果我们设置为epoch，第0个epoch结束后，随机种子的值self.seed + self.epoch依然是0，并没有发生改变，这将会导致第1个epoch和第0个epoch得到的数据顺序完全一致，丢失了epoch之间的随机性。
+了解以上细节后，我们就能对PyTorch分布式训练的数据加载有一个完整的认识了：
+
+每当我们调用for data in dataloader的时候，实际上会调用dataloader.__iter__函数。
+如果指定了shuffle=True，则使用self.seed + self.epoch作为随机种子对数据进行一次重排。
+根据进程数、batchsize、droplast等参数对数据集进行补齐或者截断。
+每个进程获得数据集的
+数据，具体来说就是dataset[rank:adjusted_size:P]这部分数据，其中rank为该进程的序号，adjusted_size为数据集补齐或者截断后的大小，P为进程总数。
+其实以上细节基本就是DistributedSampler的实现，一共只有一百多行代码，想要了解细节的朋友可以直接看它的源码。
+
+分布式数据加载对测试准确率的影响
+由于分布式数据加载不可避免地会对数据集进行补齐或者截断操作，所以测试数据集也会受到影响。如果我们的测试代码使用了分布式数据加载，那么我们计算得到的指标将是不准确的。社区里有相关的讨论。
+
+虽然有人指出这一问题，但关注的人并不多。毕竟，成百上千篇论文都对着ImageNet validation set调参并汇报validation set的准确率，也没看到有人说什么。对于常见的单机八卡的训练，最多也就重复或者漏算7条数据。大规模分布式训练的场景下，
+可以很大，分布式数据加载对测试准确率的影响可能不小，这时建议关注分布式数据加载对测试的影响。
+
+另外，如果设置了droplast=True，受影响的数据最多可以达到
+，这个还是值得注意的，影响挺大。一般测试时不会设置droplast，这个只会影响训练数据。
+
+总之，最准确的做法是在测试时关闭分布式数据加载、或者单独用另外一个脚本进行数据加载。如果为了避免麻烦而采用了分布式数据加载进行测试，一定要评估并了解它对测试准确率的影响。
+
+其它分布式数据加载范式
+以上是PyTorch默认推荐的分布式数据加载方式，基本继承了和普通训练相同的逻辑，每一个epoch都会有一次全局shuffle。
+
+然而，全局shuffle的开销很大，实际上还有一些其他的做法：
+
+启动训练时首次shuffle并分配给多个进程，把分配的结果保存下来，每个进程在后续训练过程中各自shuffle。再次训练时连进程的分配都不用，直接加载保存的分配结果。典型案例为DeepSpeed-Chat。
+将数据集存成特殊格式，用局部shuffle取代全局shuffle。典型案例为TensorFlow生态系统里的tfrecord格式。因为这种格式不能随机读取，一般是读取多个数据，然后在这里面shuffle。比如一次读取256个数据，然后从中随机选择64个组成一个batch。理论上这种读取方式的随机性更弱，但实践中似乎无害。TensorFlow用了这么多年，也没看到有人抱怨这个细节。
+关于tfds、tfrecord格式的分布式数据加载，可参见文档。里面的API可谓是混乱不堪，API名字里充满了"experimental"，一如既往的TensorFlow的味道。
+总结
+本文深入分析了分布式训练中数据加载的细节。大体上来说就是把输入数据集切分到每一个进程，其中涉及非整除部分的数据集、测试数据集等细节，尤其是为了适应分布式训练而不得不对数据集进行的补齐、截断等操作对于计算准确率等指标的影响。
+
+发布于 2024-01-01 14:54・IP 属地北京

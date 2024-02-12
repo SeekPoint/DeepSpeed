@@ -14,6 +14,7 @@ from deepspeed.runtime.zero.partitioned_param_coordinator import PartitionedPara
 from deepspeed import comm as dist
 from deepspeed.accelerator import get_accelerator
 from pydebug import gd, infoTensor
+
 FWD_MODULE_STACK = list()
 
 
@@ -480,16 +481,20 @@ class DeepSpeedZeRoOffload(object):
 
         @instrument_w_nvtx
         def _pre_forward_module_hook(module, *args):
-            logf = f'_pre_forward_module_hook'
-            gd.emb_start(info=logf)
-            gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
+            # 每一个pass导致数千个文件，不方便下载，以下类同
+            # logf = f'_pre_forward_module_hook'
+            # gd.emb_start(info=logf)
+            # gd.debuginfo(prj="ds") # 必定进入下一个，可以省略
+
             self.pre_sub_module_forward_function(module)
-            gd.emb_end(info=logf)
+
+            # gd.emb_end(info=logf)
 
         @instrument_w_nvtx
         def _post_forward_module_hook(module, input, output):
-            logf = f'_post_forward_module_hook'
-            gd.emb_start(info=logf)
+            # logf = f'_post_forward_module_hook'
+            # gd.emb_start(info=logf)
+
             global FWD_MODULE_STACK
             FWD_MODULE_STACK.pop()
             if output is None:
@@ -535,11 +540,12 @@ class DeepSpeedZeRoOffload(object):
                     actual_external_param.all_gather()
 
             self.post_sub_module_forward_function(module)
-            gd.emb_end(info=logf)
+            # gd.emb_end(info=logf)
 
         def _pre_backward_module_hook(module, inputs, output):
-            logf = f'_pre_backward_module_hook'
-            gd.emb_start(info=logf)
+            # logf = f'_pre_backward_module_hook'
+            # gd.emb_start(info=logf)
+
             @instrument_w_nvtx
             def _run_before_backward_function(sub_module):
                 # some models (e.g. Albert) may run multiple forwards on the same layer in a loop
@@ -555,7 +561,7 @@ class DeepSpeedZeRoOffload(object):
             gd.debuginfo(prj="ds", info=f"output={output}")
             tmp = _apply_to_tensors_only(module, PreBackwardFunction, _run_before_backward_function, output)
             gd.debuginfo(prj="ds", info=f"tmp={tmp}")
-            gd.emb_end(info=logf)
+            # gd.emb_end(info=logf)
             return tmp
 
         #This is an alternate to doing _post_backward_module_hook
@@ -586,8 +592,8 @@ class DeepSpeedZeRoOffload(object):
         #     return tmp
 
         def _post_backward_module_hook(module, inputs):
-            logf = f'_post_backward_module_hook'
-            gd.emb_start(info=logf)
+            # logf = f'_post_backward_module_hook'
+            # gd.emb_start(info=logf)
             gd.debuginfo(prj="ds", info=f"module={module}")
             module.ds_grads_remaining = 0
 
@@ -599,7 +605,7 @@ class DeepSpeedZeRoOffload(object):
 
             gd.debuginfo(prj="ds", info=f"input={input}")
             tmp = _apply_to_tensors_only(module, PostBackwardFunction, _run_after_backward_function, inputs)
-            gd.emb_end(info=logf)
+            # gd.emb_end(info=logf)
             gd.debuginfo(prj="ds", info=f"tmp={tmp}")
             return tmp
 

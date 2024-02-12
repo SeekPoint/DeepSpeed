@@ -820,9 +820,10 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
     # 它主要用于分布式训练，特别是在使用CPU offload和数据并行性（Data Parallelism）时
     # call in _load_legacy_checkpoint and init
     def _link_all_hp_params(self):
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
         # 获取分布式处理过程中的世界大小
         dp_world_size = dist.get_world_size(group=self.dp_process_group)
-        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__, dp_world_size={dp_world_size}')
+        gd.debuginfo(prj='ds', info=f'dp_world_size={dp_world_size}')
 
         # 如果启用了CPU卸载，获取卸载梯度字典
         if self.cpu_offload:
@@ -985,7 +986,8 @@ class DeepSpeedZeroOptimizer(ZeROOptimizer):
 
     # 用于在多个设备间重新排序数据。
     def _round_robin_reorder(self, tensor_list, num_partitions):
-        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__', num_partitions={num_partitions})
+        gd.debuginfo(prj='ds', info=f'__FUNC_IN_OUT__')
+        gd.debuginfo(prj='ds', info=f'num_partitions={num_partitions}')
         # disable round robin if need to debug something
         # 如果需要调试某个问题，可以禁用round robin
         # return tensor_list, list(range(len(tensor_list)))

@@ -1,0 +1,5 @@
+VLDB 2023 | 北大河图发布分布式训练神器Galvatron, 一键实现大模型高效自动并行
+
+https://www.kuxai.com/article/619
+
+https://github.com/PKU-DAIR/Hetu/tree/main/tools/Galvatron

@@ -1,0 +1,129 @@
+accelerate+deepspeed多机多卡训练的两种方法（三）
+
+https://blog.csdn.net/weixin_42486623/article/details/132793261
+
+
+accelerate+deepspeed多机多卡训练的两种方法（三）
+
+发呆的比目鱼
+
+已于 2023-09-10 19:26:44 修改
+
+阅读量766
+ 收藏
+
+点赞数
+分类专栏： 预训练模型 文章标签： 人工智能
+
+预训练模型
+专栏收录该内容
+33 篇文章6 订阅
+订阅专栏
+accelerate+deepspeed多机多卡训练的两种方法（三）
+pdsh
+pdsh是deepspeed里面可选的一种分布式训练工具。适合你有几台裸机，它的优点是只需要在一台机上运行脚本就可以，pdsh会自动帮你把命令和环境变量推送到其他节点上，然后汇总所有节点的日志到主节点。
+
+要用pdsh前，你得自己给所有的机器配一样的环境，配ssh，把所有机器之间都通过ssh的秘钥文件设置成不需要密码登录，然后安装pdsh，准备工作就结束了。
+
+然后是accelerate的配置文件：
+
+compute_environment: LOCAL_MACHINE
+deepspeed_config:
+  deepspeed_hostfile: ./path/hostfile
+  deepspeed_multinode_launcher: pdsh
+  gradient_accumulation_steps: 1
+  gradient_clipping: 1.0
+  offload_optimizer_device: none
+  offload_param_device: none
+  zero3_init_flag: true
+  zero3_save_16bit_model: true
+  zero_stage: 3
+distributed_type: DEEPSPEED
+dynamo_config: {}
+fsdp_config: {}
+machine_rank: 0
+main_process_ip: x.x.x.x（主节点的ip）
+main_process_port: 21011
+main_training_function: main
+megatron_lm_config: {}
+mixed_precision: fp16
+num_machines: 2
+num_processes: 16
+rdzv_backend: static
+same_network: true
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false
+
+这里需要传入一个hostfile文件：
+
+x.x.x.x slots=8
+x.x.x.x slots=8
+
+x.x.x.x 可以是IP地址，也可以是主机hostname，slots=代表要使用的GPU数量
+
+然后用accelerate运行你的训练脚本就可以了：
+
+accelerate launch --config_file $config_path train.py
+
+这样训练有个缺点，就是pdsh对tqdm支持不好，tqdm相关的日志可能没办法正常显示
+
+standard
+这个其实就是deepspeed对torchrun原生的封装，适合那种有算力池平台的环境，因为它得手动在每个节点启动你的训练脚本，还得传入不同的ip地址，如果有算力池平台就可以自动帮忙传入这些环境变量了。
+
+accelerate配置如下：
+
+compute_environment: LOCAL_MACHINE
+deepspeed_config:
+  deepspeed_multinode_launcher: standard
+  gradient_accumulation_steps: 1
+  gradient_clipping: 1.0
+  offload_optimizer_device: none
+  offload_param_device: none
+  zero3_init_flag: true
+  zero3_save_16bit_model: true
+  zero_stage: 3
+distributed_type: DEEPSPEED
+downcast_bf16: 'no'
+dynamo_config: {}
+fsdp_config: {}
+machine_rank: 0
+main_training_function: main
+megatron_lm_config: {}
+mixed_precision: fp16
+num_machines: 2
+num_processes: 16
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false
+
+
+这种训练方式就不需要传入hostfile了，而是在每个节点指定自己的ip等信息，每个节点的运行脚本如下：
+
+accelerate launch \
+--config_file $config_path \
+--machine_rank ${RANK} --main_process_ip ${MASTER_ADDR} --main_process_port ${MASTER_PORT} \
+train.py
+
+
+这种训练方式就不会有tqdm不兼容的问题了。
+
+最后就是如果多机多卡训练很慢的话（GPU占用100%但是功率很低），很可能是你的NCCL走了socket导致的，这时候可以传入环境变量，将NCCL_NET改为IB就行了：
+
+export NCCL_NET=IB
+
+NCCL其他配置
+全局环境变量设置：
+
+export NCCL_NET=Socket; # 数据传输协议，如果使用IB网卡协议，则不需要配置
+export NCCL_SOCKET_IFNAME=team0;  # 指定的socket协议网口，默认是eth0
+export NCCL_SHM_DISABLE=1;  # 强制使用P2P协议，会自动使用IB协议或IP socket
+export NCCL_SOCKET_NTHREADS=4;  # socket协议线程数，默认是1,范围1-16，数字越大数据传输越快
+export NCCL_P2P_DISABLE=0;  # 关闭p2p传输，使用NVLink or PCI可配置，默认可不配置
+export NCCL_IB_DISABLE=1;  # 为1表示禁用IB协议，如果使用IB则设置为0
+export NCCL_DEBUG=INFO # DEBUG打印日志的等级
+
+
+文章知识点与官方知识档案匹配，可进一步学习相关知识

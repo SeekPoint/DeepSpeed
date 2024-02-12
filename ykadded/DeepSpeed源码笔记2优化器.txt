@@ -1,0 +1,289 @@
+DeepSpeed源码笔记2优化器
+https://zhuanlan.zhihu.com/p/676512315
+
+DeepSpeed源码笔记2优化器
+秀才经商
+
+2 人赞同了该文章
+DeepSpeedZeroOptimizer
+　　父类ZeROOptimizer，用于优化大模型训练内存，针对zero stage1和2；
+
+　　zero stage1：将优化器状态划分到若干份，每个GPU各自维护一份，如下图
+
+　　　每块GPU存一份完整的参数W，将一个batch的数据分成3份，每个GPU读取其中一份，做完一轮forward和backward后，各自得到一份梯度；
+
+　　　对梯度做一轮all-reduce操作(reduce-scatter+all-gather)，得到完整的梯度G，详见average_tensor函数；
+
+　　　得到完整梯度G，就可以对W做更新，W的更新由优化器状态和梯度共同决定，由于每块GPU上只保管部分优化器状态，因此只能将相应的W进行更新；
+
+　　　每块GPU上都有部分W没有完成更新，需要对W做一次all-gather从别的GPU上把更新好的部分W取回来，详见all_gather_dp_groups函数；
+017.webp
+https://mp.weixin.qq.com/s/8F3eAHDBjQkHHBmrAEoOfw
+　　zero stage2：将优化器状态和梯度划分多份，每个GPU各自维护一份；
+
+　　　每块GPU上存放一份完整的参数W，将一个batch的数据划分3份，每个GPU读取各自一份，做完一轮forward和backward后，计算得到一份完整的梯度；
+
+　　　对梯度做一次reduce-scatter，保证每个GPU上所维持的那块梯度是聚合梯度，如GPU1负责维护G1，其他GPU只需要把G1对应位置的梯度发给GPU1做汇总即可。汇总完毕后，不是GPU负责的梯度(如白色块)从显存中移除；
+
+　　　每块GPU用自己对应的O和G更新相应的W，更新完毕后，每块GPU维持了一块更新完毕的W。对W做一次all-gather，将别的GPU算好的W同步到当前GPU上，详见all_gather_dp_groups函数；
+
+
+a）初始化
+　　cpu_offload：false；
+
+　　cpu_offload_pin_memory：false；
+
+　　params_names：传入的参数，以named_parameters中的模型参数为key，以模型参数名称为value构成dict；
+
+　　optimizer：传入的optimizer参数(即FusedAdam)；
+
+　　flatten：梯度展开操作(即torch中的_flatten_dense_tensors)；
+
+　　unflatten：梯度不展开操作(即torch中的_unflatten_dense_tensors)；
+
+　　partition_gradients：是否切分梯度，zero stage为2时取值true，为1时取值false；
+
+　　is_gradient_accumulation_boundary：true；
+
+　　contiguous_gradients：true，
+
+　　reduce_bucket_size：默认值500000000；
+
+　　use_multi_rank_bucket_allreduce：true；
+
+　　elements_in_ipg_bucket：默认值0；
+
+　　dtype：模型参数类型
+
+　　gradient_accumulation_dtype：float32类型，
+
+　　use_separate_grad_accum：如果dtype不等于gradient_accumulation_dtype，则取值true，否则为false；
+
+　　use_grad_accum_attribute：是否做梯度累加(由于内存不足，将一个大的batch拆分为多个小batch，每处理完一个batch，不直接根据梯度更新模型参数，而是计算多个batch，将梯度累加，再做参数更新)，use_separate_grad_accum为true且partition_gradients为false时取值为true，否则为false；
+
+　　reduce_scatter：默认为true；
+
+　　deepspeed_adam_offload：false；
+
+　　dp_process_group：传入的进程参数参数；
+
+　　real_dp_process_group：大小为模型参数分组个数的list，每一个元素为dp_process_group；
+
+　　从优化器的param_groups中取出可训练参数进行参数分组(考虑优化器在分布式环境下使用，将这些参数按照数据并行的大小进行分区，每个计算设备只需要存储和计算一部分的参数和梯度。"分区"就是把参数组划分到不同的计算设备上，每个设备上的参数组形成一个分区)：
+
+　　　　取出分组的训练参数存入bit16_groups中；
+
+　　　　将训练参数移动到CPU(move_to_cpu)；
+
+　　　　清空缓存(empty_cache)；
+
+　　　　将参数分组划分到进程分组中各个进程上，重新划分后的参数列表存入round_robin_bit16_groups中，参数划分前的编号到划分后在round_robin_bit16_groups中的索引存入round_robin_bit16_indices中(例如，划分前参数列表为["a", "b", "c", "d", "e", "f"]，进程分组包含2个进程，则round_robin_bit16_groups中存放["a", "c", "e", "b", "d", "f"]，即划分为同一进程的参数连续存放, round_robin_bit16_indices中存放{0:0, 2:1, 4:2, 1:3, 3:4, 5:5}, 即"b"参数划分前在参数列表中的下标为1，划分后下标为3，因此1:3表示参数"b"的映射关系)；
+
+　　　　在CPU上为round_robin_bit16_groups中的训练参数创建nccl_start_alignment_factor*进程分组进程总数个字节对齐的flat buffer(将训练参数的向量拼接成一个"长"向量所需要的缓存区，详见flatten_dense_tensors_aligned函数)添加到bit16_groups_flat中；
+
+　　　　将bit16_groups和round_robin_bit16_groups中每个参数的数据地址指向bit16_groups_flat为该参数创建的缓冲区， _update_model_bit16_weights；
+
+　　　　将bit16_groups_flat中训练参数均分给每个进程(get_data_parallel_partitions)，存入parallel_partitioned_bit16_groups中；
+
+　　　　将parallel_partitioned_bit16_groups中32位训练参数拷贝到single_partition_of_fp32_groups中；
+
+　　　　计算bit16_groups_flat中当前进程需要更新的参数信息：
+
+　　　　　　partition_size：参数分组中总元素个数/进程个数，即每个进程需要更新的元素个数；
+
+　　　　　　params_in_partition：当前进程需要更新的部分分组参数列表；
+
+　　　　　　params_not_in_partition：其他进程需要更新的部分分组参数列表；
+
+　　　　　　first_of_offset：当前进程需要更新的分组参数在参数分组列表中的起始索引；
+
+　　　　初始化实现梯度划分的数据结构，initialize_gradient_partitioning_data_structures
+
+　　　　　　is_grad_computed：记录每个进程在每个分区上的梯度是否已被计算；
+
+　　　　　　初始化梯度划分相关数据结构，initialize_gradient_partition
+
+　　　　　　　根据当前进程ID计算该进程在当前参数分组中需要计算梯度的参数的起始和终止位置；
+
+　　　　　　　从当前参数分组中找到该进程需要计算梯度的参数：
+
+　　　　　　　　param_to_partition_ids：记录参数分组中每个参数计算梯度时的进程ID列表；
+
+　　　　　　　　total_grads_in_partition：记录每个参数分组中每个进程需要计算梯度的参数个数；
+
+　　　　　　　　grad_partition_insertion_offset：记录每个进程在每个分区参数中进行梯度计算的插入偏移量；
+
+　　　　　　　　grad_start_offset：记录每个进程在每个分区中梯度计算开始的偏移量，初始值为0；
+
+　　　　　is_partition_reduced：记录每个进程在每个分区上的参数是否进行了reduce操作；
+
+　　　　　first_param_index_in_partition：记录每个进程在每个分区中第一个参数的索引，详见get_first_param_index函数；
+
+　　　　重置下一步反向梯度传播的数据结构，reset_partition_gradient_structures
+
+　　　　　is_partition_reduced：false，即设置所有partition没有reduce；
+
+　　　　　remaining_grads_in_partition：设置当前partition内剩余需要更新的梯度为该partition内所有梯度；
+
+　　　　　is_grad_computed：false，设置当前partition内不需要计算梯度；
+
+　　创建反向传播hook，create_reduce_and_remove_grad_hooks？
+
+　　custom_loss_scaler：false；
+
+　　loss_scaler：初始化LossScaler实例；
+
+　　dynamic_loss_scale：false；
+
+　　初始化优化器状态(为梯度和其他可能的状态分配内存，并根据需要将内存映射到GPU或保留在CPU上)，initialize_optimizer_states
+
+　　　　遍历bit16_groups中分组的模型训练参数，为每个参数分组创建一个全0的张量(用于存储该分组训练参数的梯度)，并存入single_partition_of_fp32_groups中；
+
+　　　　如果cpu_offload_pin_memory为true，则将该张量的内存映射到GPU上，否则在CPU上使用它；
+
+　　　　如果传入的优化器类型是Adagrad，则立即初始化优化器状态，否则调用优化器的step方法(第一次调用时初始化状态)；
+
+　　　　如果不进行cpu_offload(即所有计算在GPU上完成)，则将single_partition_of_fp32_groups中每组训练参数的梯度设置为None；
+
+　　将bit16_groups中的所有半精度(16位)参数和single_partition_of_fp32_groups中单精度(32位)参数链接起来(将bit16_groups中模型参数的_hp_mapping更新为根据single_partition_of_fp32_groups中该参数对应的张量初始的tensor_fragment，详见link_hp_params函数)，用于分布式训练中同步和管理模型的参数，确保所有节点在训练过程中保持一致性，详见_link_all_hp_params函数；
+
+　　将bit16_groups中每个参数分组的load_hp_checkpoint_state指定为load_hp_checkpoint_state方法，详见_enable_universal_checkpoint函数；
+
+　　_param_slice_mappings：bit16_groups中每个参数分组中每个参数名称以及其tensor_fragment映射表构成的list
+
+b）backward
+　　micro_step_id加1；
+
+　　ipg_buffer：初始化大小为reduce_bucket_size的张量，并添加到ipg_buffer中；
+
+　　ipg_index：0
+
+　　调用loss_scalar的backward进行反向梯度传播计算梯度(即计算各个参数的grad)；
+
+　　如果是zero stage为1，则将各个参数的grad转换为gradient_accumulation_dtype指定的数据类型后累加到参数的grad_accum上，同时将参数的grad置为None；
+
+c）overlapping_partition_gradients_reduce_epilogue
+　　对ipg_buffer中的梯度进行reduce操作，详见reduce_ipg_grads函数；
+
+　　　　对ipg_buffer中的梯度进行reduce操作，详见average_tensor函数；
+
+　　　　遍历params_in_ipg_bucket中每个参数分组：
+
+　　　　　　params_already_reduced：每个参数分组标记为true；
+
+　　　　　　grads_in_partition初始化为所有参数的元素个数之和大小的向量，然后各个参数的梯度拷贝进去(grads_in_partition_offset记录拷贝的最后偏移量)，详见copy_grads_in_partition函数；
+
+　　　　　　重置梯度reduce操作相关数据结构：
+
+　　　　　　　grads_in_ipg_bucket：重置为空list
+
+　　　　　　　params_in_ipg_bucket：重置为空list
+
+　　　　　　　ipg_bucket_has_moe_params：false
+
+　　　　　　　elements_in_ipg_bucket：0
+
+　　　　params_already_reduced：每个参数分组均标记为false；
+
+　　averaged_gradients：取出参数分组中每个参数的grad_accum并通过flatten操作将它们拼接成一个"长向量"，详见get_flat_partition函数；
+
+　　是否ipg缓冲区，_release_ipg_buffers
+
+　　　　ipg_buffer：None
+
+　　　　grads_in_partition：None
+
+　　　　grads_in_partition_offset：0
+
+　　将big16_groups中所有分组参数的grad和grad_accum设置为None，详见zero_grad函数；
+
+d）reduce_gradients
+　　将梯度放到bucket中，满了就reduce然后删除(reduce_independent_p_g_buckets_and_remove_grads)；
+
+　　　　将各个参数的梯度累加值(gard_accum，use_grad_accum_attribute为true时)或梯度(grad，use_grad_accum_attribute为false时)拷贝到ipg_buffer中，elements_in_ipg_bucket记录存放的ipg_buffer中数据大小，如果分组参数的元素个数超过了reduce_bucket_size，则将该参数梯度相关信息存入到extra_large_param_to_reduce中；
+
+　　　　将需要reduce的梯度添加到grads_in_ipg_bucket中；
+
+　　　　将参数分组添加到params_in_ipg_bucket中；
+
+　　在计算和通信让梯度reduce操作重叠，详见overlapping_partition_gradients_reduce_epilogue函数；
+
+e）average_tensor
+　　取出params_in_ipg_bucket中需要梯度reduce操作的参数分组：
+
+　　　　从param_to_partition_ids中取出当前参数分组中进行梯度reduce操作的进程ID列表，存入partition_ids；
+
+　　　　从grad_start_offset中取出各个进程以及需要梯度reduce操作的参数的起始偏移列表，并按照偏移位置从小到大排序，存入partition_ids_w_offsets；
+
+　　　　根据partition_ids_w_offsets将同一个进程需要梯度reduce操作的相邻参数合并一起，最终记录每个进程以及梯度redue操作的参数元素的起始偏移量和元素个数，存入rank_and_offsets；
+
+　　　　按照进程分组编号对rank_and_offsets中的参数进行分组，并根据参数偏移量和元素个数从传入的向量中切片出该进程需要reduce的梯度向量，存入buckets；
+
+　　　　遍历buckets中每个进程分组中每个进程需要进行梯度reduce的参数，执行allreduce_bucket操作，然后每个进程将reduce后的结果(即完整的梯度)拷贝到自己的参数梯度缓冲区中，详见allreduce_and_scatter
+
+　　　　　通过torch中的_flatten_dense_tensors操作将需要进行reduce的梯度参数展开成"长向量"；
+
+　　　　　将展开的"长向量"的数据类型转换为communication_data_type指定的数据类型；
+
+　　　　　对展开的"长向量"执行分布式reduce操作；
+
+f）step
+　　_global_grad_norm：计算归一化梯度，scaled_global_norm
+
+　　　　计算averaged_gradients中每个参数分组的梯度的L2范数，计算average_gradients中每个参数分组的梯度的平方和并通过all_reduce分布式操作将梯度平方和同步该进程组其他进程，详见get_grad_norm_direct函数；
+
+　　　　累加各个分组参数的梯度的平方和，计算所有参的梯度的L2范数，详见get_global_norm函数；
+
+　　遍历bit16_groups中各个参数分组：
+
+　　　　params_not_in_partition中不是当前进程更新的参数分组的grad和grad_accum设置为None，详见free_grad_in_param_list函数
+
+　　　　将averaged_gradients中各个参数分组的grad_accum拼接的"长向量"添加到该参数分组在single_partition_of_fp32_groups的grad字段；
+
+　　　　将params_in_partition中不是当前参数分组的grad和grad_accum设置为None，详见free_grad_in_param_list函数；
+
+　　　　将averaged_gradients中各个参数分组设置为None；
+
+　　　　根据_global_grad_norm对single_partition_of_fp32_groups中各个参数分组的grad_accum拼接的"长向量"进行梯度缩放和裁剪，详见unscale_and_clip_grads函数；
+
+　　　　调用optimizer的step方法进行权重更新，详见_optimizer_step函数；
+
+　　　　将single_partition_of_fp32_groups中各个参数分组的grad设置为None；
+
+　　　　将single_partition_of_fp32_groups中各个参数分组的data拷贝到parallel_partitioned_bit16_groups中；
+
+　　收集各个参数更新后的权重，详见all_gather_dp_groups函数
+
+　　　　遍历parallel_partitioned_bit16_groups中分配给各个进程分组的训练参数：
+
+　　　　　　统计该进程分组分配的训练参数的元素个数，并除以allgather_bucket_size，得到切片数num_shards；
+
+　　　　　　通过all_gather分布式操作收集其他进程或GPU更新的模型参数权重；
+
+　　使用半精度浮点数更新模型权重，_update_model_bit16_weights
+
+　　　　将bit16_groups_flat中各个参数分组通过torch的_unflatten_dense_tensors操作展开成"长向量"，并将参数权重拷贝到round_robin_bit16_groups中；
+
+　　　　将round_robin_bit16_groups中的参数权重拷贝到bit16_groups中；
+
+FusedAdam
+　　NVIDIA开源面向精简混合精度和分布式训练的pytorch扩展的优化函数；
+
+　　父类torch.optim.Optimizer；
+
+a）初始化
+　　adam_w_mode：1
+
+　　set_grad_none：true；
+
+　　_dummy_overflow_buf：
+
+　　multi_tensor_adam：加载FusedAdamBuilder(加载csrc/adam/fused_adam_frontend.cpp和csrc/adam/multi_tensor_adam.cu等文件)，指向multi_tensor_adam_cuda函数；
+
+
+
+参考资料
+
+图解大模型训练之：数据并行下篇(ZeRO，零冗余优化)
+
+编辑于 2024-01-23 22:44・IP 属地北京
